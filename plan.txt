@@ -1,39 +1,127 @@
-=================================================================
-Patient Name:	GREGORY S BURTON	Network Participation:	Out-of-Network
-Effective Date:	11/01/2025	Plan Benefits:	Calendar Year
-Insurance Payment goes to:	Office	Fee Schedule / Tier:	PPO/Traditional Preferred
-Yearly Maximum:	$1,000	Remaining Benefits:	$1,000
-Annual Max applies to preventative?:	No	Individual Deductible:	$50
-Deductible Remaining:	$50	Deductible Scope:	Basic & Major only, Waived on Preventive
-Otho Max:         $1000    Remaining Ortho: $1000 Age limit: 14 Maximum
-=================================================================
+================================================================================
+DENTVERIFY.COM - WEEKEND UPGRADE PLAN
+OBJECTIVE: USER AUTHENTICATION + PERSISTENT HISTORY + STRICT HIPAA COMPLIANCE
+================================================================================
 
-Same lang dria nga part walay nausab e remove lang nimo ang Ortho ibalhin sa babaw nga part sa hearders
+1. HIPAA TECHNICAL SAFEGUARDS COMPLIANCE (45 CFR Part 164)
+--------------------------------------------------------------------------------
+* § 164.312(a)(1) Access Control:
+  - Unique user identification and credential management.
+  - Role-Based Access Control (RBAC): Admin vs Clinic Staff.
+  - Multi-tenancy: Clinic A cannot view data from Clinic B.
+  - Strong password policy enforced (min 10 chars, uppercase, lowercase, numbers, symbols).
+  - Bcrypt password hashing (salt rounds: 12).
 
-=================================================================
-Preventative:
-1. D4346 (Scaling in presence of gingival inflammation)
-2. D1110 (Prophy / Adult Cleaning)
-3. D0274 (BTW / Bitewings)
-4. D0210 / D0330 (FMX / Pano)
-5. D0220 (PA's)
-6. D9110 (Palliative)
-7. D0120 (Exam / Periodic Oral Evaluation)
-8. D0140 (Limited Exam)
-9. D1351 (Sealant)
-10. D1206 (Flouride)
-=================================================================
-Periodontal
-11. D4341 (SRP)
-12. D4910 (Perio Maint)
-=================================================================
-Restorative:
-13. D2391 (Filling / Composite)
-=================================================================
-Major:
-14. D2740 (Crown)
-15. D2920 (Crown Recement)
-16. D7140 (Simple ext)
-17. D7210 (Surgical ext)
-18. D9222 / D9223 (Sedation / Anesthesia)
-19. D9944 (Night Guard)
+* § 164.312(a)(2)(iii) Automatic Logoff:
+  - Enforce session timeout after 15 minutes of inactivity.
+  - Visual warning countdown before auto-logout occurs.
+
+* § 164.312(a)(2)(iv) Data Encryption at Rest:
+  - Field-level encryption using AES-256-GCM for all patient identifiers (Patient Name, DOB, Subscriber ID).
+  - Encryption keys stored securely in environment variables, never committed to git.
+
+* § 164.312(b) Audit Controls & Audit Trail:
+  - Tamper-evident logging of all ePHI access events:
+    [TIMESTAMP] [USER_ID] [OFFICE_ID] [ACTION] [RECORD_ID] [IP_ADDRESS] [USER_AGENT]
+  - Actions logged: LOGIN, LOGOUT, ANALYZE_FILE, VIEW_HISTORY_ITEM, EXPORT_EXCEL, DELETE_RECORD.
+  - Audit logs are append-only; standard users cannot modify or delete audit trails.
+
+* § 164.312(e)(1) Transmission Security:
+  - Full TLS 1.3 / HTTPS enforced via Cloudflare and Nginx.
+  - HSTS enabled.
+
+================================================================================
+2. DATABASE ARCHITECTURE (POSTGRESQL)
+================================================================================
+
+A. practices (Organizations / Clinics)
+   - id: UUID (Primary Key)
+   - name: VARCHAR(255)
+   - subscription_tier: VARCHAR(50) DEFAULT 'pro'
+   - created_at: TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+
+B. users (Clinic Accounts)
+   - id: UUID (Primary Key)
+   - practice_id: UUID (Foreign Key -> practices.id)
+   - email: VARCHAR(255) UNIQUE NOT NULL
+   - password_hash: VARCHAR(255) NOT NULL
+   - full_name: VARCHAR(255) NOT NULL
+   - role: VARCHAR(50) DEFAULT 'staff'  -- 'admin' or 'staff'
+   - is_active: BOOLEAN DEFAULT TRUE
+   - last_login_at: TIMESTAMP WITH TIME ZONE
+   - created_at: TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+
+C. verifications (Persistent Insurance History)
+   - id: UUID (Primary Key)
+   - practice_id: UUID (Foreign Key -> practices.id)
+   - user_id: UUID (Foreign Key -> users.id)
+   - patient_name_enc: TEXT NOT NULL         -- AES-256-GCM encrypted
+   - member_id_enc: TEXT                     -- AES-256-GCM encrypted
+   - insurance_payer: VARCHAR(255)
+   - network_status: VARCHAR(100)
+   - full_breakdown_json: JSONB NOT NULL     -- Complete structured breakdown data
+   - created_at: TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+
+D. audit_logs (Immutable HIPAA Access Logs)
+   - id: UUID (Primary Key)
+   - user_id: UUID (Foreign Key -> users.id)
+   - action: VARCHAR(100) NOT NULL           -- 'LOGIN', 'VIEW_RECORD', etc.
+   - target_id: UUID                         -- verification ID accessed
+   - ip_address: VARCHAR(45)
+   - user_agent: TEXT
+   - metadata: JSONB
+   - created_at: TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+
+================================================================================
+3. STEP-BY-STEP WEEKEND EXECUTION ROADMAP
+================================================================================
+
+PHASE 1: DATABASE PROVISIONING & SECURITY CONFIGURATION
+--------------------------------------------------------------------------------
+[ ] 1. Install PostgreSQL on VPS:
+       sudo apt-get update && sudo apt-get install -y postgresql postgresql-contrib
+[ ] 2. Create dedicated database `dentverify_db` and restricted database user.
+[ ] 3. Run initial schema migrations (tables, foreign keys, indexes).
+[ ] 4. Generate master encryption secret (32-byte hex for AES-256-GCM) and update `.env`.
+
+PHASE 2: USER AUTHENTICATION & SESSION MANAGEMENT
+--------------------------------------------------------------------------------
+[ ] 1. Install auth dependencies: `bcryptjs`, `jsonwebtoken` or `express-session`, `pg`.
+[ ] 2. Implement auth endpoints in `server.js`:
+       - POST /api/auth/login        (Rate-limited with express-rate-limit)
+       - POST /api/auth/register     (Admin/Invite controlled)
+       - POST /api/auth/logout       (Clear HttpOnly cookies)
+       - GET  /api/auth/me           (Validate session and return user profile)
+[ ] 3. Build Login / Registration UI in `public/`:
+       - Clean modal / auth view.
+       - Protect uploader so unauthorized users cannot submit files.
+
+PHASE 3: PERSISTENT HISTORY & HISTORY DASHBOARD
+--------------------------------------------------------------------------------
+[ ] 1. Modify `POST /api/analyze`:
+       - Once Gemini returns the breakdown JSON, encrypt PHI fields.
+       - Store record in `verifications` table tagged with `req.user.id`.
+[ ] 2. Create history endpoints:
+       - GET /api/verifications          (Paginated list: date, payer, patient preview)
+       - GET /api/verifications/:id      (Fetch full breakdown JSON)
+       - DELETE /api/verifications/:id   (Soft delete / purge with audit log)
+[ ] 3. Build History Dashboard Tab in Frontend:
+       - Search bar (search by patient name or insurance payer).
+       - Date filters.
+       - 1-click "Open Breakdown" to restore the matrix cards and Excel download.
+
+PHASE 4: HIPAA HARDENING & VERIFICATION
+--------------------------------------------------------------------------------
+[ ] 1. Add 15-Minute Inactivity Auto-Logout:
+       - Listen for mouse, touch, and keyboard events in `public/app.js`.
+       - Display a 60-second warning countdown before ending the session.
+[ ] 2. Implement Audit Log Middleware:
+       - Every query to `/api/verifications` logs an entry in `audit_logs`.
+[ ] 3. Verify Zero-Leakage:
+       - Ensure logs (PM2 / Nginx) never write unencrypted patient identifiers.
+[ ] 4. Commit and push to GitHub repository:
+       git add . && git commit -m "feat: implement HIPAA auth and persistent history" && git push
+
+================================================================================
+END OF PLAN - READY FOR WEEKEND IMPLEMENTATION
+================================================================================
