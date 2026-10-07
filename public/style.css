@@ -948,12 +948,18 @@
       border-color: var(--teal-primary);
     }
 
-    /* Financial Meters Grid - Compact */
+    /* Financial Meters Grid - 3 Top Columns with Full-Width Scope Below */
     .financials-grid {
       display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+      grid-template-columns: repeat(3, 1fr);
       gap: 0.85rem;
       margin-top: 1.15rem;
+    }
+
+    @media (max-width: 860px) {
+      .financials-grid {
+        grid-template-columns: 1fr;
+      }
     }
 
     .financial-card {
@@ -962,6 +968,18 @@
       border-radius: var(--radius-md);
       padding: 0.85rem 1.05rem;
       position: relative;
+    }
+
+    .financial-card.scope-card-full {
+      grid-column: 1 / -1;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 0.65rem;
+      padding: 0.7rem 1.05rem;
+      background: rgba(15, 23, 42, 0.75);
+      border: 1px solid rgba(56, 189, 248, 0.25);
     }
 
     .financial-card-header {
