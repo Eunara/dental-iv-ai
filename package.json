@@ -1,0 +1,26 @@
+{
+  "name": "dental-insurance-verification",
+  "version": "1.0.0",
+  "description": "Production-ready Dental Insurance Verification Web App powered by Gemini 2.5 Flash",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node --watch server.js"
+  },
+  "dependencies": {
+    "@google/genai": "^2.27.0",
+    "dotenv": "^16.4.7",
+    "express": "^4.21.2",
+    "multer": "^1.4.5-lts.1"
+  },
+  "keywords": [
+    "dental",
+    "insurance",
+    "verification",
+    "gemini",
+    "rcm",
+    "cdt"
+  ],
+  "author": "",
+  "license": "ISC"
+}

@@ -1,0 +1,3363 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>DentVerify AI | Dental Insurance Verification & CDT Auditor</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg-darkest: #070d19;
+      --bg-main: #0c1427;
+      --bg-card: #121c33;
+      --bg-card-hover: #182544;
+      --bg-input: #17233e;
+      --bg-glass: rgba(18, 28, 51, 0.75);
+
+      --border-subtle: #1e2f50;
+      --border-medium: #2a416d;
+      --border-focus: #0ea5e9;
+
+      --text-primary: #f8fafc;
+      --text-secondary: #94a3b8;
+      --text-muted: #64748b;
+
+      /* Dental & Clinical Accent Palette */
+      --cyan-bright: #06b6d4;
+      --cyan-glow: rgba(6, 182, 212, 0.18);
+      --teal-primary: #0ea5e9;
+      --emerald-green: #10b981;
+      --emerald-glow: rgba(16, 185, 129, 0.15);
+      --amber-warn: #f59e0b;
+      --amber-glow: rgba(245, 158, 11, 0.15);
+      --rose-danger: #f43f5e;
+      --rose-glow: rgba(244, 63, 94, 0.15);
+      --indigo-accent: #6366f1;
+
+      --radius-sm: 6px;
+      --radius-md: 10px;
+      --radius-lg: 14px;
+      --radius-xl: 20px;
+
+      --shadow-subtle: 0 4px 20px rgba(0, 0, 0, 0.35);
+      --shadow-card: 0 10px 30px -10px rgba(7, 13, 25, 0.7), 0 0 1px 1px rgba(255, 255, 255, 0.05);
+      --shadow-glow: 0 0 25px rgba(14, 165, 233, 0.25);
+
+      --font-sans: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+      --font-mono: 'JetBrains Mono', monospace;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      background-color: var(--bg-main);
+      background-image: 
+        radial-gradient(at 0% 0%, rgba(14, 165, 233, 0.12) 0px, transparent 50%),
+        radial-gradient(at 100% 0%, rgba(6, 182, 212, 0.08) 0px, transparent 40%),
+        radial-gradient(at 50% 100%, rgba(16, 185, 129, 0.05) 0px, transparent 50%);
+      background-attachment: fixed;
+      color: var(--text-primary);
+      font-family: var(--font-sans);
+      line-height: 1.5;
+      min-height: 100vh;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    /* Top Navigation Header */
+    header {
+      background: rgba(12, 20, 39, 0.85);
+      backdrop-filter: blur(14px);
+      border-bottom: 1px solid var(--border-subtle);
+      position: sticky;
+      top: 0;
+      z-index: 50;
+    }
+
+    .nav-container {
+      max-width: 1440px;
+      margin: 0 auto;
+      padding: 0.85rem 1.75rem;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .brand-group {
+      display: flex;
+      align-items: center;
+      gap: 0.9rem;
+      text-decoration: none;
+    }
+
+    .brand-mark {
+      width: 42px;
+      height: 42px;
+      border-radius: var(--radius-md);
+      background: linear-gradient(135deg, #0ea5e9, #06b6d4 80%);
+      box-shadow: 0 0 20px rgba(14, 165, 233, 0.45);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: white;
+      position: relative;
+    }
+
+    .brand-mark::after {
+      content: '';
+      position: absolute;
+      inset: -1px;
+      border-radius: var(--radius-md);
+      border: 1px solid rgba(255, 255, 255, 0.3);
+      pointer-events: none;
+    }
+
+    .brand-titles h1 {
+      font-size: 1.25rem;
+      font-weight: 800;
+      letter-spacing: -0.02em;
+      color: #fff;
+      display: flex;
+      align-items: center;
+      gap: 0.45rem;
+    }
+
+    .brand-titles h1 span.highlight {
+      background: linear-gradient(135deg, #38bdf8, #22d3ee);
+      background-clip: text;
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    .brand-tag {
+      font-size: 0.72rem;
+      color: var(--text-secondary);
+      font-weight: 500;
+      letter-spacing: 0.04em;
+    }
+
+    .header-system-meta {
+      display: flex;
+      align-items: center;
+      gap: 1.25rem;
+    }
+
+    .meta-chip {
+      background: rgba(23, 35, 62, 0.8);
+      border: 1px solid var(--border-subtle);
+      border-radius: 9999px;
+      padding: 0.35rem 0.85rem;
+      font-size: 0.775rem;
+      color: var(--text-secondary);
+      display: flex;
+      align-items: center;
+      gap: 0.45rem;
+    }
+
+    .pulse-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--emerald-green);
+      box-shadow: 0 0 8px var(--emerald-green);
+      animation: pulse 2s infinite;
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50% { opacity: 0.5; transform: scale(0.85); }
+    }
+
+    /* Main Container */
+    main {
+      max-width: 1440px;
+      margin: 0 auto;
+      padding: 2.25rem 1.75rem 5rem;
+    }
+
+    /* Verification Badge Header Hero */
+    .hero-section {
+      margin-bottom: 2.25rem;
+      display: flex;
+      flex-wrap: wrap;
+      align-items: flex-end;
+      justify-content: space-between;
+      gap: 1.5rem;
+    }
+
+    .hero-lead {
+      max-width: 780px;
+    }
+
+    .verification-kicker {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      background: rgba(14, 165, 233, 0.12);
+      border: 1px solid rgba(14, 165, 233, 0.35);
+      color: #38bdf8;
+      font-size: 0.75rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      padding: 0.3rem 0.75rem;
+      border-radius: 9999px;
+      margin-bottom: 0.85rem;
+    }
+
+    .hero-lead h2 {
+      font-size: 2.15rem;
+      font-weight: 800;
+      letter-spacing: -0.03em;
+      line-height: 1.2;
+      color: #fff;
+      margin-bottom: 0.6rem;
+    }
+
+    .hero-lead p {
+      color: var(--text-secondary);
+      font-size: 0.975rem;
+      line-height: 1.6;
+    }
+
+    .hero-actions {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+    }
+
+    .btn-sample {
+      background: rgba(23, 35, 62, 0.7);
+      border: 1px solid var(--border-medium);
+      color: #38bdf8;
+      font-size: 0.825rem;
+      font-weight: 600;
+      padding: 0.65rem 1.15rem;
+      border-radius: var(--radius-md);
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      transition: all 0.2s;
+    }
+
+    .btn-sample:hover {
+      background: rgba(14, 165, 233, 0.15);
+      border-color: var(--teal-primary);
+      transform: translateY(-1px);
+    }
+
+    /* Workspace Grid */
+    .workspace-layout {
+      display: flex;
+      flex-direction: column;
+      gap: 2.25rem;
+    }
+
+    /* Cards */
+    .ui-panel {
+      background: var(--bg-card);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-xl);
+      box-shadow: var(--shadow-card);
+      position: relative;
+      overflow: hidden;
+    }
+
+    .panel-header-accent {
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 2px;
+      background: linear-gradient(90deg, #0ea5e9, #06b6d4, #10b981);
+    }
+
+    /* Verification Form Card */
+    .verification-form-box {
+      padding: 2rem 2.25rem;
+    }
+
+    .step-header {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      margin-bottom: 1.25rem;
+    }
+
+    .step-pill {
+      width: 26px;
+      height: 26px;
+      border-radius: 50%;
+      background: var(--teal-primary);
+      color: white;
+      font-size: 0.8rem;
+      font-weight: 800;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .step-title {
+      font-size: 1.05rem;
+      font-weight: 700;
+      color: #fff;
+    }
+
+    .step-desc {
+      font-size: 0.825rem;
+      color: var(--text-muted);
+    }
+
+    /* Dropzone Upload */
+    .dropzone-field {
+      border: 2px dashed var(--border-medium);
+      border-radius: var(--radius-lg);
+      background: rgba(15, 23, 42, 0.45);
+      padding: 2.75rem 2rem;
+      text-align: center;
+      cursor: pointer;
+      transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+      position: relative;
+    }
+
+    .dropzone-field:hover, .dropzone-field.dragover {
+      border-color: var(--teal-primary);
+      background: rgba(14, 165, 233, 0.06);
+      box-shadow: inset 0 0 20px rgba(14, 165, 233, 0.1);
+    }
+
+    .drop-illustration {
+      width: 58px;
+      height: 58px;
+      border-radius: 50%;
+      background: rgba(14, 165, 233, 0.12);
+      border: 1px solid rgba(14, 165, 233, 0.25);
+      color: var(--teal-primary);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin: 0 auto 1.25rem;
+      transition: transform 0.2s;
+    }
+
+    .dropzone-field:hover .drop-illustration {
+      transform: scale(1.08);
+      background: rgba(14, 165, 233, 0.2);
+    }
+
+    .drop-heading {
+      font-size: 1.05rem;
+      font-weight: 700;
+      color: #fff;
+      margin-bottom: 0.35rem;
+    }
+
+    .drop-subheading {
+      font-size: 0.85rem;
+      color: var(--text-muted);
+      max-width: 480px;
+      margin: 0 auto;
+    }
+
+    .file-input-hidden {
+      display: none;
+    }
+
+    /* File Attached Banner */
+    .file-attached-card {
+      display: none;
+      align-items: center;
+      justify-content: space-between;
+      background: rgba(23, 35, 62, 0.9);
+      border: 1px solid var(--border-medium);
+      border-radius: var(--radius-md);
+      padding: 1rem 1.25rem;
+      margin-top: 1.25rem;
+    }
+
+    .file-attached-card.active {
+      display: flex;
+    }
+
+    /* Multi-file Container */
+    .files-list-container {
+      display: none;
+      flex-direction: column;
+      gap: 0.75rem;
+      margin-top: 1.25rem;
+    }
+
+    .files-list-container.active {
+      display: flex;
+    }
+
+    .files-list-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0.25rem 0.2rem;
+    }
+
+    .files-count-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.4rem;
+      font-size: 0.8rem;
+      font-weight: 700;
+      color: var(--teal-primary);
+      background: rgba(14, 165, 233, 0.12);
+      border: 1px solid rgba(14, 165, 233, 0.25);
+      padding: 0.25rem 0.75rem;
+      border-radius: 999px;
+    }
+
+    .btn-add-more-files {
+      background: transparent;
+      border: 1px dashed rgba(14, 165, 233, 0.4);
+      color: var(--teal-primary);
+      padding: 0.35rem 0.85rem;
+      border-radius: var(--radius-sm);
+      font-size: 0.8rem;
+      font-weight: 600;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 0.4rem;
+      transition: all 0.2s;
+    }
+
+    .btn-add-more-files:hover {
+      background: rgba(14, 165, 233, 0.15);
+      border-color: var(--teal-primary);
+      color: #fff;
+    }
+
+    .files-items-grid {
+      display: flex;
+      flex-direction: column;
+      gap: 0.6rem;
+    }
+
+    .file-item-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      background: rgba(23, 35, 62, 0.85);
+      border: 1px solid var(--border-medium);
+      border-radius: var(--radius-md);
+      padding: 0.75rem 1rem;
+      transition: all 0.2s;
+    }
+
+    .file-item-row:hover {
+      border-color: rgba(14, 165, 233, 0.4);
+      background: rgba(23, 35, 62, 0.98);
+    }
+
+    .file-item-left {
+      display: flex;
+      align-items: center;
+      gap: 0.85rem;
+      min-width: 0;
+    }
+
+    .file-item-badge {
+      width: 38px;
+      height: 38px;
+      border-radius: var(--radius-sm);
+      background: rgba(14, 165, 233, 0.15);
+      border: 1px solid rgba(14, 165, 233, 0.3);
+      color: var(--teal-primary);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 800;
+      font-size: 0.725rem;
+      font-family: var(--font-mono);
+      flex-shrink: 0;
+    }
+
+    .file-item-info {
+      min-width: 0;
+    }
+
+    .file-item-name {
+      font-size: 0.9rem;
+      font-weight: 600;
+      color: #fff;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      max-width: 420px;
+    }
+
+    .file-item-meta {
+      font-size: 0.75rem;
+      color: var(--text-secondary);
+      font-family: var(--font-mono);
+    }
+
+    .file-preview-left {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+    }
+
+    .file-doc-icon {
+      width: 42px;
+      height: 42px;
+      border-radius: var(--radius-sm);
+      background: rgba(14, 165, 233, 0.15);
+      border: 1px solid rgba(14, 165, 233, 0.3);
+      color: var(--teal-primary);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 800;
+      font-size: 0.75rem;
+      font-family: var(--font-mono);
+    }
+
+    .file-doc-details h4 {
+      font-size: 0.95rem;
+      font-weight: 600;
+      color: #fff;
+    }
+
+    .file-doc-details span {
+      font-size: 0.775rem;
+      color: var(--text-secondary);
+      font-family: var(--font-mono);
+    }
+
+    .btn-icon-danger {
+      background: rgba(244, 63, 94, 0.1);
+      border: 1px solid rgba(244, 63, 94, 0.2);
+      color: #fda4af;
+      padding: 0.45rem;
+      border-radius: var(--radius-sm);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.15s;
+    }
+
+    .btn-icon-danger:hover {
+      background: var(--rose-danger);
+      color: white;
+    }
+
+    /* Network Preference Options */
+    .network-tier-block {
+      margin-top: 2rem;
+    }
+
+    .tier-cards-row {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+      gap: 1rem;
+      margin-top: 0.85rem;
+    }
+
+    .tier-card {
+      position: relative;
+    }
+
+    .tier-card input[type="radio"] {
+      position: absolute;
+      opacity: 0;
+      inset: 0;
+      cursor: pointer;
+      z-index: 2;
+    }
+
+    .tier-card-inner {
+      background: rgba(23, 35, 62, 0.5);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-md);
+      padding: 1.15rem 1.25rem;
+      transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+      height: 100%;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+    }
+
+    .tier-card input[type="radio"]:checked + .tier-card-inner {
+      background: rgba(14, 165, 233, 0.1);
+      border-color: var(--teal-primary);
+      box-shadow: 0 0 0 1px var(--teal-primary), 0 4px 16px rgba(14, 165, 233, 0.2);
+    }
+
+    .tier-top {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 0.4rem;
+    }
+
+    .tier-name {
+      font-size: 0.975rem;
+      font-weight: 700;
+      color: #fff;
+    }
+
+    .tier-check-circle {
+      width: 18px;
+      height: 18px;
+      border-radius: 50%;
+      border: 2px solid var(--text-muted);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.2s;
+    }
+
+    .tier-card input[type="radio"]:checked + .tier-card-inner .tier-check-circle {
+      border-color: var(--teal-primary);
+      background: var(--teal-primary);
+    }
+
+    .tier-check-circle::after {
+      content: '';
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: #fff;
+      display: none;
+    }
+
+    .tier-card input[type="radio"]:checked + .tier-card-inner .tier-check-circle::after {
+      display: block;
+    }
+
+    .tier-desc {
+      font-size: 0.8rem;
+      color: var(--text-secondary);
+      line-height: 1.4;
+    }
+
+    /* Actions Bottom */
+    .form-cta-bar {
+      margin-top: 2rem;
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 1.25rem;
+      padding-top: 1.75rem;
+      border-top: 1px solid var(--border-subtle);
+    }
+
+    .btn-verify-primary {
+      background: linear-gradient(135deg, #0ea5e9, #0284c7);
+      color: white;
+      border: none;
+      padding: 0.95rem 2.25rem;
+      border-radius: var(--radius-md);
+      font-size: 1rem;
+      font-weight: 700;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 0.65rem;
+      transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+      box-shadow: 0 4px 18px rgba(14, 165, 233, 0.35);
+    }
+
+    .btn-verify-primary:hover:not(:disabled) {
+      background: linear-gradient(135deg, #38bdf8, #0ea5e9);
+      transform: translateY(-2px);
+      box-shadow: 0 8px 25px rgba(14, 165, 233, 0.5);
+    }
+
+    .btn-verify-primary:disabled {
+      opacity: 0.45;
+      cursor: not-allowed;
+      transform: none;
+    }
+
+    .compliance-stamp {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      font-size: 0.775rem;
+      color: var(--text-muted);
+    }
+
+    .compliance-stamp svg {
+      color: var(--emerald-green);
+    }
+
+    /* Loading Progress Indicator */
+    .auditor-loading {
+      display: none;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 3.5rem 1.5rem;
+      text-align: center;
+    }
+
+    .auditor-loading.active {
+      display: flex;
+    }
+
+    .sonar-emitter {
+      position: relative;
+      width: 72px;
+      height: 72px;
+      margin-bottom: 1.5rem;
+    }
+
+    .sonar-circle {
+      position: absolute;
+      inset: 0;
+      border-radius: 50%;
+      border: 3px solid rgba(14, 165, 233, 0.2);
+      border-top-color: var(--teal-primary);
+      animation: spin 1s linear infinite;
+    }
+
+    .sonar-inner {
+      position: absolute;
+      inset: 12px;
+      background: rgba(14, 165, 233, 0.15);
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--teal-primary);
+    }
+
+    .loading-head {
+      font-size: 1.25rem;
+      font-weight: 800;
+      color: #fff;
+      margin-bottom: 0.45rem;
+    }
+
+    .loading-ticker {
+      font-size: 0.85rem;
+      color: var(--cyan-bright);
+      font-family: var(--font-mono);
+      min-height: 1.5rem;
+    }
+
+    /* Alert Banner */
+    .ui-alert-error {
+      display: none;
+      background: var(--rose-glow);
+      border: 1px solid rgba(244, 63, 94, 0.35);
+      color: #fecdd3;
+      padding: 1rem 1.25rem;
+      border-radius: var(--radius-md);
+      margin-top: 1.5rem;
+      font-size: 0.9rem;
+      align-items: flex-start;
+      gap: 0.75rem;
+    }
+
+    .ui-alert-error.active {
+      display: flex;
+    }
+
+    /* ========================================= */
+    /* VERIFICATION REPORT DASHBOARD (RESULTS) */
+    /* ========================================= */
+    .report-dashboard {
+      display: none;
+      animation: slideUp 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    .report-dashboard.active {
+      display: block;
+    }
+
+    @keyframes slideUp {
+      from { opacity: 0; transform: translateY(16px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    /* Patient / Policy Status Banner */
+    .policy-hero-card {
+      background: linear-gradient(135deg, rgba(23, 35, 62, 0.9) 0%, rgba(14, 23, 44, 0.95) 100%);
+      border: 1px solid var(--border-medium);
+      border-radius: var(--radius-xl);
+      padding: 1.75rem 2rem;
+      margin-bottom: 1.75rem;
+      box-shadow: var(--shadow-card);
+    }
+
+    .policy-banner-top {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 1.25rem;
+      padding-bottom: 1.25rem;
+      border-bottom: 1px solid var(--border-subtle);
+    }
+
+    .carrier-title-group {
+      display: flex;
+      align-items: center;
+      gap: 1.25rem;
+    }
+
+    .carrier-badge-icon {
+      width: 48px;
+      height: 48px;
+      border-radius: var(--radius-md);
+      background: rgba(14, 165, 233, 0.15);
+      border: 1px solid rgba(14, 165, 233, 0.3);
+      color: var(--teal-primary);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .carrier-title-group h2 {
+      font-size: 1.85rem;
+      font-weight: 800;
+      letter-spacing: -0.03em;
+      color: #fff;
+    }
+
+    .policy-meta-sub {
+      display: flex;
+      align-items: center;
+      gap: 0.85rem;
+      font-size: 0.85rem;
+      color: var(--text-secondary);
+      margin-top: 0.2rem;
+    }
+
+    .network-indicator-pill {
+      font-size: 0.8rem;
+      font-weight: 800;
+      padding: 0.35rem 0.95rem;
+      border-radius: 9999px;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      display: inline-flex;
+      align-items: center;
+      gap: 0.45rem;
+    }
+
+    .network-indicator-pill.in-network {
+      background: rgba(16, 185, 129, 0.15);
+      border: 1px solid var(--emerald-green);
+      color: #34d399;
+    }
+
+    .network-indicator-pill.out-network {
+      background: rgba(245, 158, 11, 0.15);
+      border: 1px solid var(--amber-warn);
+      color: #fbbf24;
+    }
+
+    .banner-quick-actions {
+      display: flex;
+      align-items: center;
+      gap: 0.85rem;
+    }
+
+    .btn-action-pms {
+      background: linear-gradient(135deg, #10b981, #059669);
+      color: white;
+      border: none;
+      padding: 0.75rem 1.4rem;
+      border-radius: var(--radius-md);
+      font-size: 0.875rem;
+      font-weight: 700;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      box-shadow: 0 4px 14px rgba(16, 185, 129, 0.3);
+      transition: all 0.2s;
+    }
+
+    .btn-action-pms:hover {
+      background: linear-gradient(135deg, #34d399, #10b981);
+      transform: translateY(-1px);
+      box-shadow: 0 6px 18px rgba(16, 185, 129, 0.45);
+    }
+
+    .btn-action-ghost {
+      background: rgba(23, 35, 62, 0.8);
+      border: 1px solid var(--border-medium);
+      color: var(--text-primary);
+      padding: 0.75rem 1.25rem;
+      border-radius: var(--radius-md);
+      font-size: 0.875rem;
+      font-weight: 600;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      transition: all 0.2s;
+    }
+
+    .btn-action-ghost:hover {
+      background: var(--bg-card-hover);
+      border-color: var(--teal-primary);
+    }
+
+    /* Financial Meters Grid */
+    .financials-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+      gap: 1.15rem;
+      margin-top: 1.5rem;
+    }
+
+    .financial-card {
+      background: rgba(18, 28, 51, 0.65);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-lg);
+      padding: 1.35rem 1.4rem;
+      position: relative;
+    }
+
+    .financial-card-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 0.5rem;
+    }
+
+    .financial-label {
+      font-size: 0.775rem;
+      font-weight: 700;
+      color: var(--text-secondary);
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+    }
+
+    .financial-amount {
+      font-size: 1.75rem;
+      font-weight: 800;
+      color: #fff;
+      font-family: var(--font-mono);
+      letter-spacing: -0.02em;
+      margin-bottom: 0.4rem;
+    }
+
+    .meter-progress-track {
+      width: 100%;
+      height: 6px;
+      background: rgba(255, 255, 255, 0.08);
+      border-radius: 9999px;
+      overflow: hidden;
+      margin: 0.65rem 0 0.5rem;
+    }
+
+    .meter-progress-bar {
+      height: 100%;
+      border-radius: 9999px;
+      transition: width 0.6s ease;
+    }
+
+    .meter-progress-bar.emerald { background: linear-gradient(90deg, #10b981, #34d399); }
+    .meter-progress-bar.amber { background: linear-gradient(90deg, #f59e0b, #fbbf24); }
+
+    .financial-sub-text {
+      font-size: 0.775rem;
+      color: var(--text-muted);
+      display: flex;
+      justify-content: space-between;
+    }
+
+    /* Policy Rules Pills Row */
+    .policy-rules-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.75rem;
+      margin-bottom: 1.75rem;
+    }
+
+    .rule-chip {
+      background: rgba(23, 35, 62, 0.85);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-md);
+      padding: 0.55rem 0.95rem;
+      display: flex;
+      align-items: center;
+      gap: 0.6rem;
+      font-size: 0.825rem;
+    }
+
+    .rule-status-circle {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+    }
+
+    .rule-status-circle.good {
+      background: var(--emerald-green);
+      box-shadow: 0 0 8px var(--emerald-green);
+    }
+
+    .rule-status-circle.warn {
+      background: var(--amber-warn);
+      box-shadow: 0 0 8px var(--amber-warn);
+    }
+
+    .rule-status-circle.neutral {
+      background: var(--text-muted);
+    }
+
+    /* Category Benefit Percentages Grid */
+    .category-matrix-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-xl);
+      padding: 1.5rem 1.75rem;
+      margin-bottom: 1.75rem;
+      box-shadow: var(--shadow-card);
+    }
+
+    .matrix-heading {
+      font-size: 1.05rem;
+      font-weight: 700;
+      color: #fff;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      margin-bottom: 1.15rem;
+    }
+
+    .category-cards-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+      gap: 0.85rem;
+    }
+
+    .category-box {
+      background: rgba(23, 35, 62, 0.6);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-md);
+      padding: 1rem 0.85rem;
+      text-align: center;
+      transition: all 0.15s;
+    }
+
+    .category-box:hover {
+      background: rgba(23, 35, 62, 0.95);
+      border-color: var(--border-medium);
+      transform: translateY(-1px);
+    }
+
+    .category-code-tag {
+      font-size: 0.68rem;
+      font-weight: 700;
+      color: var(--teal-primary);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      margin-bottom: 0.25rem;
+    }
+
+    .category-name-text {
+      font-size: 0.8rem;
+      font-weight: 600;
+      color: var(--text-secondary);
+      margin-bottom: 0.35rem;
+    }
+
+    .category-percentage-num {
+      font-size: 1.45rem;
+      font-weight: 800;
+      color: #fff;
+      font-family: var(--font-mono);
+    }
+
+    /* Procedure Codes Table Card */
+    .codes-table-panel {
+      background: var(--bg-card);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-xl);
+      padding: 1.75rem;
+      box-shadow: var(--shadow-card);
+    }
+
+    .table-toolbar {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 1.25rem;
+      margin-bottom: 1.5rem;
+    }
+
+    .toolbar-left {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+    }
+
+    .codes-count-pill {
+      background: rgba(14, 165, 233, 0.15);
+      border: 1px solid rgba(14, 165, 233, 0.3);
+      color: var(--cyan-bright);
+      font-size: 0.775rem;
+      font-weight: 700;
+      padding: 0.25rem 0.65rem;
+      border-radius: 9999px;
+    }
+
+    .search-input-container {
+      position: relative;
+      min-width: 280px;
+      max-width: 420px;
+      flex: 1;
+    }
+
+    .search-input-container svg {
+      position: absolute;
+      left: 1rem;
+      top: 50%;
+      transform: translateY(-50%);
+      color: var(--text-muted);
+    }
+
+    .table-search-input {
+      width: 100%;
+      background: var(--bg-input);
+      border: 1px solid var(--border-medium);
+      border-radius: var(--radius-md);
+      padding: 0.65rem 1rem 0.65rem 2.65rem;
+      color: #fff;
+      font-size: 0.875rem;
+      font-family: var(--font-sans);
+      outline: none;
+      transition: all 0.2s;
+    }
+
+    .table-search-input:focus {
+      border-color: var(--teal-primary);
+      box-shadow: 0 0 0 2px rgba(14, 165, 233, 0.2);
+    }
+
+    .table-filter-chips {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .filter-chip {
+      background: var(--bg-input);
+      border: 1px solid var(--border-subtle);
+      color: var(--text-secondary);
+      padding: 0.45rem 0.95rem;
+      border-radius: 9999px;
+      font-size: 0.775rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+
+    .filter-chip.active, .filter-chip:hover {
+      background: var(--teal-primary);
+      color: white;
+      border-color: var(--teal-primary);
+    }
+
+    /* Table Component */
+    .table-responsive-box {
+      overflow-x: auto;
+      border-radius: var(--radius-md);
+      border: 1px solid var(--border-subtle);
+      background: rgba(12, 20, 39, 0.6);
+    }
+
+    table.cdt-data-table {
+      width: 100%;
+      border-collapse: collapse;
+      text-align: left;
+      font-size: 0.85rem;
+    }
+
+    table.cdt-data-table thead {
+      background: #090f1d;
+    }
+
+    table.cdt-data-table th {
+      padding: 0.95rem 1rem;
+      color: var(--text-secondary);
+      font-weight: 700;
+      font-size: 0.725rem;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      border-bottom: 1px solid var(--border-subtle);
+      white-space: nowrap;
+    }
+
+    table.cdt-data-table tbody tr {
+      border-bottom: 1px solid rgba(30, 47, 80, 0.45);
+      transition: background-color 0.12s;
+    }
+
+    table.cdt-data-table tbody tr:hover {
+      background-color: rgba(24, 37, 68, 0.7);
+    }
+
+    table.cdt-data-table td {
+      padding: 0.9rem 1rem;
+      color: var(--text-primary);
+      vertical-align: middle;
+    }
+
+    .cdt-badge {
+      font-family: var(--font-mono);
+      font-weight: 700;
+      font-size: 0.85rem;
+      background: rgba(14, 165, 233, 0.15);
+      border: 1px solid rgba(14, 165, 233, 0.3);
+      color: #38bdf8;
+      padding: 0.25rem 0.55rem;
+      border-radius: 4px;
+      display: inline-block;
+      white-space: nowrap;
+    }
+
+    .desc-text {
+      font-weight: 500;
+      min-width: 200px;
+      color: #e2e8f0;
+    }
+
+    .pct-badge-num {
+      font-family: var(--font-mono);
+      font-weight: 700;
+      font-size: 0.9rem;
+    }
+
+    .tag-ded-yes {
+      background: rgba(245, 158, 11, 0.15);
+      color: #fcd34d;
+      border: 1px solid rgba(245, 158, 11, 0.3);
+      font-size: 0.725rem;
+      font-weight: 600;
+      padding: 0.15rem 0.45rem;
+      border-radius: 4px;
+    }
+
+    .tag-ded-no {
+      color: var(--text-muted);
+      font-size: 0.8rem;
+    }
+
+    .badge-status-eligible {
+      background: var(--emerald-glow);
+      border: 1px solid var(--emerald-green);
+      color: #34d399;
+      font-size: 0.725rem;
+      font-weight: 700;
+      padding: 0.25rem 0.65rem;
+      border-radius: 9999px;
+      display: inline-flex;
+      align-items: center;
+      gap: 0.35rem;
+      white-space: nowrap;
+    }
+
+    .badge-status-ineligible {
+      background: var(--rose-glow);
+      border: 1px solid var(--rose-danger);
+      color: #fda4af;
+      font-size: 0.725rem;
+      font-weight: 700;
+      padding: 0.25rem 0.65rem;
+      border-radius: 9999px;
+      display: inline-flex;
+      align-items: center;
+      gap: 0.35rem;
+      white-space: nowrap;
+    }
+
+    .downgrade-flag {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.3rem;
+      background: rgba(245, 158, 11, 0.15);
+      border: 1px solid rgba(245, 158, 11, 0.3);
+      color: #fbbf24;
+      padding: 0.2rem 0.55rem;
+      border-radius: 4px;
+      font-size: 0.75rem;
+      font-weight: 500;
+    }
+
+    .history-text {
+      font-family: var(--font-mono);
+      font-size: 0.8rem;
+      color: var(--text-muted);
+      white-space: nowrap;
+    }
+
+    .notes-snippet {
+      font-size: 0.8rem;
+      color: var(--text-secondary);
+      max-width: 260px;
+      line-height: 1.4;
+    }
+
+    /* Modal for Practice Management Software Notes */
+    .pms-modal-backdrop {
+      position: fixed;
+      inset: 0;
+      background: rgba(4, 8, 17, 0.85);
+      backdrop-filter: blur(8px);
+      z-index: 100;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      padding: 1.25rem;
+    }
+
+    .pms-modal-backdrop.active {
+      display: flex;
+    }
+
+    .pms-modal-box {
+      background: var(--bg-card);
+      border: 1px solid var(--border-medium);
+      border-radius: var(--radius-xl);
+      width: 100%;
+      max-width: 780px;
+      max-height: 92vh;
+      display: flex;
+      flex-direction: column;
+      box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.8);
+      overflow: hidden;
+      animation: modalSpring 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    @keyframes modalSpring {
+      from { transform: scale(0.96); opacity: 0; }
+      to { transform: scale(1); opacity: 1; }
+    }
+
+    .pms-modal-header {
+      padding: 1.25rem 1.75rem;
+      border-bottom: 1px solid var(--border-subtle);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      background: rgba(18, 28, 51, 0.9);
+    }
+
+    .pms-modal-header h3 {
+      font-size: 1.15rem;
+      color: #fff;
+      display: flex;
+      align-items: center;
+      gap: 0.6rem;
+    }
+
+    .btn-close-modal {
+      background: none;
+      border: none;
+      color: var(--text-muted);
+      cursor: pointer;
+      padding: 0.3rem;
+      border-radius: 4px;
+      transition: color 0.15s;
+    }
+
+    .btn-close-modal:hover {
+      color: #fff;
+    }
+
+    .pms-modal-body {
+      padding: 1.5rem 1.75rem;
+      overflow-y: auto;
+    }
+
+    .pms-textbox {
+      width: 100%;
+      height: 400px;
+      background: #080e1b;
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-md);
+      color: #cbd5e1;
+      font-family: var(--font-mono);
+      font-size: 0.825rem;
+      line-height: 1.65;
+      padding: 1.15rem;
+      resize: vertical;
+      outline: none;
+    }
+
+    .pms-textbox:focus {
+      border-color: var(--teal-primary);
+    }
+
+    .pms-modal-footer {
+      padding: 1.15rem 1.75rem;
+      border-top: 1px solid var(--border-subtle);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      background: rgba(18, 28, 51, 0.9);
+    }
+
+    /* Toast Notification */
+    .toast-pill {
+      position: fixed;
+      bottom: 2rem;
+      right: 2rem;
+      background: #064e3b;
+      color: #d1fae5;
+      border: 1px solid #10b981;
+      padding: 0.9rem 1.4rem;
+      border-radius: var(--radius-md);
+      box-shadow: 0 10px 25px rgba(0, 0, 0, 0.5);
+      font-size: 0.875rem;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      gap: 0.65rem;
+      z-index: 120;
+      transform: translateY(100px);
+      opacity: 0;
+      transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+      pointer-events: none;
+    }
+
+    .toast-pill.show {
+      transform: translateY(0);
+      opacity: 1;
+    }
+
+    /* Print Formatting */
+    @media print {
+      header, .verification-form-box, .banner-quick-actions, .table-toolbar { display: none !important; }
+      body { background: #fff !important; color: #000 !important; }
+      .ui-panel, .policy-hero-card, .table-responsive-box { border: 1px solid #ccc !important; box-shadow: none !important; }
+      table.cdt-data-table th, table.cdt-data-table td { color: #000 !important; border: 1px solid #ddd !important; }
+    }
+
+    @media (max-width: 768px) {
+      .nav-container { padding: 0.75rem 1rem; }
+      main { padding: 1.5rem 1rem 4rem; }
+      .hero-section { flex-direction: column; align-items: flex-start; }
+      .policy-banner-top { flex-direction: column; align-items: flex-start; }
+      .banner-quick-actions { width: 100%; justify-content: flex-start; }
+    }
+    /* AI Settings Modal & Header Button */
+    .btn-prompt-settings {
+      background: rgba(23, 35, 62, 0.85);
+      border: 1px solid var(--border-medium);
+      color: #38bdf8;
+      padding: 0.4rem 0.85rem;
+      border-radius: var(--radius-md);
+      font-size: 0.775rem;
+      font-weight: 700;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 0.45rem;
+      transition: all 0.2s;
+    }
+
+    .btn-prompt-settings:hover {
+      background: rgba(14, 165, 233, 0.18);
+      border-color: var(--teal-primary);
+      color: #fff;
+      transform: translateY(-1px);
+    }
+
+    .settings-modal-backdrop {
+      position: fixed;
+      inset: 0;
+      background: rgba(4, 8, 17, 0.85);
+      backdrop-filter: blur(8px);
+      z-index: 100;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      padding: 1.25rem;
+    }
+
+    .settings-modal-backdrop.active {
+      display: flex;
+    }
+
+    .settings-modal-box {
+      background: var(--bg-card);
+      border: 1px solid var(--border-medium);
+      border-radius: var(--radius-xl);
+      width: 100%;
+      max-width: 860px;
+      max-height: 94vh;
+      display: flex;
+      flex-direction: column;
+      box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.85);
+      overflow: hidden;
+      animation: modalSpring 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    .settings-tabs-row {
+      display: flex;
+      gap: 0.5rem;
+      padding: 0.75rem 1.75rem 0;
+      background: rgba(18, 28, 51, 0.95);
+      border-bottom: 1px solid var(--border-subtle);
+    }
+
+    .settings-tab-btn {
+      background: transparent;
+      border: none;
+      border-bottom: 2px solid transparent;
+      color: var(--text-secondary);
+      font-size: 0.85rem;
+      font-weight: 700;
+      padding: 0.65rem 1rem;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 0.45rem;
+      transition: all 0.15s;
+    }
+
+    .settings-tab-btn.active {
+      color: #38bdf8;
+      border-bottom-color: #38bdf8;
+    }
+
+    .settings-tab-pane {
+      display: none;
+      flex-direction: column;
+      gap: 0.75rem;
+    }
+
+    .settings-tab-pane.active {
+      display: flex;
+    }
+
+    .prompt-editor-textarea {
+      width: 100%;
+      height: 380px;
+      background: #080e1b;
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-md);
+      color: #e2e8f0;
+      font-family: var(--font-mono);
+      font-size: 0.825rem;
+      line-height: 1.6;
+      padding: 1.15rem;
+      resize: vertical;
+      outline: none;
+    }
+
+    .prompt-editor-textarea:focus {
+      border-color: var(--teal-primary);
+    }
+
+    .settings-info-badge {
+      font-size: 0.775rem;
+      color: var(--text-muted);
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      background: rgba(23, 35, 62, 0.5);
+      padding: 0.5rem 0.85rem;
+      border-radius: var(--radius-sm);
+    }
+
+    .btn-restore-defaults {
+      background: rgba(23, 35, 62, 0.8);
+      border: 1px solid var(--border-subtle);
+      color: var(--text-secondary);
+      font-size: 0.8rem;
+      font-weight: 600;
+      padding: 0.6rem 1rem;
+      border-radius: var(--radius-md);
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .btn-restore-defaults:hover {
+      color: #fff;
+      border-color: var(--text-muted);
+    }
+
+    /* History & Patient Badge Styles */
+    .btn-history-toggle {
+      background: rgba(23, 35, 62, 0.85);
+      border: 1px solid var(--border-medium);
+      color: #10b981;
+      padding: 0.4rem 0.85rem;
+      border-radius: var(--radius-md);
+      font-size: 0.775rem;
+      font-weight: 700;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 0.45rem;
+      transition: all 0.2s;
+    }
+
+    .btn-history-toggle:hover {
+      background: rgba(16, 185, 129, 0.18);
+      border-color: #10b981;
+      color: #fff;
+      transform: translateY(-1px);
+    }
+
+    .patient-hero-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.45rem;
+      background: rgba(16, 185, 129, 0.15);
+      border: 1px solid rgba(16, 185, 129, 0.35);
+      color: #34d399;
+      padding: 0.25rem 0.75rem;
+      border-radius: 999px;
+      font-size: 0.825rem;
+      font-weight: 700;
+      letter-spacing: 0.02em;
+    }
+
+    .patient-input-group {
+      margin-top: 1.25rem;
+      background: rgba(23, 35, 62, 0.5);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-md);
+      padding: 0.85rem 1.15rem;
+      display: flex;
+      flex-direction: column;
+      gap: 0.4rem;
+    }
+
+    .patient-input-label {
+      font-size: 0.8rem;
+      font-weight: 600;
+      color: var(--text-secondary);
+      display: flex;
+      align-items: center;
+      gap: 0.4rem;
+    }
+
+    .patient-name-field {
+      width: 100%;
+      background: #080e1b;
+      border: 1px solid var(--border-medium);
+      border-radius: var(--radius-sm);
+      color: #fff;
+      padding: 0.6rem 0.85rem;
+      font-size: 0.9rem;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+
+    .patient-name-field:focus {
+      border-color: var(--teal-primary);
+    }
+
+    .patient-input-hint {
+      font-size: 0.725rem;
+      color: var(--text-muted);
+    }
+
+    /* Verification History Drawer / Modal */
+    .history-drawer-backdrop {
+      position: fixed;
+      inset: 0;
+      background: rgba(4, 8, 17, 0.85);
+      backdrop-filter: blur(8px);
+      z-index: 100;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      padding: 1.25rem;
+    }
+
+    .history-drawer-backdrop.active {
+      display: flex;
+    }
+
+    .history-modal-box {
+      background: var(--bg-card);
+      border: 1px solid var(--border-medium);
+      border-radius: var(--radius-xl);
+      width: 100%;
+      max-width: 760px;
+      max-height: 88vh;
+      display: flex;
+      flex-direction: column;
+      box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.85);
+      overflow: hidden;
+      animation: modalSpring 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    .history-list-body {
+      padding: 1.25rem 1.75rem;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      gap: 0.75rem;
+    }
+
+    .history-empty-state {
+      padding: 3.5rem 1.5rem;
+      text-align: center;
+      color: var(--text-muted);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 0.75rem;
+    }
+
+    .history-card-item {
+      background: rgba(23, 35, 62, 0.75);
+      border: 1px solid var(--border-medium);
+      border-radius: var(--radius-md);
+      padding: 1rem 1.25rem;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 1rem;
+      transition: all 0.2s;
+      cursor: pointer;
+    }
+
+    .history-card-item:hover {
+      border-color: rgba(14, 165, 233, 0.4);
+      background: rgba(23, 35, 62, 0.95);
+      transform: translateY(-1px);
+    }
+
+    .history-card-left {
+      display: flex;
+      flex-direction: column;
+      gap: 0.25rem;
+      min-width: 0;
+    }
+
+    .history-patient-row {
+      display: flex;
+      align-items: center;
+      gap: 0.65rem;
+      flex-wrap: wrap;
+    }
+
+    .history-patient-title {
+      font-size: 0.95rem;
+      font-weight: 700;
+      color: #fff;
+    }
+
+    .history-meta-info {
+      font-size: 0.775rem;
+      color: var(--text-secondary);
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      flex-wrap: wrap;
+    }
+
+    .history-actions-row {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      flex-shrink: 0;
+    }
+
+    .btn-history-load {
+      background: rgba(14, 165, 233, 0.15);
+      border: 1px solid rgba(14, 165, 233, 0.35);
+      color: #38bdf8;
+      padding: 0.4rem 0.85rem;
+      border-radius: var(--radius-sm);
+      font-size: 0.775rem;
+      font-weight: 700;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .btn-history-load:hover {
+      background: var(--teal-primary);
+      color: #fff;
+    }
+
+    .btn-history-delete {
+      background: rgba(244, 63, 94, 0.1);
+      border: 1px solid rgba(244, 63, 94, 0.2);
+      color: #fda4af;
+      padding: 0.4rem 0.55rem;
+      border-radius: var(--radius-sm);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.2s;
+    }
+
+    .btn-history-delete:hover {
+      background: var(--rose-danger);
+      color: white;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Top Navigation Header -->
+  <header>
+    <div class="nav-container">
+      <a href="/" class="brand-group">
+        <div class="brand-mark">
+          <!-- Dental Shield Icon -->
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
+            <path d="M9 12l2 2 4-4"></path>
+          </svg>
+        </div>
+        <div class="brand-titles">
+          <h1>DentVerify <span class="highlight">AI</span></h1>
+          <div class="brand-tag">iv.eonx.cz • Clinical RCM & CDT Breakdown Engine</div>
+        </div>
+      </a>
+      <div class="header-system-meta">
+        <button type="button" class="btn-history-toggle" id="openHistoryBtn" title="View Previously Verified Patients">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="12" cy="12" r="10"></circle>
+            <polyline points="12 6 12 12 16 14"></polyline>
+          </svg>
+          <span id="headerHistoryCount">History (0)</span>
+        </button>
+        <button type="button" class="btn-prompt-settings" id="openSettingsBtn" title="Customize AI Role & Extraction Directives">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="12" cy="12" r="3"></circle>
+            <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
+          </svg>
+          <span>AI Settings</span>
+        </button>
+        <div class="meta-chip">
+          <span class="pulse-dot"></span>
+          <span>Gemini AI Engine</span>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <main>
+    <!-- Hero / Verification Kicker -->
+    <div class="hero-section">
+      <div class="hero-lead">
+        <div class="verification-kicker">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+            <polyline points="20 6 9 17 4 12"></polyline>
+          </svg>
+          Automated Insurance Breakdown Auditor
+        </div>
+        <h2>Instant Dental Verification & Procedure Code Breakdown</h2>
+        <p>Upload carrier breakdowns, fee schedules, or insurance web portal eligibility screenshots. Our RCM auditor extracts comprehensive procedure codes, benefit tiers, waiting periods, downgrades, and formats PMS notes.</p>
+      </div>
+      <div class="hero-actions">
+        <button type="button" class="btn-sample" id="loadSampleBtn">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <polygon points="5 3 19 12 5 21 5 3"></polygon>
+          </svg>
+          Load Demo Breakdown
+        </button>
+      </div>
+    </div>
+
+    <!-- Workspace Layout -->
+    <div class="workspace-layout">
+      
+      <!-- STEP 1 & 2: VERIFICATION FORM PANEL -->
+      <div class="ui-panel verification-form-box" id="formPanel">
+        <div class="panel-header-accent"></div>
+
+        <div class="step-header">
+          <div class="step-pill">1</div>
+          <div>
+            <div class="step-title">Upload Insurance Document(s)</div>
+            <div class="step-desc">Accepts one or multiple PDFs, scanned letters, or portal eligibility screenshots (Max 10 files, 25MB total)</div>
+          </div>
+        </div>
+
+        <!-- Drag & Drop Zone -->
+        <div class="dropzone-field" id="dropzoneField">
+          <div class="drop-illustration">
+            <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+              <polyline points="14 2 14 8 20 8"></polyline>
+              <line x1="12" y1="18" x2="12" y2="12"></line>
+              <line x1="9" y1="15" x2="15" y2="15"></line>
+            </svg>
+          </div>
+          <div class="drop-heading">Select or drag & drop breakdown file(s) here</div>
+          <div class="drop-subheading">Upload single breakdown or multiple pages/portal screenshots (PDF, PNG, JPG, WEBP)</div>
+          <input type="file" id="fileInput" class="file-input-hidden" multiple accept="application/pdf,image/png,image/jpeg,image/jpg,image/webp">
+        </div>
+
+        <!-- Attached Files List Container -->
+        <div class="files-list-container" id="filesListContainer">
+          <div class="files-list-header">
+            <div class="files-count-badge" id="filesCountBadge">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                <polyline points="14 2 14 8 20 8"></polyline>
+              </svg>
+              <span id="filesCountText">1 File Attached</span>
+            </div>
+            <button type="button" class="btn-add-more-files" id="addMoreFilesBtn">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                <line x1="12" y1="5" x2="12" y2="19"></line>
+                <line x1="5" y1="12" x2="19" y2="12"></line>
+              </svg>
+              Add More Files
+            </button>
+          </div>
+          <div class="files-items-grid" id="filesItemsGrid">
+            <!-- Dynamically populated files -->
+          </div>
+        </div>
+
+        <!-- Optional Patient Name (Safe RCM Tag) -->
+        <div class="patient-input-group">
+          <label class="patient-input-label" for="patientNameInput">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+              <circle cx="12" cy="7" r="4"></circle>
+            </svg>
+            Patient Name (Optional):
+          </label>
+          <input type="text" id="patientNameInput" class="patient-name-field" placeholder="e.g. John Doe (Auto-extracted from document if left blank)" autocomplete="off">
+          <div class="patient-input-hint">For PMS tracking only. Strict privacy: DOB, SSN, and sensitive IDs are never extracted or stored.</div>
+        </div>
+
+        <!-- STEP 2: NETWORK TIER SELECTION -->
+        <div class="network-tier-block">
+          <div class="step-header">
+            <div class="step-pill">2</div>
+            <div>
+              <div class="step-title">Select Network Benefit Tier</div>
+              <div class="step-desc">Target the specific network schedule if the breakdown includes dual-column comparison tables</div>
+            </div>
+          </div>
+
+          <div class="tier-cards-row">
+            <div class="tier-card">
+              <input type="radio" id="tierAuto" name="network_preference" value="auto" checked>
+              <div class="tier-card-inner">
+                <div class="tier-top">
+                  <span class="tier-name">Auto-Detect</span>
+                  <div class="tier-check-circle"></div>
+                </div>
+                <div class="tier-desc">Automatically inspect and extract the policy status indicated in the document.</div>
+              </div>
+            </div>
+
+            <div class="tier-card">
+              <input type="radio" id="tierIn" name="network_preference" value="in_network">
+              <div class="tier-card-inner">
+                <div class="tier-top">
+                  <span class="tier-name">In-Network (PPO/Premier)</span>
+                  <div class="tier-check-circle"></div>
+                </div>
+                <div class="tier-desc">Force extraction from In-Network benefit tables & contracted deductible amounts.</div>
+              </div>
+            </div>
+
+            <div class="tier-card">
+              <input type="radio" id="tierOut" name="network_preference" value="out_network">
+              <div class="tier-card-inner">
+                <div class="tier-top">
+                  <span class="tier-name">Out-of-Network</span>
+                  <div class="tier-check-circle"></div>
+                </div>
+                <div class="tier-desc">Force extraction from Out-of-Network fee tables and non-contracted maximums.</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Action / CTA Bar -->
+        <div class="form-cta-bar">
+          <button type="button" class="btn-verify-primary" id="analyzeBtn">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+              <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon>
+            </svg>
+            Analyze Breakdown
+          </button>
+          <div class="compliance-stamp">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
+            </svg>
+            <span>In-memory secure buffer • Structured CDT audit output</span>
+          </div>
+        </div>
+
+        <!-- Auditor Loading State -->
+        <div class="auditor-loading" id="auditorLoading">
+          <div class="sonar-emitter">
+            <div class="sonar-circle"></div>
+            <div class="sonar-inner">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+                <path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path>
+              </svg>
+            </div>
+          </div>
+          <div class="loading-head">Auditing Dental Breakdown...</div>
+          <div class="loading-ticker" id="loadingTicker">Initializing Gemini 2.5 Flash pipeline...</div>
+        </div>
+
+        <!-- Error Alert -->
+        <div class="ui-alert-error" id="uiAlertError">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="12" cy="12" r="10"></circle>
+            <line x1="12" y1="8" x2="12" y2="12"></line>
+            <line x1="12" y1="16" x2="12.01" y2="16"></line>
+          </svg>
+          <div id="errorDetailsText">Verification error details.</div>
+        </div>
+      </div>
+
+      <!-- ============================================= -->
+      <!-- VERIFIED AUDIT RESULTS REPORT DASHBOARD -->
+      <!-- ============================================= -->
+      <div class="report-dashboard" id="reportDashboard">
+        
+        <!-- TOP POLICY HERO BANNER -->
+        <div class="policy-hero-card">
+          <div class="policy-banner-top">
+            <div class="carrier-title-group">
+              <div class="carrier-badge-icon">
+                <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+                  <path d="M3 21h18M3 10h18M5 6l7-3 7 3M4 10v11M20 10v11M8 14v4M12 14v4M16 14v4"></path>
+                </svg>
+              </div>
+              <div>
+                <h2 id="carrierNameDisplay">Delta Dental of California</h2>
+                <div class="policy-meta-sub">
+                  <span id="patientHeroBadge" class="patient-hero-badge" style="display: none;">
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
+                    <span id="patientHeroName">Patient Name</span>
+                  </span>
+                  <span id="planEffectiveDateDisplay">Effective: 01/01/2024</span>
+                  <span>•</span>
+                  <span id="networkStatusBadge" class="network-indicator-pill in-network">In-Network</span>
+                </div>
+              </div>
+            </div>
+
+            <div class="banner-quick-actions">
+              <button type="button" class="btn-action-pms" id="openPmsModalBtn">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+                  <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+                </svg>
+                Copy PMS Note
+              </button>
+              <button type="button" class="btn-action-ghost" id="newVerificationBtn">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                  <polyline points="17 8 12 3 7 8"></polyline>
+                  <line x1="12" y1="3" x2="12" y2="15"></line>
+                </svg>
+                New Breakdown
+              </button>
+            </div>
+          </div>
+
+          <!-- RCM FINANCIAL METERS HUD -->
+          <div class="financials-grid">
+            <!-- Annual Max -->
+            <div class="financial-card">
+              <div class="financial-card-header">
+                <span class="financial-label">Annual Maximum</span>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#10b981" stroke-width="2"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path></svg>
+              </div>
+              <div class="financial-amount" id="hudAnnualMax">$1,500</div>
+              <div class="meter-progress-track">
+                <div class="meter-progress-bar emerald" id="meterMaxBar" style="width: 75%;"></div>
+              </div>
+              <div class="financial-sub-text">
+                <span id="hudRemainingMax">Remaining: $1,125</span>
+                <span id="hudMaxPctUsed">25% used</span>
+              </div>
+            </div>
+
+            <!-- Deductible Individual -->
+            <div class="financial-card">
+              <div class="financial-card-header">
+                <span class="financial-label">Individual Deductible</span>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#f59e0b" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><path d="M12 6v6l4 2"></path></svg>
+              </div>
+              <div class="financial-amount" id="hudDeductible">$50</div>
+              <div class="meter-progress-track">
+                <div class="meter-progress-bar amber" id="meterDedBar" style="width: 100%;"></div>
+              </div>
+              <div class="financial-sub-text">
+                <span id="hudRemainingDed">Remaining: $0 (Met)</span>
+                <span id="hudDedMetStatus">100% Met</span>
+              </div>
+            </div>
+
+            <!-- Deductible Applies To -->
+            <div class="financial-card">
+              <div class="financial-card-header">
+                <span class="financial-label">Deductible Scope</span>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#0ea5e9" stroke-width="2"><path d="M4 6h16M4 12h16M4 18h7"></path></svg>
+              </div>
+              <div class="financial-amount" id="hudDedApplies" style="font-size: 1.25rem; font-family: var(--font-sans); margin-top: 0.35rem;">Basic & Major</div>
+              <div style="margin-top: 0.75rem;">
+                <span class="rule-chip" style="padding: 0.35rem 0.65rem; font-size: 0.75rem;">
+                  <span class="rule-status-circle good" id="chipPrevMaxDot"></span>
+                  <span id="chipPrevMaxText">Prev waived from deductible</span>
+                </span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- KEY POLICY CLAUSES & WARNING FLAGS -->
+        <div class="policy-rules-row" id="rulesRow">
+          <!-- Dynamically populated with Missing Tooth, Waiting Periods, Preventive Max -->
+        </div>
+
+        <!-- CATEGORY COVERAGE MATRIX -->
+        <div class="category-matrix-card">
+          <div class="matrix-heading">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#0ea5e9" stroke-width="2">
+              <path d="M22 12h-4l-3 9L9 3l-3 9H2"></path>
+            </svg>
+            Coverage Percentage by Clinical Category
+          </div>
+          <div class="category-cards-grid" id="categoryCardsGrid">
+            <!-- Dynamically populated -->
+          </div>
+        </div>
+
+        <!-- EXHAUSTIVE CDT PROCEDURE CODES TABLE -->
+        <div class="codes-table-panel">
+          <div class="table-toolbar">
+            <div class="toolbar-left">
+              <div class="matrix-heading" style="margin-bottom: 0;">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#0ea5e9" stroke-width="2">
+                  <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                  <polyline points="14 2 14 8 20 8"></polyline>
+                </svg>
+                <span>Audited CDT Procedure Codes</span>
+              </div>
+              <span class="codes-count-pill" id="codesCountPill">0 codes</span>
+            </div>
+
+            <!-- Table Search -->
+            <div class="search-input-container">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <circle cx="11" cy="11" r="8"></circle>
+                <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+              </svg>
+              <input type="text" id="cdtSearchInput" class="table-search-input" placeholder="Search CDT code (e.g. D1110, D4341) or keywords...">
+            </div>
+
+            <!-- Filter Chips -->
+            <div class="table-filter-chips">
+              <button type="button" class="filter-chip active" data-filter="all">All Codes</button>
+              <button type="button" class="filter-chip" data-filter="eligible">Eligible Only</button>
+              <button type="button" class="filter-chip" data-filter="not_covered">Not Covered (0%)</button>
+              <button type="button" class="filter-chip" data-filter="downgrades">Downgrades</button>
+            </div>
+          </div>
+
+          <!-- Table Container -->
+          <div class="table-responsive-box">
+            <table class="cdt-data-table">
+              <thead>
+                <tr>
+                  <th>CDT Code</th>
+                  <th>Clinical Description</th>
+                  <th>Benefit %</th>
+                  <th>Deductible</th>
+                  <th>Frequency Limitation</th>
+                  <th>Age Limit</th>
+                  <th>Eligibility Status</th>
+                  <th>History on File</th>
+                  <th>Downgrade Clause</th>
+                  <th>Auditor Notes</th>
+                </tr>
+              </thead>
+              <tbody id="cdtTableBody">
+                <!-- Dynamically populated rows -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <!-- PRACTICE MANAGEMENT SYSTEM (PMS) NOTE MODAL -->
+  <div class="pms-modal-backdrop" id="pmsModal">
+    <div class="pms-modal-box">
+      <div class="pms-modal-header">
+        <h3>
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#10b981" stroke-width="2">
+            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+            <polyline points="14 2 14 8 20 8"></polyline>
+            <line x1="16" y1="13" x2="8" y2="13"></line>
+            <line x1="16" y1="17" x2="8" y2="17"></line>
+          </svg>
+          Practice Management System (PMS) Clinical Note
+        </h3>
+        <button type="button" class="btn-close-modal" id="closePmsModalBtn">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <line x1="18" y1="6" x2="6" y2="18"></line>
+            <line x1="6" y1="6" x2="18" y2="18"></line>
+          </svg>
+        </button>
+      </div>
+      <div class="pms-modal-body">
+        <textarea id="pmsNoteContent" class="pms-textbox" spellcheck="false"></textarea>
+      </div>
+      <div class="pms-modal-footer">
+        <span style="font-size: 0.775rem; color: var(--text-muted);">Formatted for Dentrix, Eaglesoft, Open Dental & Curve</span>
+        <button type="button" class="btn-action-pms" id="copyPmsNoteBtn">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+            <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+          </svg>
+          Copy to Clipboard
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- AI SETTINGS & PROMPT DIRECTIVES MODAL -->
+  <div class="settings-modal-backdrop" id="settingsModal">
+    <div class="settings-modal-box">
+      <div class="pms-modal-header">
+        <h3>
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#38bdf8" stroke-width="2">
+            <circle cx="12" cy="12" r="3"></circle>
+            <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
+          </svg>
+          AI Auditor Role & Prompt Directives
+        </h3>
+        <button type="button" class="btn-close-modal" id="closeSettingsModalBtn">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <line x1="18" y1="6" x2="6" y2="18"></line>
+            <line x1="6" y1="6" x2="18" y2="18"></line>
+          </svg>
+        </button>
+      </div>
+
+      <div class="settings-tabs-row">
+        <button type="button" class="settings-tab-btn active" data-tab="tabRole">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+            <circle cx="12" cy="7" r="4"></circle>
+          </svg>
+          AI Role & System Prompt
+        </button>
+        <button type="button" class="settings-tab-btn" data-tab="tabCodes">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+            <polyline points="14 2 14 8 20 8"></polyline>
+          </svg>
+          Required CDT Codes & Directives
+        </button>
+      </div>
+
+      <div class="pms-modal-body" style="padding-top: 1.25rem;">
+        <!-- Tab 1: System Instruction -->
+        <div class="settings-tab-pane active" id="tabRole">
+          <div class="settings-info-badge">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#38bdf8" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg>
+            <span>Controls the AI auditor persona, clinical accuracy rules, and verification priority.</span>
+          </div>
+          <textarea id="settingSystemInstruction" class="prompt-editor-textarea" spellcheck="false" placeholder="Enter AI System Instructions..."></textarea>
+        </div>
+
+        <!-- Tab 2: Custom CDT Prompt -->
+        <div class="settings-tab-pane" id="tabCodes">
+          <div class="settings-info-badge">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#38bdf8" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg>
+            <span>Add or customize CDT codes (D0120, D1110, D4341, D2740, etc.) and category extraction instructions.</span>
+          </div>
+          <textarea id="settingCustomPrompt" class="prompt-editor-textarea" spellcheck="false" placeholder="Enter CDT Codes Directives..."></textarea>
+        </div>
+      </div>
+
+      <div class="pms-modal-footer">
+        <button type="button" class="btn-restore-defaults" id="btnRestoreDefaults">
+          ↺ Reset to Factory Defaults
+        </button>
+        <button type="button" class="btn-verify-primary" id="btnSaveSettings" style="padding: 0.65rem 1.4rem; font-size: 0.85rem;">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+            <polyline points="20 6 9 17 4 12"></polyline>
+          </svg>
+          Save & Apply Directives
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- PATIENT VERIFICATION HISTORY MODAL -->
+  <div class="history-drawer-backdrop" id="historyModal">
+    <div class="history-modal-box">
+      <div class="pms-modal-header">
+        <h3 style="display: flex; align-items: center; gap: 0.55rem; color: #fff; font-size: 1.1rem; font-weight: 700;">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#10b981" stroke-width="2.2">
+            <circle cx="12" cy="12" r="10"></circle>
+            <polyline points="12 6 12 12 16 14"></polyline>
+          </svg>
+          Verification History (<span id="historyModalCount">0</span>)
+        </h3>
+        <button type="button" class="btn-close-modal" id="closeHistoryModalBtn">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <line x1="18" y1="6" x2="6" y2="18"></line>
+            <line x1="6" y1="6" x2="18" y2="18"></line>
+          </svg>
+        </button>
+      </div>
+
+      <div class="history-list-body" id="historyListContainer">
+        <!-- Dynamically rendered verification history cards -->
+      </div>
+
+      <div class="pms-modal-footer">
+        <button type="button" class="btn-restore-defaults" id="btnClearHistoryBtn" style="color: #fda4af;">
+          Clear All History
+        </button>
+        <button type="button" class="btn-restore-defaults" id="btnCloseHistoryFooterBtn">
+          Close
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- TOAST FEEDBACK -->
+  <div class="toast-pill" id="toastPill">
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+      <polyline points="20 6 9 17 4 12"></polyline>
+    </svg>
+    <span id="toastPillMessage">Copied to clipboard!</span>
+  </div>
+
+  <script>
+    // State
+    let selectedFile = null;
+    let currentAuditData = null;
+    let currentFilter = 'all';
+    let currentSearch = '';
+
+    // Sample Delta Dental Data for Demo Testing
+    const SAMPLE_BREAKDOWN_DATA = {
+      insurance_details: {
+        carrier: "Delta Dental Premier / PPO Plus",
+        effective_date: "01/01/2024 - 12/31/2024",
+        network_status: "In-Network (PPO Tier)",
+        annual_maximum: 2000,
+        remaining_maximum: 1540,
+        preventive_applies_to_max: false,
+        deductible_individual: 50,
+        deductible_remaining: 0,
+        deductible_applies_to: "Basic & Major Services Only (Waived on Preventive)",
+        missing_tooth_clause: false,
+        waiting_period: false
+      },
+      coverage_levels: {
+        preventive: "100%",
+        basic: "80%",
+        major: "50%",
+        endo: "80%",
+        oral_surgery: "80%",
+        ortho: "50%",
+        ortho_max: "$1,500 Lifetime",
+        ortho_age_limit: "Up to age 19"
+      },
+      procedure_codes: [
+        // DIAGNOSTIC & PREVENTIVE
+        { code: "D0120", description: "Periodic Oral Evaluation (Exam)", coverage_percentage: "100%", deductible_applied: false, frequency_limitation: "2 in 12 rolling months", age_limit: "None", is_eligible: true, history_dates: "04/10/2024", downgrade_rule: "None", notes: "Shared freq with D0150/D0180" },
+        { code: "D0140", description: "Limited Oral Evaluation (Problem Focused)", coverage_percentage: "100%", deductible_applied: false, frequency_limitation: "2 in 12 months", age_limit: "None", is_eligible: true, history_dates: "None", downgrade_rule: "None", notes: "Emergency exam covered at 100%" },
+        { code: "D0150", description: "Comprehensive Oral Evaluation (New Patient Exam)", coverage_percentage: "100%", deductible_applied: false, frequency_limitation: "1 in 36 months", age_limit: "None", is_eligible: false, history_dates: "01/15/2023", downgrade_rule: "None", notes: "Eligible 01/15/2026" },
+        { code: "D0180", description: "Comprehensive Periodontal Evaluation", coverage_percentage: "100%", deductible_applied: false, frequency_limitation: "1 in 36 months", age_limit: "None", is_eligible: true, history_dates: "None", downgrade_rule: "None", notes: "Shared benefit with D0150" },
+        { code: "D1110", description: "Prophylaxis (Cleaning) - Adult", coverage_percentage: "100%", deductible_applied: false, frequency_limitation: "2 in 12 months (150 days apart)", age_limit: "Age 14+", is_eligible: true, history_dates: "04/10/2024", downgrade_rule: "None", notes: "Next eligible 09/07/2024" },
+        { code: "D1120", description: "Prophylaxis (Cleaning) - Child", coverage_percentage: "100%", deductible_applied: false, frequency_limitation: "2 in 12 months", age_limit: "Through age 13", is_eligible: false, history_dates: "None", downgrade_rule: "None", notes: "Patient is adult" },
+        { code: "D4346", description: "Scaling in presence of generalized moderate or severe gingival inflammation", coverage_percentage: "100%", deductible_applied: false, frequency_limitation: "1 in 12 months", age_limit: "None", is_eligible: true, history_dates: "None", downgrade_rule: "None", notes: "Shared frequency with D1110" },
+        { code: "D0210", description: "Complete Intraoral Series of Radiographic Images (FMX)", coverage_percentage: "100%", deductible_applied: false, frequency_limitation: "1 in 60 months", age_limit: "None", is_eligible: false, history_dates: "06/20/2021", downgrade_rule: "None", notes: "Shared freq with D0330 Pano" },
+        { code: "D0330", description: "Panoramic Radiographic Image (Pano)", coverage_percentage: "100%", deductible_applied: false, frequency_limitation: "1 in 60 months", age_limit: "None", is_eligible: false, history_dates: "06/20/2021", downgrade_rule: "None", notes: "Shared freq with D0210 FMX" },
+        { code: "D0272", description: "Bitewings - Two Radiographic Images", coverage_percentage: "100%", deductible_applied: false, frequency_limitation: "1 in 12 months", age_limit: "None", is_eligible: true, history_dates: "None", downgrade_rule: "None", notes: "Shared with D0274" },
+        { code: "D0274", description: "Bitewings - Four Radiographic Images", coverage_percentage: "100%", deductible_applied: false, frequency_limitation: "1 set in 12 rolling months", age_limit: "None", is_eligible: true, history_dates: "04/10/2023", downgrade_rule: "None", notes: "Eligible" },
+        { code: "D0220", description: "Intraoral - Periapical First Radiographic Image (PA)", coverage_percentage: "100%", deductible_applied: false, frequency_limitation: "As needed for diagnostic evaluation", age_limit: "None", is_eligible: true, history_dates: "None", downgrade_rule: "None", notes: "Covered at 100%" },
+        { code: "D0230", description: "Intraoral - Periapical Each Additional Radiographic Image", coverage_percentage: "100%", deductible_applied: false, frequency_limitation: "Max 5 additional per visit", age_limit: "None", is_eligible: true, history_dates: "None", downgrade_rule: "None", notes: "Covered with D0220" },
+        { code: "D1206", description: "Topical Application of Fluoride Varnish", coverage_percentage: "100%", deductible_applied: false, frequency_limitation: "2 in 12 months", age_limit: "Under age 19", is_eligible: false, history_dates: "None", downgrade_rule: "None", notes: "Age limit exceeded" },
+        { code: "D1208", description: "Topical Application of Fluoride - Excluding Varnish", coverage_percentage: "100%", deductible_applied: false, frequency_limitation: "2 in 12 months", age_limit: "Under age 19", is_eligible: false, history_dates: "None", downgrade_rule: "None", notes: "Child fluoride only" },
+        { code: "D1351", description: "Sealant - Per Tooth", coverage_percentage: "100%", deductible_applied: false, frequency_limitation: "1 per tooth in 36 months", age_limit: "Through age 15", is_eligible: false, history_dates: "None", downgrade_rule: "None", notes: "Permanent molars only" },
+
+        // PERIODONTICS
+        { code: "D4341", description: "Periodontal Scaling and Root Planing (SRP) - Four or more teeth per quadrant", coverage_percentage: "80%", deductible_applied: true, frequency_limitation: "1 per quad every 24 months", age_limit: "None", is_eligible: true, history_dates: "None", downgrade_rule: "None", notes: "Max 2 quads per visit; 4mm+ pockets required" },
+        { code: "D4342", description: "Periodontal Scaling and Root Planing (SRP) - One to three teeth per quadrant", coverage_percentage: "80%", deductible_applied: true, frequency_limitation: "1 per quad every 24 months", age_limit: "None", is_eligible: true, history_dates: "None", downgrade_rule: "None", notes: "1-3 teeth per quad" },
+        { code: "D4910", description: "Periodontal Maintenance", coverage_percentage: "80%", deductible_applied: true, frequency_limitation: "4 in 12 months following active perio", age_limit: "None", is_eligible: true, history_dates: "None", downgrade_rule: "None", notes: "Requires active SRP history" },
+        { code: "D4381", description: "Localized delivery of antimicrobial agents", coverage_percentage: "80%", deductible_applied: true, frequency_limitation: "Max 2 teeth per quad, 1 in 24 months", age_limit: "None", is_eligible: true, history_dates: "None", downgrade_rule: "None", notes: "Arestin therapy" },
+
+        // RESTORATIVE (BASIC)
+        { code: "D2140", description: "Amalgam - one surface, primary or permanent", coverage_percentage: "80%", deductible_applied: true, frequency_limitation: "1 per surface in 24 months", age_limit: "None", is_eligible: true, history_dates: "None", downgrade_rule: "None", notes: "Covered under Basic" },
+        { code: "D2150", description: "Amalgam - two surfaces, primary or permanent", coverage_percentage: "80%", deductible_applied: true, frequency_limitation: "1 per surface in 24 months", age_limit: "None", is_eligible: true, history_dates: "None", downgrade_rule: "None", notes: "Covered under Basic" },
+        { code: "D2160", description: "Amalgam - three surfaces, primary or permanent", coverage_percentage: "80%", deductible_applied: true, frequency_limitation: "1 per surface in 24 months", age_limit: "None", is_eligible: true, history_dates: "None", downgrade_rule: "None", notes: "Covered under Basic" },
+        { code: "D2161", description: "Amalgam - four or more surfaces, primary or permanent", coverage_percentage: "80%", deductible_applied: true, frequency_limitation: "1 per surface in 24 months", age_limit: "None", is_eligible: true, history_dates: "None", downgrade_rule: "None", notes: "Covered under Basic" },
+        { code: "D2330", description: "Resin-based composite - one surface, anterior", coverage_percentage: "80%", deductible_applied: true, frequency_limitation: "1 per surface in 24 months", age_limit: "None", is_eligible: true, history_dates: "None", downgrade_rule: "None", notes: "Paid at composite allowance" },
+        { code: "D2331", description: "Resin-based composite - two surfaces, anterior", coverage_percentage: "80%", deductible_applied: true, frequency_limitation: "1 per surface in 24 months", age_limit: "None", is_eligible: true, history_dates: "None", downgrade_rule: "None", notes: "Paid at composite allowance" },
+        { code: "D2332", description: "Resin-based composite - three surfaces, anterior", coverage_percentage: "80%", deductible_applied: true, frequency_limitation: "1 per surface in 24 months", age_limit: "None", is_eligible: true, history_dates: "None", downgrade_rule: "None", notes: "Paid at composite allowance" },
+        { code: "D2335", description: "Resin-based composite - four or more surfaces, anterior", coverage_percentage: "80%", deductible_applied: true, frequency_limitation: "1 per surface in 24 months", age_limit: "None", is_eligible: true, history_dates: "None", downgrade_rule: "None", notes: "Incisal angle restoration" },
+        { code: "D2391", description: "Resin-based composite - one surface, posterior", coverage_percentage: "80%", deductible_applied: true, frequency_limitation: "1 per surface in 24 months", age_limit: "None", is_eligible: true, history_dates: "None", downgrade_rule: "Downgraded to Amalgam on posterior molars", notes: "Patient pays downgrade difference" },
+        { code: "D2392", description: "Resin-based composite - two surfaces, posterior", coverage_percentage: "80%", deductible_applied: true, frequency_limitation: "1 per surface in 24 months", age_limit: "None", is_eligible: true, history_dates: "None", downgrade_rule: "Downgraded to Amalgam on molars", notes: "Patient pays downgrade difference" },
+        { code: "D2393", description: "Resin-based composite - three surfaces, posterior", coverage_percentage: "80%", deductible_applied: true, frequency_limitation: "1 per surface in 24 months", age_limit: "None", is_eligible: true, history_dates: "None", downgrade_rule: "Downgraded to Amalgam on molars", notes: "Patient pays downgrade difference" },
+        { code: "D2394", description: "Resin-based composite - four or more surfaces, posterior", coverage_percentage: "80%", deductible_applied: true, frequency_limitation: "1 per surface in 24 months", age_limit: "None", is_eligible: true, history_dates: "None", downgrade_rule: "Downgraded to Amalgam on molars", notes: "Patient pays downgrade difference" },
+
+        // MAJOR RESTORATIVE & PROSTHODONTICS
+        { code: "D2740", description: "Crown - Porcelain/Ceramic Substrate", coverage_percentage: "50%", deductible_applied: true, frequency_limitation: "1 in 60 months per tooth", age_limit: "None", is_eligible: true, history_dates: "None", downgrade_rule: "None", notes: "Prep date used; pre-op X-rays required" },
+        { code: "D2750", description: "Crown - Porcelain Fused to High Noble Metal", coverage_percentage: "50%", deductible_applied: true, frequency_limitation: "1 in 60 months per tooth", age_limit: "None", is_eligible: true, history_dates: "None", downgrade_rule: "None", notes: "Major Restorative tier" },
+        { code: "D2790", description: "Crown - Full Cast High Noble Metal", coverage_percentage: "50%", deductible_applied: true, frequency_limitation: "1 in 60 months per tooth", age_limit: "None", is_eligible: true, history_dates: "None", downgrade_rule: "None", notes: "Major Restorative tier" },
+        { code: "D2920", description: "Re-cement or re-bond crown", coverage_percentage: "80%", deductible_applied: true, frequency_limitation: "1 in 12 months after initial 6 months", age_limit: "None", is_eligible: true, history_dates: "None", downgrade_rule: "None", notes: "Basic category" },
+        { code: "D2950", description: "Core Buildup, including any pins", coverage_percentage: "50%", deductible_applied: true, frequency_limitation: "1 per tooth in 60 months", age_limit: "None", is_eligible: true, history_dates: "None", downgrade_rule: "None", notes: "Covered only with crown" },
+        { code: "D2954", description: "Prefabricated Post and Core in addition to crown", coverage_percentage: "50%", deductible_applied: true, frequency_limitation: "1 per tooth in 60 months", age_limit: "None", is_eligible: true, history_dates: "None", downgrade_rule: "None", notes: "Post placement" },
+        { code: "D6010", description: "Surgical Placement of Implant Body: Endosteal Implant", coverage_percentage: "50%", deductible_applied: true, frequency_limitation: "1 per tooth lifetime", age_limit: "None", is_eligible: true, history_dates: "None", downgrade_rule: "None", notes: "Implant rider included" },
+        { code: "D6058", description: "Abutment supported porcelain/ceramic crown", coverage_percentage: "50%", deductible_applied: true, frequency_limitation: "1 in 60 months", age_limit: "None", is_eligible: true, history_dates: "None", downgrade_rule: "None", notes: "Implant crown" },
+        { code: "D6065", description: "Implant supported porcelain/ceramic crown", coverage_percentage: "50%", deductible_applied: true, frequency_limitation: "1 in 60 months", age_limit: "None", is_eligible: true, history_dates: "None", downgrade_rule: "None", notes: "Single implant crown" },
+        { code: "D5110", description: "Complete Denture - Maxillary (Upper)", coverage_percentage: "50%", deductible_applied: true, frequency_limitation: "1 in 60 months", age_limit: "None", is_eligible: true, history_dates: "None", downgrade_rule: "None", notes: "Subject to missing tooth clause: No" },
+        { code: "D5120", description: "Complete Denture - Mandibular (Lower)", coverage_percentage: "50%", deductible_applied: true, frequency_limitation: "1 in 60 months", age_limit: "None", is_eligible: true, history_dates: "None", downgrade_rule: "None", notes: "Major prosthetics" },
+        { code: "D5213", description: "Maxillary Partial Denture - cast metal framework", coverage_percentage: "50%", deductible_applied: true, frequency_limitation: "1 in 60 months", age_limit: "None", is_eligible: true, history_dates: "None", downgrade_rule: "None", notes: "Upper partial" },
+        { code: "D5214", description: "Mandibular Partial Denture - cast metal framework", coverage_percentage: "50%", deductible_applied: true, frequency_limitation: "1 in 60 months", age_limit: "None", is_eligible: true, history_dates: "None", downgrade_rule: "None", notes: "Lower partial" },
+
+        // ENDODONTICS
+        { code: "D3310", description: "Endodontic Therapy - Anterior Tooth", coverage_percentage: "80%", deductible_applied: true, frequency_limitation: "1 per tooth lifetime", age_limit: "None", is_eligible: true, history_dates: "None", downgrade_rule: "None", notes: "Basic Endodontics" },
+        { code: "D3320", description: "Endodontic Therapy - Premolar Tooth", coverage_percentage: "80%", deductible_applied: true, frequency_limitation: "1 per tooth lifetime", age_limit: "None", is_eligible: true, history_dates: "None", downgrade_rule: "None", notes: "Basic Endodontics" },
+        { code: "D3330", description: "Endodontic Therapy - Molar Tooth", coverage_percentage: "80%", deductible_applied: true, frequency_limitation: "1 per tooth lifetime", age_limit: "None", is_eligible: true, history_dates: "None", downgrade_rule: "None", notes: "Basic Endodontics" },
+
+        // ORAL SURGERY & ADJUNCTIVE
+        { code: "D7140", description: "Extraction, Erupted Tooth or Exposed Root", coverage_percentage: "80%", deductible_applied: true, frequency_limitation: "1 per tooth lifetime", age_limit: "None", is_eligible: true, history_dates: "None", downgrade_rule: "None", notes: "Simple extraction" },
+        { code: "D7210", description: "Extraction, Erupted Tooth Requiring Removal of Bone and/or Sectioning", coverage_percentage: "80%", deductible_applied: true, frequency_limitation: "1 per tooth lifetime", age_limit: "None", is_eligible: true, history_dates: "None", downgrade_rule: "None", notes: "Surgical extraction" },
+        { code: "D7220", description: "Removal of Impacted Tooth - Soft Tissue", coverage_percentage: "80%", deductible_applied: true, frequency_limitation: "1 per tooth lifetime", age_limit: "None", is_eligible: true, history_dates: "None", downgrade_rule: "None", notes: "Impacted tooth" },
+        { code: "D7230", description: "Removal of Impacted Tooth - Partially Bony", coverage_percentage: "80%", deductible_applied: true, frequency_limitation: "1 per tooth lifetime", age_limit: "None", is_eligible: true, history_dates: "None", downgrade_rule: "None", notes: "Impacted tooth" },
+        { code: "D7240", description: "Removal of Impacted Tooth - Completely Bony", coverage_percentage: "80%", deductible_applied: true, frequency_limitation: "1 per tooth lifetime", age_limit: "None", is_eligible: true, history_dates: "None", downgrade_rule: "None", notes: "Full bony impaction" },
+        { code: "D9110", description: "Palliative Emergency Treatment of Dental Pain - Minor Procedure", coverage_percentage: "80%", deductible_applied: true, frequency_limitation: "1 per date of service", age_limit: "None", is_eligible: true, history_dates: "None", downgrade_rule: "None", notes: "Emergency palliative" },
+        { code: "D9222", description: "Deep Sedation / General Anesthesia - first 15 minutes", coverage_percentage: "80%", deductible_applied: true, frequency_limitation: "In conjunction with surgical extractions", age_limit: "None", is_eligible: true, history_dates: "None", downgrade_rule: "None", notes: "Medical necessity applies" },
+        { code: "D9223", description: "Deep Sedation / General Anesthesia - each subsequent 15 minutes", coverage_percentage: "80%", deductible_applied: true, frequency_limitation: "Max 4 units per visit", age_limit: "None", is_eligible: true, history_dates: "None", downgrade_rule: "None", notes: "Anesthesia add-on" },
+        { code: "D9944", description: "Occlusal Guard (Night Guard) - Hard Appliance, Full Arch", coverage_percentage: "0%", deductible_applied: false, frequency_limitation: "Not Covered", age_limit: "None", is_eligible: false, history_dates: "None", downgrade_rule: "None", notes: "Plan exclusion: Bruxism appliances" },
+
+        // ORTHODONTICS
+        { code: "D8080", description: "Comprehensive Orthodontic Treatment of the Adolescent Dentition", coverage_percentage: "50%", deductible_applied: false, frequency_limitation: "1 in lifetime", age_limit: "Through age 18", is_eligible: false, history_dates: "None", downgrade_rule: "None", notes: "Lifetime Ortho Max $1,500 applies" },
+        { code: "D8090", description: "Comprehensive Orthodontic Treatment of the Adult Dentition", coverage_percentage: "0%", deductible_applied: false, frequency_limitation: "Not Covered", age_limit: "None", is_eligible: false, history_dates: "None", downgrade_rule: "None", notes: "Adult ortho not covered under this plan" },
+        { code: "D8670", description: "Periodic Orthodontic Treatment Visit", coverage_percentage: "50%", deductible_applied: false, frequency_limitation: "Monthly fee schedule", age_limit: "Through age 18", is_eligible: false, history_dates: "None", downgrade_rule: "None", notes: "Adolescent ortho only" }
+      ]
+    };
+
+    // HTML escape utility
+    function escapeHtml(str) {
+      if (str === null || str === undefined) return '';
+      return String(str)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;');
+    }
+
+    // File State
+    let selectedFiles = [];
+
+    // History Storage Key
+    const HISTORY_STORAGE_KEY = 'dentverify_audit_history';
+
+    // Elements
+    const dropzoneField = document.getElementById('dropzoneField');
+    const fileInput = document.getElementById('fileInput');
+    const filesListContainer = document.getElementById('filesListContainer');
+    const filesItemsGrid = document.getElementById('filesItemsGrid');
+    const filesCountText = document.getElementById('filesCountText');
+    const addMoreFilesBtn = document.getElementById('addMoreFilesBtn');
+    const patientNameInput = document.getElementById('patientNameInput');
+    const patientHeroBadge = document.getElementById('patientHeroBadge');
+    const patientHeroName = document.getElementById('patientHeroName');
+    const analyzeBtn = document.getElementById('analyzeBtn');
+    const auditorLoading = document.getElementById('auditorLoading');
+    const loadingTicker = document.getElementById('loadingTicker');
+    const uiAlertError = document.getElementById('uiAlertError');
+    const errorDetailsText = document.getElementById('errorDetailsText');
+    const reportDashboard = document.getElementById('reportDashboard');
+    const newVerificationBtn = document.getElementById('newVerificationBtn');
+    const loadSampleBtn = document.getElementById('loadSampleBtn');
+
+    // History Modal elements
+    const historyModal = document.getElementById('historyModal');
+    const openHistoryBtn = document.getElementById('openHistoryBtn');
+    const closeHistoryModalBtn = document.getElementById('closeHistoryModalBtn');
+    const btnCloseHistoryFooterBtn = document.getElementById('btnCloseHistoryFooterBtn');
+    const btnClearHistoryBtn = document.getElementById('btnClearHistoryBtn');
+    const historyListContainer = document.getElementById('historyListContainer');
+    const headerHistoryCount = document.getElementById('headerHistoryCount');
+    const historyModalCount = document.getElementById('historyModalCount');
+
+    // Table elements
+    const cdtSearchInput = document.getElementById('cdtSearchInput');
+    const filterChips = document.querySelectorAll('.filter-chip');
+    const cdtTableBody = document.getElementById('cdtTableBody');
+    const codesCountPill = document.getElementById('codesCountPill');
+
+    // PMS Modal elements
+    const pmsModal = document.getElementById('pmsModal');
+    const openPmsModalBtn = document.getElementById('openPmsModalBtn');
+    const closePmsModalBtn = document.getElementById('closePmsModalBtn');
+    const pmsNoteContent = document.getElementById('pmsNoteContent');
+    const copyPmsNoteBtn = document.getElementById('copyPmsNoteBtn');
+    const toastPill = document.getElementById('toastPill');
+    const toastPillMessage = document.getElementById('toastPillMessage');
+
+    // Drag and drop handlers
+    ['dragenter', 'dragover'].forEach(name => {
+      dropzoneField.addEventListener(name, (e) => {
+        e.preventDefault();
+        dropzoneField.classList.add('dragover');
+      });
+    });
+
+    ['dragleave', 'drop'].forEach(name => {
+      dropzoneField.addEventListener(name, (e) => {
+        e.preventDefault();
+        dropzoneField.classList.remove('dragover');
+      });
+    });
+
+    dropzoneField.addEventListener('drop', (e) => {
+      if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+        handleIncomingFiles(Array.from(e.dataTransfer.files));
+      }
+    });
+
+    dropzoneField.addEventListener('click', () => {
+      fileInput.click();
+    });
+
+    addMoreFilesBtn.addEventListener('click', () => {
+      fileInput.click();
+    });
+
+    fileInput.addEventListener('change', (e) => {
+      if (e.target.files && e.target.files.length > 0) {
+        handleIncomingFiles(Array.from(e.target.files));
+      }
+      fileInput.value = ''; // Reset so the same file can be re-selected if removed
+    });
+
+    function formatFileSize(bytes) {
+      if (bytes === 0) return '0 B';
+      const k = 1024;
+      const sizes = ['B', 'KB', 'MB', 'GB'];
+      const i = Math.floor(Math.log(bytes) / Math.log(k));
+      return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+    }
+
+    function handleIncomingFiles(newFiles) {
+      hideAlert();
+      const validTypes = ['application/pdf', 'image/png', 'image/jpeg', 'image/jpg', 'image/webp'];
+
+      for (const f of newFiles) {
+        if (!validTypes.includes(f.type) && !/\.(pdf|png|jpe?g|webp)$/i.test(f.name)) {
+          showAlert(`"${f.name}" is not a supported format. Please use PDF, PNG, JPG, or WEBP.`);
+          continue;
+        }
+
+        // Check if already added
+        const exists = selectedFiles.some(existing => existing.name === f.name && existing.size === f.size);
+        if (!exists) {
+          if (selectedFiles.length >= 10) {
+            showAlert('Maximum 10 files allowed at once.');
+            break;
+          }
+          selectedFiles.push(f);
+        }
+      }
+
+      renderFilesList();
+    }
+
+    function renderFilesList() {
+      if (selectedFiles.length === 0) {
+        filesListContainer.classList.remove('active');
+        dropzoneField.style.display = 'block';
+        return;
+      }
+
+      filesListContainer.classList.add('active');
+      dropzoneField.style.display = 'none';
+
+      const totalSize = selectedFiles.reduce((acc, f) => acc + f.size, 0);
+      filesCountText.textContent = `${selectedFiles.length} File${selectedFiles.length > 1 ? 's' : ''} Attached (${formatFileSize(totalSize)})`;
+
+      filesItemsGrid.innerHTML = '';
+      selectedFiles.forEach((file, index) => {
+        const ext = file.name.split('.').pop().toUpperCase().slice(0, 4) || 'DOC';
+        
+        const row = document.createElement('div');
+        row.className = 'file-item-row';
+        row.innerHTML = `
+          <div class="file-item-left">
+            <div class="file-item-badge">${escapeHtml(ext)}</div>
+            <div class="file-item-info">
+              <div class="file-item-name" title="${escapeHtml(file.name)}">${escapeHtml(file.name)}</div>
+              <div class="file-item-meta">${formatFileSize(file.size)} • Page/File #${index + 1}</div>
+            </div>
+          </div>
+          <button type="button" class="btn-icon-danger remove-single-file-btn" data-index="${index}" title="Remove this file">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <line x1="18" y1="6" x2="6" y2="18"></line>
+              <line x1="6" y1="6" x2="18" y2="18"></line>
+            </svg>
+          </button>
+        `;
+
+        const removeBtn = row.querySelector('.remove-single-file-btn');
+        removeBtn.addEventListener('click', (e) => {
+          e.stopPropagation();
+          selectedFiles.splice(index, 1);
+          renderFilesList();
+        });
+
+        filesItemsGrid.appendChild(row);
+      });
+    }
+
+    // Loading ticker animation
+    let loadingTickerTimer = null;
+    const tickerSteps = [
+      'Extracting document text & tabular grids...',
+      'Auditing network benefit tier (In vs Out of Network)...',
+      'Calculating annual maximums & individual deductibles...',
+      'Exhaustively mapping CDT procedure codes (D0100 - D9999)...',
+      'Evaluating frequency limitations & history dates...',
+      'Validating amalgam downgrade clauses & tooth exclusions...',
+      'Finalizing clinical PMS note formatting...'
+    ];
+
+    function startAuditorLoading() {
+      auditorLoading.classList.add('active');
+      analyzeBtn.disabled = true;
+      hideAlert();
+      let stepIndex = 0;
+      loadingTicker.textContent = tickerSteps[0];
+      loadingTickerTimer = setInterval(() => {
+        stepIndex = (stepIndex + 1) % tickerSteps.length;
+        loadingTicker.textContent = tickerSteps[stepIndex];
+      }, 2200);
+    }
+
+    function stopAuditorLoading() {
+      auditorLoading.classList.remove('active');
+      analyzeBtn.disabled = false;
+      if (loadingTickerTimer) clearInterval(loadingTickerTimer);
+    }
+
+    function showAlert(msg) {
+      errorDetailsText.textContent = msg;
+      uiAlertError.classList.add('active');
+    }
+
+    function hideAlert() {
+      uiAlertError.classList.remove('active');
+    }
+
+    function displayToast(msg) {
+      toastPillMessage.textContent = msg;
+      toastPill.classList.add('show');
+      setTimeout(() => {
+        toastPill.classList.remove('show');
+      }, 3000);
+    }
+
+    // Demo Sample Trigger
+    loadSampleBtn.addEventListener('click', () => {
+      hideAlert();
+      currentAuditData = JSON.parse(JSON.stringify(SAMPLE_BREAKDOWN_DATA));
+      const enteredName = patientNameInput ? patientNameInput.value.trim() : '';
+      if (enteredName) {
+        currentAuditData.insurance_details.patient_name = enteredName;
+      }
+      renderReportDashboard(currentAuditData);
+      saveAuditToHistory(currentAuditData);
+      displayToast('Loaded sample Delta Dental breakdown.');
+    });
+
+    // Reset Verification and Form State without reloading page
+    function resetVerificationState() {
+      selectedFiles = [];
+      currentAuditData = null;
+      if (fileInput) fileInput.value = '';
+      if (patientNameInput) patientNameInput.value = '';
+      if (filesListContainer) filesListContainer.classList.remove('active');
+      if (dropzoneField) dropzoneField.style.display = 'block';
+      if (reportDashboard) reportDashboard.classList.remove('active');
+      if (patientHeroBadge) patientHeroBadge.style.display = 'none';
+      hideAlert();
+      stopAuditorLoading();
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+
+    // Form submission
+    analyzeBtn.addEventListener('click', async () => {
+      if (selectedFiles.length === 0) {
+        showAlert('Please upload or drag at least one dental breakdown file before analyzing.');
+        return;
+      }
+
+      const pref = document.querySelector('input[name="network_preference"]:checked')?.value || 'auto';
+      const patientNameVal = patientNameInput ? patientNameInput.value.trim() : '';
+
+      const formData = new FormData();
+      
+      selectedFiles.forEach((file) => {
+        formData.append('files', file);
+      });
+      formData.append('network_preference', pref);
+      if (patientNameVal) {
+        formData.append('patient_name', patientNameVal);
+      }
+
+      // Append customized AI role or CDT prompt from settings if configured
+      const customSys = localStorage.getItem('dentverify_system_instruction') || (settingSystemInstruction ? settingSystemInstruction.value.trim() : '');
+      const customPr = localStorage.getItem('dentverify_custom_prompt') || (settingCustomPrompt ? settingCustomPrompt.value.trim() : '');
+      if (customSys) formData.append('system_instruction', customSys);
+      if (customPr) formData.append('custom_prompt', customPr);
+
+      startAuditorLoading();
+
+      try {
+        const response = await fetch('/api/verify', {
+          method: 'POST',
+          body: formData,
+        });
+
+        const resData = await response.json();
+
+        if (!response.ok || !resData.success) {
+          throw new Error(resData.error || 'Failed to verify insurance document.');
+        }
+
+        currentAuditData = resData.data;
+
+        // If user explicitly entered a patient name on the form, keep it
+        if (patientNameVal && (!currentAuditData.insurance_details.patient_name || currentAuditData.insurance_details.patient_name === 'N/A')) {
+          currentAuditData.insurance_details.patient_name = patientNameVal;
+        }
+
+        renderReportDashboard(currentAuditData);
+        saveAuditToHistory(currentAuditData);
+      } catch (err) {
+        console.error(err);
+        showAlert(err.message || 'An error occurred during verification.');
+      } finally {
+        stopAuditorLoading();
+      }
+    });
+
+    // Money formatter
+    function fmtMoney(amount) {
+      if (amount === null || amount === undefined) return 'Unlimited';
+      return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 }).format(amount);
+    }
+
+    // Render verification report
+    function renderReportDashboard(data) {
+      const details = data.insurance_details || {};
+      const levels = data.coverage_levels || {};
+
+      // Patient Name Display
+      if (details.patient_name && details.patient_name.trim() !== '' && details.patient_name.toLowerCase() !== 'n/a') {
+        patientHeroName.textContent = details.patient_name.trim();
+        patientHeroBadge.style.display = 'inline-flex';
+      } else {
+        patientHeroBadge.style.display = 'none';
+      }
+
+      // Carrier & Network
+      document.getElementById('carrierNameDisplay').textContent = details.carrier || 'Dental Insurance Plan';
+      document.getElementById('planEffectiveDateDisplay').textContent = 'Effective: ' + (details.effective_date || 'Current Benefit Period');
+      
+      const netBadge = document.getElementById('networkStatusBadge');
+      const netStatus = details.network_status || 'In-Network';
+      netBadge.textContent = netStatus;
+      if (netStatus.toLowerCase().includes('out')) {
+        netBadge.className = 'network-indicator-pill out-network';
+      } else {
+        netBadge.className = 'network-indicator-pill in-network';
+      }
+
+      // Annual Max Card
+      document.getElementById('hudAnnualMax').textContent = fmtMoney(details.annual_maximum);
+      document.getElementById('hudRemainingMax').textContent = 'Remaining: ' + fmtMoney(details.remaining_maximum);
+      
+      let maxPct = 0;
+      if (details.annual_maximum && details.remaining_maximum !== null && details.remaining_maximum !== undefined) {
+        const used = Math.max(0, details.annual_maximum - details.remaining_maximum);
+        maxPct = Math.min(100, Math.round((used / details.annual_maximum) * 100));
+        document.getElementById('hudMaxPctUsed').textContent = `${maxPct}% used (${fmtMoney(used)})`;
+        document.getElementById('meterMaxBar').style.width = `${Math.max(5, 100 - maxPct)}%`;
+      } else {
+        document.getElementById('hudMaxPctUsed').textContent = 'No usage recorded';
+        document.getElementById('meterMaxBar').style.width = '100%';
+      }
+
+      // Individual Deductible Card
+      document.getElementById('hudDeductible').textContent = fmtMoney(details.deductible_individual);
+      if (details.deductible_remaining !== null && details.deductible_remaining !== undefined) {
+        document.getElementById('hudRemainingDed').textContent = 'Remaining: ' + fmtMoney(details.deductible_remaining);
+        if (details.deductible_remaining === 0) {
+          document.getElementById('hudDedMetStatus').textContent = '100% Met';
+          document.getElementById('meterDedBar').style.width = '100%';
+        } else {
+          document.getElementById('hudDedMetStatus').textContent = 'Active Balance';
+          document.getElementById('meterDedBar').style.width = '35%';
+        }
+      } else {
+        document.getElementById('hudRemainingDed').textContent = 'Remaining: $0 (Met or None)';
+        document.getElementById('hudDedMetStatus').textContent = 'Met / N/A';
+        document.getElementById('meterDedBar').style.width = '100%';
+      }
+
+      // Deductible Scope Card
+      document.getElementById('hudDedApplies').textContent = details.deductible_applies_to || 'Basic & Major Services';
+      const prevCounts = Boolean(details.preventive_applies_to_max);
+      document.getElementById('chipPrevMaxDot').className = prevCounts ? 'rule-status-circle warn' : 'rule-status-circle good';
+      document.getElementById('chipPrevMaxText').textContent = prevCounts ? 'Prev counts toward annual max' : 'Preventive does NOT apply to max';
+
+      // Rules Row
+      const rulesRow = document.getElementById('rulesRow');
+      rulesRow.innerHTML = '';
+
+      // Missing tooth clause
+      const mtChip = document.createElement('div');
+      mtChip.className = 'rule-chip';
+      const hasMT = Boolean(details.missing_tooth_clause);
+      mtChip.innerHTML = `
+        <span class="rule-status-circle ${hasMT ? 'warn' : 'good'}"></span>
+        <span><strong>Missing Tooth Clause:</strong> ${hasMT ? 'Applies (Yes)' : 'No (Waived)'}</span>
+      `;
+      rulesRow.appendChild(mtChip);
+
+      // Waiting periods
+      const wpChip = document.createElement('div');
+      wpChip.className = 'rule-chip';
+      const hasWP = Boolean(details.waiting_period);
+      wpChip.innerHTML = `
+        <span class="rule-status-circle ${hasWP ? 'warn' : 'good'}"></span>
+        <span><strong>Waiting Period:</strong> ${hasWP ? 'Yes (Present on Basic/Major)' : 'None / Waived'}</span>
+      `;
+      rulesRow.appendChild(wpChip);
+
+      // Ortho limits
+      if (levels.ortho_max || levels.ortho_age_limit) {
+        const orthoChip = document.createElement('div');
+        orthoChip.className = 'rule-chip';
+        orthoChip.innerHTML = `
+          <span class="rule-status-circle neutral"></span>
+          <span><strong>Ortho Terms:</strong> Max ${levels.ortho_max || 'N/A'} • ${levels.ortho_age_limit || 'No Age Limit'}</span>
+        `;
+        rulesRow.appendChild(orthoChip);
+      }
+
+      // Category Matrix Cards
+      const categoryCardsGrid = document.getElementById('categoryCardsGrid');
+      categoryCardsGrid.innerHTML = '';
+
+      const catMatrix = [
+        { code: 'D0100 - D1000', name: 'Preventive / Diag', val: levels.preventive || '100%' },
+        { code: 'D2000 - D2900', name: 'Basic Restorative', val: levels.basic || '80%' },
+        { code: 'D2700 - D6000', name: 'Major (Crown/Br)', val: levels.major || '50%' },
+        { code: 'D3000 - D3900', name: 'Endodontics', val: levels.endo || levels.basic || '80%' },
+        { code: 'D4000 - D4900', name: 'Periodontics', val: levels.basic || '80%' },
+        { code: 'D7000 - D7900', name: 'Oral Surgery', val: levels.oral_surgery || levels.basic || '80%' },
+        { code: 'D8000 - D8900', name: 'Orthodontics', val: levels.ortho || '0%' },
+      ];
+
+      catMatrix.forEach(item => {
+        const cBox = document.createElement('div');
+        cBox.className = 'category-box';
+        cBox.innerHTML = `
+          <div class="category-code-tag">${item.code}</div>
+          <div class="category-name-text">${item.name}</div>
+          <div class="category-percentage-num">${item.val}</div>
+        `;
+        categoryCardsGrid.appendChild(cBox);
+      });
+
+      // Populate Table
+      renderCdtTable();
+
+      // Show Report Dashboard
+      reportDashboard.classList.add('active');
+      reportDashboard.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+
+    // Render CDT Table
+    function renderCdtTable() {
+      const allCodes = currentAuditData?.procedure_codes || [];
+      cdtTableBody.innerHTML = '';
+
+      const query = currentSearch.trim().toLowerCase();
+
+      const filtered = allCodes.filter(item => {
+        const textMatch = 
+          (item.code || '').toLowerCase().includes(query) ||
+          (item.description || '').toLowerCase().includes(query) ||
+          (item.notes || '').toLowerCase().includes(query) ||
+          (item.downgrade_rule || '').toLowerCase().includes(query);
+
+        if (!textMatch) return false;
+
+        if (currentFilter === 'eligible') {
+          return item.is_eligible === true;
+        } else if (currentFilter === 'not_covered') {
+          return item.is_eligible === false || (item.coverage_percentage || '').includes('0%') || (item.coverage_percentage || '').toLowerCase().includes('nc');
+        } else if (currentFilter === 'downgrades') {
+          return item.downgrade_rule && item.downgrade_rule.toLowerCase() !== 'none' && item.downgrade_rule !== '';
+        }
+
+        return true;
+      });
+
+      codesCountPill.textContent = `${filtered.length} of ${allCodes.length} codes`;
+
+      if (filtered.length === 0) {
+        const tr = document.createElement('tr');
+        tr.innerHTML = `<td colspan="10" style="text-align: center; color: var(--text-muted); padding: 3rem;">No procedure codes found matching current filter/query.</td>`;
+        cdtTableBody.appendChild(tr);
+        return;
+      }
+
+      filtered.forEach(p => {
+        const tr = document.createElement('tr');
+
+        // Status badge
+        const statusBadge = p.is_eligible
+          ? `<span class="badge-status-eligible"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"></polyline></svg>Eligible</span>`
+          : `<span class="badge-status-ineligible"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>Ineligible</span>`;
+
+        // Downgrade pill
+        let downgradeCell = `<span style="color: var(--text-muted); font-size: 0.8rem;">None</span>`;
+        if (p.downgrade_rule && p.downgrade_rule.toLowerCase() !== 'none') {
+          downgradeCell = `<span class="downgrade-flag"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polygon points="12 2 2 22 22 22 12 2"></polygon><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>${p.downgrade_rule}</span>`;
+        }
+
+        // Ded Applies
+        const dedCell = p.deductible_applied ? `<span class="tag-ded-yes">Applies</span>` : `<span class="tag-ded-no">Waived</span>`;
+
+        tr.innerHTML = `
+          <td><span class="cdt-badge">${p.code || 'CDT'}</span></td>
+          <td class="desc-text">${p.description || '-'}</td>
+          <td><span class="pct-badge-num" style="color: #38bdf8;">${p.coverage_percentage || '0%'}</span></td>
+          <td>${dedCell}</td>
+          <td>${p.frequency_limitation || '-'}</td>
+          <td>${p.age_limit || 'None'}</td>
+          <td>${statusBadge}</td>
+          <td class="history-text">${p.history_dates || 'None'}</td>
+          <td>${downgradeCell}</td>
+          <td class="notes-snippet">${p.notes || '-'}</td>
+        `;
+
+        cdtTableBody.appendChild(tr);
+      });
+    }
+
+    // Search and filter listeners
+    cdtSearchInput.addEventListener('input', (e) => {
+      currentSearch = e.target.value;
+      renderCdtTable();
+    });
+
+    filterChips.forEach(chip => {
+      chip.addEventListener('click', () => {
+        filterChips.forEach(c => c.classList.remove('active'));
+        chip.classList.add('active');
+        currentFilter = chip.dataset.filter;
+        renderCdtTable();
+      });
+    });
+
+    // Reset button (resets state cleanly without reload)
+    newVerificationBtn.addEventListener('click', () => {
+      resetVerificationState();
+    });
+
+    // Format PMS Text
+    function buildPmsNote() {
+      if (!currentAuditData) return '';
+      const d = currentAuditData.insurance_details || {};
+      const c = currentAuditData.coverage_levels || {};
+      const codes = currentAuditData.procedure_codes || [];
+
+      const today = new Date().toLocaleDateString('en-US');
+
+      let txt = `==========================================================\n`;
+      txt += `DENTAL INSURANCE VERIFICATION AUDIT [${today}]\n`;
+      txt += `==========================================================\n`;
+      if (d.patient_name && d.patient_name.trim() !== '' && d.patient_name.toLowerCase() !== 'n/a') {
+        txt += `PATIENT NAME:         ${d.patient_name.trim()}\n`;
+      }
+      txt += `CARRIER:              ${d.carrier || 'N/A'}\n`;
+      txt += `STATUS/TIER:          ${d.network_status || 'In-Network'}\n`;
+      txt += `EFFECTIVE DATES:      ${d.effective_date || 'N/A'}\n`;
+      txt += `ANNUAL MAXIMUM:       ${fmtMoney(d.annual_maximum)} | REMAINING: ${fmtMoney(d.remaining_maximum)}\n`;
+      txt += `INDIVIDUAL DED:       ${fmtMoney(d.deductible_individual)} | REMAINING: ${fmtMoney(d.deductible_remaining)}\n`;
+      txt += `DEDUCTIBLE APPLIES:   ${d.deductible_applies_to || 'Basic & Major'}\n`;
+      txt += `PREVENTIVE TO MAX:    ${d.preventive_applies_to_max ? 'YES (Counts toward max)' : 'NO (Waived from max)'}\n`;
+      txt += `MISSING TOOTH CLAUSE: ${d.missing_tooth_clause ? 'YES' : 'NO'}\n`;
+      txt += `WAITING PERIODS:      ${d.waiting_period ? 'YES' : 'NO'}\n`;
+      txt += `----------------------------------------------------------\n`;
+      txt += `CATEGORY BREAKDOWN:\n`;
+      txt += ` • Preventive:        ${c.preventive || '100%'}\n`;
+      txt += ` • Basic:             ${c.basic || '80%'}\n`;
+      txt += ` • Major:             ${c.major || '50%'}\n`;
+      txt += ` • Endodontics:       ${c.endo || c.basic || '80%'}\n`;
+      txt += ` • Periodontics:      ${c.basic || '80%'}\n`;
+      txt += ` • Oral Surgery:      ${c.oral_surgery || c.basic || '80%'}\n`;
+      txt += ` • Orthodontics:      ${c.ortho || '0%'} (Max: ${c.ortho_max || 'N/A'}, Age: ${c.ortho_age_limit || 'None'})\n`;
+      txt += `----------------------------------------------------------\n`;
+      txt += `AUDITED CDT PROCEDURE CODES & LIMITATIONS:\n`;
+
+      codes.forEach(cd => {
+        txt += `• ${cd.code} - ${cd.description}\n`;
+        txt += `  Coverage: ${cd.coverage_percentage} | Ded: ${cd.deductible_applied ? 'Applies' : 'Waived'} | Freq: ${cd.frequency_limitation} | Elig: ${cd.is_eligible ? 'ELIGIBLE' : 'NOT ELIGIBLE'}\n`;
+        if (cd.history_dates && cd.history_dates.toLowerCase() !== 'none') {
+          txt += `  History on File: ${cd.history_dates}\n`;
+        }
+        if (cd.downgrade_rule && cd.downgrade_rule.toLowerCase() !== 'none') {
+          txt += `  Downgrade: ${cd.downgrade_rule}\n`;
+        }
+        if (cd.notes && cd.notes.trim() !== '') {
+          txt += `  Note: ${cd.notes}\n`;
+        }
+      });
+
+      txt += `==========================================================\n`;
+      txt += `Verified via DentVerify AI (iv.eonx.cz)\n`;
+
+      pmsNoteContent.value = txt;
+      return txt;
+    }
+
+    // Modal Events
+    openPmsModalBtn.addEventListener('click', () => {
+      buildPmsNote();
+      pmsModal.classList.add('active');
+    });
+
+    closePmsModalBtn.addEventListener('click', () => {
+      pmsModal.classList.remove('active');
+    });
+
+    pmsModal.addEventListener('click', (e) => {
+      if (e.target === pmsModal) {
+        pmsModal.classList.remove('active');
+      }
+    });
+
+    copyPmsNoteBtn.addEventListener('click', () => {
+      pmsNoteContent.select();
+      navigator.clipboard.writeText(pmsNoteContent.value).then(() => {
+        displayToast('PMS Note copied to clipboard!');
+      }).catch(() => {
+        document.execCommand('copy');
+        displayToast('PMS Note copied to clipboard!');
+      });
+    });
+
+    // ==========================================
+    // AI SETTINGS & PROMPTS CONFIGURATION LOGIC
+    // ==========================================
+    const openSettingsBtn = document.getElementById('openSettingsBtn');
+    const settingsModal = document.getElementById('settingsModal');
+    const closeSettingsModalBtn = document.getElementById('closeSettingsModalBtn');
+    const settingSystemInstruction = document.getElementById('settingSystemInstruction');
+    const settingCustomPrompt = document.getElementById('settingCustomPrompt');
+    const btnRestoreDefaults = document.getElementById('btnRestoreDefaults');
+    const btnSaveSettings = document.getElementById('btnSaveSettings');
+    const settingsTabBtns = document.querySelectorAll('.settings-tab-btn');
+    const settingsTabPanes = document.querySelectorAll('.settings-tab-pane');
+
+    // Tab switching in Settings modal
+    settingsTabBtns.forEach(btn => {
+      btn.addEventListener('click', () => {
+        settingsTabBtns.forEach(b => b.classList.remove('active'));
+        settingsTabPanes.forEach(p => p.classList.remove('active'));
+        btn.classList.add('active');
+        const targetId = btn.dataset.tab;
+        document.getElementById(targetId)?.classList.add('active');
+      });
+    });
+
+    // Fetch and sync default or saved prompt settings
+    async function loadPromptSettings() {
+      try {
+        const storedSys = localStorage.getItem('dentverify_system_instruction');
+        const storedPr = localStorage.getItem('dentverify_custom_prompt');
+
+        if (storedSys && storedPr) {
+          settingSystemInstruction.value = storedSys;
+          settingCustomPrompt.value = storedPr;
+          return;
+        }
+
+        const res = await fetch('/api/prompts/default');
+        if (res.ok) {
+          const data = await res.json();
+          if (!storedSys) settingSystemInstruction.value = data.systemInstruction || '';
+          if (!storedPr) settingCustomPrompt.value = data.customPrompt || '';
+        }
+      } catch (e) {
+        console.warn('Could not load default prompts:', e);
+      }
+    }
+
+    // Open Settings Modal
+    openSettingsBtn.addEventListener('click', () => {
+      loadPromptSettings();
+      settingsModal.classList.add('active');
+    });
+
+    // Close Settings Modal
+    closeSettingsModalBtn.addEventListener('click', () => {
+      settingsModal.classList.remove('active');
+    });
+
+    settingsModal.addEventListener('click', (e) => {
+      if (e.target === settingsModal) {
+        settingsModal.classList.remove('active');
+      }
+    });
+
+    // Save Settings
+    btnSaveSettings.addEventListener('click', () => {
+      const sysVal = settingSystemInstruction.value.trim();
+      const prVal = settingCustomPrompt.value.trim();
+      if (sysVal) localStorage.setItem('dentverify_system_instruction', sysVal);
+      if (prVal) localStorage.setItem('dentverify_custom_prompt', prVal);
+      settingsModal.classList.remove('active');
+      displayToast('AI Directives saved! Applied to breakdown audits.');
+    });
+
+    // Restore Factory Defaults
+    btnRestoreDefaults.addEventListener('click', async () => {
+      try {
+        const res = await fetch('/api/prompts/default');
+        if (res.ok) {
+          const data = await res.json();
+          settingSystemInstruction.value = data.systemInstruction || '';
+          settingCustomPrompt.value = data.customPrompt || '';
+          localStorage.removeItem('dentverify_system_instruction');
+          localStorage.removeItem('dentverify_custom_prompt');
+          displayToast('Restored default AI prompt directives.');
+        }
+      } catch (e) {
+        displayToast('Could not fetch default prompts.');
+      }
+    });
+
+    // Initialize prompt values on page load
+    loadPromptSettings();
+
+    // ==========================================
+    // PATIENT VERIFICATION HISTORY LOGIC
+    // ==========================================
+    function getAuditHistory() {
+      try {
+        const raw = localStorage.getItem(HISTORY_STORAGE_KEY);
+        return raw ? JSON.parse(raw) : [];
+      } catch (e) {
+        console.warn('Could not read audit history:', e);
+        return [];
+      }
+    }
+
+    function saveAuditToHistory(auditData) {
+      if (!auditData) return;
+      try {
+        const list = getAuditHistory();
+        const d = auditData.insurance_details || {};
+        const pName = (d.patient_name && d.patient_name.trim() !== '') ? d.patient_name.trim() : 'Patient (Unspecified)';
+        const carrier = d.carrier || 'Dental Insurance';
+        
+        const historyRecord = {
+          id: 'hist_' + Date.now() + '_' + Math.random().toString(36).substr(2, 5),
+          timestamp: new Date().toISOString(),
+          displayDate: new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit' }),
+          patientName: pName,
+          carrier: carrier,
+          networkStatus: d.network_status || 'In-Network',
+          codesCount: (auditData.procedure_codes || []).length,
+          data: auditData,
+        };
+
+        // Prepend new record, keep up to 40 recent patient verifications
+        list.unshift(historyRecord);
+        if (list.length > 40) list.pop();
+        localStorage.setItem(HISTORY_STORAGE_KEY, JSON.stringify(list));
+        updateHistoryCountUI();
+      } catch (e) {
+        console.warn('Could not save audit to history:', e);
+      }
+    }
+
+    function deleteHistoryItem(id) {
+      try {
+        const list = getAuditHistory().filter(item => item.id !== id);
+        localStorage.setItem(HISTORY_STORAGE_KEY, JSON.stringify(list));
+        renderHistoryList();
+        updateHistoryCountUI();
+        displayToast('History item deleted.');
+      } catch (e) {
+        console.warn('Could not delete history item:', e);
+      }
+    }
+
+    function clearAllHistory() {
+      if (!confirm('Are you sure you want to clear all patient verification history?')) return;
+      localStorage.removeItem(HISTORY_STORAGE_KEY);
+      renderHistoryList();
+      updateHistoryCountUI();
+      displayToast('All verification history cleared.');
+    }
+
+    function updateHistoryCountUI() {
+      const list = getAuditHistory();
+      const count = list.length;
+      if (headerHistoryCount) headerHistoryCount.textContent = `History (${count})`;
+      if (historyModalCount) historyModalCount.textContent = count;
+    }
+
+    function renderHistoryList() {
+      const list = getAuditHistory();
+      updateHistoryCountUI();
+      if (!historyListContainer) return;
+
+      historyListContainer.innerHTML = '';
+
+      if (list.length === 0) {
+        historyListContainer.innerHTML = `
+          <div class="history-empty-state">
+            <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+              <circle cx="12" cy="12" r="10"></circle>
+              <polyline points="12 6 12 12 16 14"></polyline>
+            </svg>
+            <div style="font-size: 1rem; font-weight: 600; color: #fff;">No Patient Verifications Recorded Yet</div>
+            <div style="font-size: 0.825rem; max-width: 380px;">Whenever you analyze an insurance breakdown, it will automatically save here so you can review previous patient benefits anytime without re-uploading.</div>
+          </div>
+        `;
+        return;
+      }
+
+      list.forEach((item) => {
+        const card = document.createElement('div');
+        card.className = 'history-card-item';
+        card.innerHTML = `
+          <div class="history-card-left">
+            <div class="history-patient-row">
+              <span class="patient-hero-badge" style="padding: 0.15rem 0.6rem; font-size: 0.775rem;">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
+                ${escapeHtml(item.patientName)}
+              </span>
+              <span class="history-patient-title">${escapeHtml(item.carrier)}</span>
+            </div>
+            <div class="history-meta-info">
+              <span>Verified: ${escapeHtml(item.displayDate)}</span>
+              <span>•</span>
+              <span style="color: ${item.networkStatus.toLowerCase().includes('out') ? '#fda4af' : '#38bdf8'};">${escapeHtml(item.networkStatus)}</span>
+              <span>•</span>
+              <span>${item.codesCount} CDT codes</span>
+            </div>
+          </div>
+          <div class="history-actions-row">
+            <button type="button" class="btn-history-load load-hist-btn" title="View Patient Breakdown">
+              Load Audit
+            </button>
+            <button type="button" class="btn-history-delete del-hist-btn" title="Delete record">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <line x1="18" y1="6" x2="6" y2="18"></line>
+                <line x1="6" y1="6" x2="18" y2="18"></line>
+              </svg>
+            </button>
+          </div>
+        `;
+
+        // Card clicks
+        const loadBtn = card.querySelector('.load-hist-btn');
+        loadBtn.addEventListener('click', (e) => {
+          e.stopPropagation();
+          currentAuditData = item.data;
+          renderReportDashboard(currentAuditData);
+          historyModal.classList.remove('active');
+          displayToast(`Loaded audit for: ${item.patientName}`);
+        });
+
+        card.addEventListener('click', () => {
+          currentAuditData = item.data;
+          renderReportDashboard(currentAuditData);
+          historyModal.classList.remove('active');
+          displayToast(`Loaded audit for: ${item.patientName}`);
+        });
+
+        const delBtn = card.querySelector('.del-hist-btn');
+        delBtn.addEventListener('click', (e) => {
+          e.stopPropagation();
+          deleteHistoryItem(item.id);
+        });
+
+        historyListContainer.appendChild(card);
+      });
+    }
+
+    // History Modal Open / Close Events
+    if (openHistoryBtn) {
+      openHistoryBtn.addEventListener('click', () => {
+        renderHistoryList();
+        historyModal.classList.add('active');
+      });
+    }
+
+    if (closeHistoryModalBtn) {
+      closeHistoryModalBtn.addEventListener('click', () => {
+        historyModal.classList.remove('active');
+      });
+    }
+
+    if (btnCloseHistoryFooterBtn) {
+      btnCloseHistoryFooterBtn.addEventListener('click', () => {
+        historyModal.classList.remove('active');
+      });
+    }
+
+    if (btnClearHistoryBtn) {
+      btnClearHistoryBtn.addEventListener('click', () => {
+        clearAllHistory();
+      });
+    }
+
+    if (historyModal) {
+      historyModal.addEventListener('click', (e) => {
+        if (e.target === historyModal) {
+          historyModal.classList.remove('active');
+        }
+      });
+    }
+
+    // Update history badge counter on initial page load
+    updateHistoryCountUI();
+  </script>
+</body>
+</html>
