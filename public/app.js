@@ -34,8 +34,8 @@
         waiting_period_details: "Basic 6mo Major 12",
         ortho: "50%",
         ortho_max: "$1,000",
-        ortho_remaining: "$1,000",
-        ortho_age_limit: "14 Maximum"
+        ortho_remaining: "$999",
+        ortho_age_limit: "26"
       },
       procedure_codes: [
         // 1. D4346
@@ -671,6 +671,36 @@
       document.getElementById('chipPrevMaxDot').className = prevCounts ? 'rule-status-circle warn' : 'rule-status-circle good';
       document.getElementById('chipPrevMaxText').textContent = prevCounts ? 'Prev counts toward annual max' : 'Preventive does NOT apply to max';
 
+      // Orthodontics Card in policy-hero-card
+      const oMaxStr = levels.ortho_max || '$1,000';
+      const oRemStr = levels.ortho_remaining || '$999';
+      const oAgeStr = levels.ortho_age_limit || '26';
+      const oCovStr = levels.ortho || '50%';
+
+      const hudOrthoMaxEl = document.getElementById('hudOrthoMax');
+      if (hudOrthoMaxEl) hudOrthoMaxEl.textContent = oMaxStr;
+
+      const hudOrthoRemEl = document.getElementById('hudOrthoRem');
+      if (hudOrthoRemEl) hudOrthoRemEl.textContent = 'Ortho Rem: ' + oRemStr;
+
+      const hudOrthoAgeLimitEl = document.getElementById('hudOrthoAgeLimit');
+      if (hudOrthoAgeLimitEl) hudOrthoAgeLimitEl.textContent = 'Age limit: ' + oAgeStr;
+
+      const hudOrthoCoveragePillEl = document.getElementById('hudOrthoCoveragePill');
+      if (hudOrthoCoveragePillEl) hudOrthoCoveragePillEl.textContent = oCovStr;
+
+      const meterOrthoBar = document.getElementById('meterOrthoBar');
+      if (meterOrthoBar) {
+        const numMax = parseFloat(String(oMaxStr).replace(/[^0-9.]/g, '')) || 0;
+        const numRem = parseFloat(String(oRemStr).replace(/[^0-9.]/g, '')) || 0;
+        if (numMax > 0) {
+          const pct = Math.min(100, Math.max(5, Math.round((numRem / numMax) * 100)));
+          meterOrthoBar.style.width = pct + '%';
+        } else {
+          meterOrthoBar.style.width = '100%';
+        }
+      }
+
       // Rules Row
       const rulesRow = document.getElementById('rulesRow');
       rulesRow.innerHTML = '';
@@ -695,18 +725,7 @@
       `;
       rulesRow.appendChild(wpChip);
 
-      // Ortho limits
-      if (levels.ortho_max || levels.ortho_age_limit || levels.ortho) {
-        const orthoChip = document.createElement('div');
-        orthoChip.className = 'rule-chip';
-        orthoChip.innerHTML = `
-          <span class="rule-status-circle neutral"></span>
-          <span><strong>Ortho Terms:</strong> Coverage ${levels.ortho || '50%'} • Max ${levels.ortho_max || '$2,000'} • Age Limit: ${levels.ortho_age_limit || 'NL'}</span>
-        `;
-        rulesRow.appendChild(orthoChip);
-      }
-
-      // Category Matrix Cards (Clinical Excel Categories)
+      // Category Matrix Cards (Clinical Excel Categories - Ortho excluded)
       const categoryCardsGrid = document.getElementById('categoryCardsGrid');
       categoryCardsGrid.innerHTML = '';
 
@@ -781,16 +800,6 @@
           color: hasWP ? 'amber' : 'emerald'
         },
       ];
-
-      if (levels.ortho || levels.ortho_max) {
-        catMatrix.push({
-          code: 'ORTHO',
-          name: 'Orthodontics',
-          val: levels.ortho || '50%',
-          sub: `Max: ${levels.ortho_max || '$2,000'} • Age: ${levels.ortho_age_limit || 'NL'}`,
-          color: 'neutral'
-        });
-      }
 
       catMatrix.forEach(item => {
         const cBox = document.createElement('div');
@@ -874,14 +883,13 @@
         return;
       }
 
-      // Group into the 5 clinical categories requested by user:
-      // 1. Preventative, 2. Periodontal, 3. Restorative (2391), 4. Major, 5. Ortho
+      // Group into the 4 clinical categories requested by user:
+      // 1. Preventative, 2. Periodontal, 3. Restorative (2391), 4. Major
       const categoriesDef = [
         { key: 'preventative', title: 'PREVENTATIVE', badgeStyle: 'background: #fce7f3; color: #9d174d; border: 1px solid #fbcfe8;', desc: 'D4346, Prophy, Bitewings, FMX/Pano, PA\'s, Palliative, Exams, Sealants, Fluoride' },
         { key: 'periodontal', title: 'PERIODONTAL', badgeStyle: 'background: #dcfce7; color: #166534; border: 1px solid #bbf7d0;', desc: 'D4341 (SRP), D4910 (Perio Maintenance)' },
         { key: 'restorative', title: 'RESTORATIVE (2391)', badgeStyle: 'background: #f3e8ff; color: #6b21a8; border: 1px solid #e9d5ff;', desc: 'D2391 (Posterior Composite Filling)' },
         { key: 'major', title: 'MAJOR', badgeStyle: 'background: #ecfdf5; color: #047857; border: 1px solid #a7f3d0;', desc: 'D2740 (Crown), D2920 (Recement), D7140/D7210 (Extractions), D9222/D9223 (Sedation), D9944 (Night Guard)' },
-        { key: 'ortho', title: 'ORTHO', badgeStyle: 'background: #e0f2fe; color: #0369a1; border: 1px solid #bae6fd;', desc: 'Comprehensive Orthodontic Treatment' },
       ];
 
       categoriesDef.forEach(catDef => {

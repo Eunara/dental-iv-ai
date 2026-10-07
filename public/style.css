@@ -1005,6 +1005,7 @@
 
     .meter-progress-bar.emerald { background: linear-gradient(90deg, #10b981, #34d399); }
     .meter-progress-bar.amber { background: linear-gradient(90deg, #f59e0b, #fbbf24); }
+    .meter-progress-bar.cyan { background: linear-gradient(90deg, #0284c7, #38bdf8); }
 
     .financial-sub-text {
       font-size: 0.775rem;
