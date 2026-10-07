@@ -282,15 +282,6 @@
                 </svg>
                 Excel Sheet (PDF)
               </button>
-              <button type="button" class="btn-action-calc" id="scrollToEstimatorBtn" title="Jump to Treatment Copay Estimator">
-                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
-                  <rect x="4" y="2" width="16" height="20" rx="2"></rect>
-                  <line x1="8" y1="6" x2="16" y2="6"></line>
-                  <line x1="16" y1="14" x2="16" y2="18"></line>
-                  <path d="M16 10h.01"></path><path d="M12 10h.01"></path><path d="M8 10h.01"></path>
-                </svg>
-                Copay Estimator
-              </button>
               <button type="button" class="btn-action-pms" id="openPmsModalBtn">
                 <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                   <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
@@ -393,109 +384,6 @@
           </div>
           <div class="category-cards-grid" id="categoryCardsGrid">
             <!-- Dynamically populated with Preventative, Basic, Major, ENDO, Oral Surgery, Implants D6010, Missing Tooth, Waiting Period -->
-          </div>
-        </div>
-
-        <!-- TREATMENT COPAY & PATIENT OUT-OF-POCKET ESTIMATOR (OPTION 2) -->
-        <div class="copay-estimator-panel" id="copayEstimatorSection">
-          <div class="matrix-heading">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#10b981" stroke-width="2.2">
-              <rect x="4" y="2" width="16" height="20" rx="2"></rect>
-              <line x1="8" y1="6" x2="16" y2="6"></line>
-              <line x1="16" y1="14" x2="16" y2="18"></line>
-              <path d="M16 10h.01"></path>
-              <path d="M12 10h.01"></path>
-              <path d="M8 10h.01"></path>
-              <path d="M12 14h.01"></path>
-              <path d="M8 14h.01"></path>
-              <path d="M12 18h.01"></path>
-              <path d="M8 18h.01"></path>
-            </svg>
-            <span>Treatment Copay & Out-of-Pocket Estimator</span>
-            <span class="copay-calc-badge">Live Benefit Estimator</span>
-          </div>
-
-          <div class="copay-estimator-body">
-            <div class="copay-inputs-col">
-              <div class="copay-input-group">
-                <label for="copayProcedureSelect" class="copay-label">Select CDT Procedure Code</label>
-                <select id="copayProcedureSelect" class="copay-select">
-                  <!-- Populated from audit data -->
-                </select>
-              </div>
-
-              <div class="copay-form-row">
-                <div class="copay-input-group" style="flex: 1;">
-                  <label for="copayFeeInput" class="copay-label">Office / UCR Fee ($)</label>
-                  <div class="input-money-wrap">
-                    <span class="currency-symbol">$</span>
-                    <input type="number" id="copayFeeInput" class="copay-input" value="1200" min="0" step="10">
-                  </div>
-                </div>
-
-                <div class="copay-input-group" style="flex: 1;">
-                  <label for="copayCategorySelect" class="copay-label">Coverage Tier & Percentage</label>
-                  <select id="copayCategorySelect" class="copay-select">
-                    <option value="preventive">Preventative (100%)</option>
-                    <option value="basic">Basic Restorative (80%)</option>
-                    <option value="major" selected>Major Restorative (60%)</option>
-                    <option value="endo">Endodontics (80%)</option>
-                    <option value="oral_surgery">Oral Surgery (80%)</option>
-                    <option value="implants">Implants D6010 (NC / 0%)</option>
-                    <option value="ortho">Orthodontics (50%)</option>
-                    <option value="custom">Custom Coverage %...</option>
-                  </select>
-                </div>
-              </div>
-
-              <div class="copay-form-row" id="copayCustomPctRow" style="display: none;">
-                <div class="copay-input-group" style="flex: 1;">
-                  <label for="copayCustomPctInput" class="copay-label">Custom Coverage Percentage (%)</label>
-                  <input type="number" id="copayCustomPctInput" class="copay-input" value="50" min="0" max="100">
-                </div>
-              </div>
-
-              <div class="copay-checkbox-row">
-                <label class="copay-checkbox-label">
-                  <input type="checkbox" id="copayApplyDedCheckbox" checked>
-                  <span>Apply remaining deductible (<strong id="copayDedAmountDisplay">$50.00</strong>)</span>
-                </label>
-              </div>
-            </div>
-
-            <!-- Output HUD -->
-            <div class="copay-results-card">
-              <div>
-                <div class="copay-card-title">Estimated Patient Responsibility</div>
-                <div class="copay-big-patient-out" id="copayEstimatedOutDisplay">$530.00</div>
-              </div>
-              <div class="copay-breakdown-table">
-                <div class="copay-calc-row">
-                  <span>Procedure Fee:</span>
-                  <strong id="copayFeeDisplay">$1,200.00</strong>
-                </div>
-                <div class="copay-calc-row">
-                  <span>Deductible Applied:</span>
-                  <span id="copayDedAppliedDisplay">-$50.00</span>
-                </div>
-                <div class="copay-calc-row">
-                  <span>Covered Allowance:</span>
-                  <span id="copayAllowanceDisplay">$1,150.00</span>
-                </div>
-                <div class="copay-calc-row highlight-ins">
-                  <span>Insurance Est. Payment (<span id="copayPctDisplay">60%</span>):</span>
-                  <strong id="copayInsPaysDisplay">$690.00</strong>
-                </div>
-                <div class="copay-calc-row highlight-total">
-                  <span>Estimated Patient Out-of-Pocket:</span>
-                  <strong id="copayTotalPatientDisplay">$510.00</strong>
-                </div>
-              </div>
-              <div class="copay-warning-box" id="copayWarningBox" style="display: none;">
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polygon points="12 2 2 22 22 22 12 2"></polygon><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>
-                <span id="copayWarningText">Posterior composite amalgam downgrade rule applies.</span>
-              </div>
-            </div>
           </div>
         </div>
 
