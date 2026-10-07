@@ -376,9 +376,11 @@ YOU MUST SPECIFICALLY AUDIT AND EXTRACT THE REQUIRED CDT PROCEDURES IF PRESENT O
    - D8090: Comprehensive Orthodontic Treatment of the Adult Dentition
    - D8670: Periodic Orthodontic Treatment Visit
 
-CRITICAL CLINICAL PROCEDURE SEQUENCE:
+CRITICAL CLINICAL PROCEDURE SEQUENCE BY 5 CATEGORIES:
 Audit the attached insurance breakdown sheet and extract the Procedure Table.
-Strictly maintain the following sequence and exact order of procedure codes in the procedure_codes array:
+Strictly maintain the following sequence and exact order of procedure codes in the procedure_codes array, separated into 5 clinical categories:
+
+CATEGORY 1: PREVENTATIVE
 1. D4346 (Scaling in presence of gingival inflammation)
 2. D1110 (Prophy / Adult Cleaning)
 3. D0274 (BTW / Bitewings)
@@ -389,16 +391,24 @@ Strictly maintain the following sequence and exact order of procedure codes in t
 8. D0140 (Limited Exam)
 9. D1351 (Sealant)
 10. D1206 (Flouride)
+
+CATEGORY 2: PERIODONTAL
 11. D4341 (SRP)
 12. D4910 (Perio Maint)
+
+CATEGORY 3: RESTORATIVE (D2391 is the only code for restorative)
 13. D2391 (Filling / Composite)
+
+CATEGORY 4: MAJOR
 14. D2740 (Crown)
 15. D2920 (Crown Recement)
 16. D7140 (Simple ext)
 17. D7210 (Surgical ext)
 18. D9222 / D9223 (Sedation / Anesthesia)
 19. D9944 (Night Guard)
-20. D6010 (Implants)
+20. D6010 (Implants, if present)
+
+CATEGORY 5: ORTHO
 21. Ortho (Orthodontics)
 
 For each code in this exact order, strictly extract:

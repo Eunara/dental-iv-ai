@@ -2811,9 +2811,13 @@
 
             <!-- Filter Chips -->
             <div class="table-filter-chips">
-              <button type="button" class="filter-chip active" data-filter="all">All Codes</button>
+              <button type="button" class="filter-chip active" data-filter="all">All Categories</button>
+              <button type="button" class="filter-chip" data-filter="preventative">Preventative</button>
+              <button type="button" class="filter-chip" data-filter="periodontal">Periodontal</button>
+              <button type="button" class="filter-chip" data-filter="restorative">Restorative (2391)</button>
+              <button type="button" class="filter-chip" data-filter="major">Major</button>
+              <button type="button" class="filter-chip" data-filter="ortho">Ortho</button>
               <button type="button" class="filter-chip" data-filter="eligible">Eligible Only</button>
-              <button type="button" class="filter-chip" data-filter="not_covered">Not Covered (0%)</button>
               <button type="button" class="filter-chip" data-filter="downgrades">Downgrades</button>
             </div>
           </div>
@@ -2839,6 +2843,18 @@
                 <!-- Dynamically populated rows -->
               </tbody>
             </table>
+          </div>
+
+          <!-- Quick Return to Upload Files Button -->
+          <div style="display: flex; justify-content: center; align-items: center; margin-top: 1.5rem; gap: 1rem;">
+            <button type="button" class="btn-verify-primary" id="bottomNewBreakdownBtn" style="padding: 0.65rem 1.6rem; font-size: 0.85rem;">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                <polyline points="17 8 12 3 7 8"></polyline>
+                <line x1="12" y1="3" x2="12" y2="15"></line>
+              </svg>
+              New Breakdown (Upload Another Document)
+            </button>
           </div>
         </div>
       </div>
@@ -3182,6 +3198,81 @@
       return 900;
     }
 
+    // Strict categorization into the 5 clinical breakdown categories:
+    // 1. Preventative, 2. Periodontal, 3. Restorative (D2391), 4. Major, 5. Ortho
+    function categorizeProcedureCode(item) {
+      if (!item) return 'major';
+      const code = String(item.code || '').toUpperCase().trim();
+      const desc = String(item.description || '').toLowerCase();
+
+      // 1. Preventative
+      if (
+        code.includes('D4346') ||
+        code.includes('D1110') ||
+        code.includes('D0274') ||
+        code.includes('D0210') ||
+        code.includes('D0330') ||
+        code.includes('D0220') ||
+        code.includes('D9110') ||
+        code.includes('D0120') ||
+        code.includes('D0140') ||
+        code.includes('D1351') ||
+        code.includes('D1206') ||
+        code.includes('D1120') ||
+        code.includes('D0150') ||
+        code.includes('D0180') ||
+        code.includes('D0272') ||
+        code.includes('D0230') ||
+        code.includes('D1208') ||
+        desc.includes('prophy') ||
+        desc.includes('exam') ||
+        desc.includes('bitewing') ||
+        desc.includes('fluoride') ||
+        desc.includes('flouride') ||
+        desc.includes('sealant') ||
+        desc.includes('palliative')
+      ) {
+        return 'preventative';
+      }
+
+      // 2. Periodontal
+      if (
+        code.includes('D4341') ||
+        code.includes('D4910') ||
+        code.includes('D4342') ||
+        code.includes('D4381') ||
+        desc.includes('srp') ||
+        desc.includes('scaling and root') ||
+        desc.includes('perio maint') ||
+        desc.includes('periodontal')
+      ) {
+        return 'periodontal';
+      }
+
+      // 3. Restorative (user: 2391 - mao rani nga code ang sa restorative)
+      if (
+        code.includes('D2391') ||
+        code.includes('2391') ||
+        (code.startsWith('D2') && !code.includes('D2740') && !code.includes('D2920') && (desc.includes('filling') || desc.includes('composite') || desc.includes('amalgam') || desc.includes('resin')))
+      ) {
+        return 'restorative';
+      }
+
+      // 5. Ortho
+      if (
+        code.includes('ORTHO') ||
+        code.includes('D8080') ||
+        code.includes('D8090') ||
+        code.includes('D8670') ||
+        desc.includes('ortho')
+      ) {
+        return 'ortho';
+      }
+
+      // 4. Major (D2740, D2920, D7140, D7210, D9222/D9223, D9944, D6010, etc.)
+      return 'major';
+    }
+
     // File State
     let selectedFiles = [];
 
@@ -3435,7 +3526,19 @@
       if (patientNameInput) patientNameInput.value = '';
       if (filesListContainer) filesListContainer.classList.remove('active');
       if (dropzoneField) dropzoneField.style.display = 'block';
-      if (reportDashboard) reportDashboard.classList.remove('active');
+
+      // Hide Report Dashboard (IV Information)
+      if (reportDashboard) {
+        reportDashboard.classList.remove('active');
+        reportDashboard.style.display = 'none';
+      }
+
+      // Show Upload Form and Hero section
+      const heroSec = document.querySelector('.hero-section');
+      if (heroSec) heroSec.style.display = 'flex';
+      const formPan = document.getElementById('formPanel');
+      if (formPan) formPan.style.display = 'block';
+
       if (patientHeroBadge) patientHeroBadge.style.display = 'none';
       hideAlert();
       stopAuditorLoading();
@@ -3787,9 +3890,16 @@
       // Populate CDT Codes Table
       renderCdtTable();
 
+      // Hide Upload Section so ONLY IV Information is visible
+      const heroSec = document.querySelector('.hero-section');
+      if (heroSec) heroSec.style.display = 'none';
+      const formPan = document.getElementById('formPanel');
+      if (formPan) formPan.style.display = 'none';
+
       // Show Report Dashboard
       reportDashboard.classList.add('active');
-      reportDashboard.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      reportDashboard.style.display = 'block';
+      window.scrollTo({ top: 0, behavior: 'smooth' });
     }
 
     // Render CDT Table
@@ -3808,10 +3918,20 @@
 
         if (!textMatch) return false;
 
-        if (currentFilter === 'eligible') {
+        const cat = categorizeProcedureCode(item);
+
+        if (currentFilter === 'preventative') {
+          return cat === 'preventative';
+        } else if (currentFilter === 'periodontal') {
+          return cat === 'periodontal';
+        } else if (currentFilter === 'restorative') {
+          return cat === 'restorative';
+        } else if (currentFilter === 'major') {
+          return cat === 'major';
+        } else if (currentFilter === 'ortho') {
+          return cat === 'ortho';
+        } else if (currentFilter === 'eligible') {
           return item.is_eligible === true;
-        } else if (currentFilter === 'not_covered') {
-          return item.is_eligible === false || (item.coverage_percentage || '').includes('0%') || (item.coverage_percentage || '').toLowerCase().includes('nc');
         } else if (currentFilter === 'downgrades') {
           return item.downgrade_rule && item.downgrade_rule.toLowerCase() !== 'none' && item.downgrade_rule !== '';
         }
@@ -3831,37 +3951,68 @@
         return;
       }
 
-      filtered.forEach(p => {
-        const tr = document.createElement('tr');
+      // Group into the 5 clinical categories requested by user:
+      // 1. Preventative, 2. Periodontal, 3. Restorative (2391), 4. Major, 5. Ortho
+      const categoriesDef = [
+        { key: 'preventative', title: 'PREVENTATIVE', badgeStyle: 'background: #fce7f3; color: #9d174d; border: 1px solid #fbcfe8;', desc: 'D4346, Prophy, Bitewings, FMX/Pano, PA\'s, Palliative, Exams, Sealants, Fluoride' },
+        { key: 'periodontal', title: 'PERIODONTAL', badgeStyle: 'background: #dcfce7; color: #166534; border: 1px solid #bbf7d0;', desc: 'D4341 (SRP), D4910 (Perio Maintenance)' },
+        { key: 'restorative', title: 'RESTORATIVE (2391)', badgeStyle: 'background: #f3e8ff; color: #6b21a8; border: 1px solid #e9d5ff;', desc: 'D2391 (Posterior Composite Filling)' },
+        { key: 'major', title: 'MAJOR', badgeStyle: 'background: #ecfdf5; color: #047857; border: 1px solid #a7f3d0;', desc: 'D2740 (Crown), D2920 (Recement), D7140/D7210 (Extractions), D9222/D9223 (Sedation), D9944 (Night Guard)' },
+        { key: 'ortho', title: 'ORTHO', badgeStyle: 'background: #e0f2fe; color: #0369a1; border: 1px solid #bae6fd;', desc: 'Comprehensive Orthodontic Treatment' },
+      ];
 
-        // Status badge
-        const statusBadge = p.is_eligible
-          ? `<span class="badge-status-eligible"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"></polyline></svg>Eligible</span>`
-          : `<span class="badge-status-ineligible"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>Ineligible</span>`;
+      categoriesDef.forEach(catDef => {
+        const catCodes = filtered.filter(item => categorizeProcedureCode(item) === catDef.key);
+        if (catCodes.length === 0) return;
 
-        // Downgrade pill
-        let downgradeCell = `<span style="color: var(--text-muted); font-size: 0.8rem;">None</span>`;
-        if (p.downgrade_rule && p.downgrade_rule.toLowerCase() !== 'none') {
-          downgradeCell = `<span class="downgrade-flag"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polygon points="12 2 2 22 22 22 12 2"></polygon><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>${p.downgrade_rule}</span>`;
-        }
-
-        // Ded Applies
-        const dedCell = p.deductible_applied ? `<span class="tag-ded-yes">Applies</span>` : `<span class="tag-ded-no">Waived</span>`;
-
-        tr.innerHTML = `
-          <td><span class="cdt-badge">${p.code || 'CDT'}</span></td>
-          <td class="desc-text">${p.description || '-'}</td>
-          <td><span class="pct-badge-num" style="color: #38bdf8;">${p.coverage_percentage || '0%'}</span></td>
-          <td>${dedCell}</td>
-          <td>${p.frequency_limitation || '-'}</td>
-          <td>${p.age_limit || 'None'}</td>
-          <td>${statusBadge}</td>
-          <td class="history-text">${p.history_dates || 'None'}</td>
-          <td>${downgradeCell}</td>
-          <td class="notes-snippet">${p.notes || '-'}</td>
+        // Category header row
+        const catRow = document.createElement('tr');
+        catRow.className = 'category-header-row';
+        catRow.innerHTML = `
+          <td colspan="10" style="background: rgba(15, 23, 42, 0.95); padding: 0.65rem 0.85rem; border-top: 2px solid rgba(56, 189, 248, 0.25); border-bottom: 1px solid rgba(56, 189, 248, 0.2);">
+            <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 0.5rem;">
+              <div style="display: flex; align-items: center; gap: 0.6rem;">
+                <span style="${catDef.badgeStyle} font-weight: 800; font-size: 0.78rem; padding: 2px 9px; border-radius: 4px; letter-spacing: 0.04em;">${catDef.title}</span>
+                <span style="font-size: 0.78rem; color: var(--text-secondary);">${catDef.desc}</span>
+              </div>
+              <span style="font-size: 0.74rem; color: var(--cyan-bright); font-family: var(--font-mono); font-weight: 700;">${catCodes.length} procedure${catCodes.length > 1 ? 's' : ''}</span>
+            </div>
+          </td>
         `;
+        cdtTableBody.appendChild(catRow);
 
-        cdtTableBody.appendChild(tr);
+        catCodes.forEach(p => {
+          const tr = document.createElement('tr');
+
+          // Status badge
+          const statusBadge = p.is_eligible
+            ? `<span class="badge-status-eligible"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"></polyline></svg>Eligible</span>`
+            : `<span class="badge-status-ineligible"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>Ineligible</span>`;
+
+          // Downgrade pill
+          let downgradeCell = `<span style="color: var(--text-muted); font-size: 0.8rem;">None</span>`;
+          if (p.downgrade_rule && p.downgrade_rule.toLowerCase() !== 'none') {
+            downgradeCell = `<span class="downgrade-flag"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polygon points="12 2 2 22 22 22 12 2"></polygon><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>${escapeHtml(p.downgrade_rule)}</span>`;
+          }
+
+          // Ded Applies
+          const dedCell = p.deductible_applied ? `<span class="tag-ded-yes">Applies</span>` : `<span class="tag-ded-no">Waived</span>`;
+
+          tr.innerHTML = `
+            <td><span class="cdt-badge">${escapeHtml(p.code || 'CDT')}</span></td>
+            <td class="desc-text">${escapeHtml(p.description || '-')}</td>
+            <td><span class="pct-badge-num" style="color: #38bdf8;">${escapeHtml(p.coverage_percentage || '0%')}</span></td>
+            <td>${dedCell}</td>
+            <td>${escapeHtml(p.frequency_limitation || '-')}</td>
+            <td>${escapeHtml(p.age_limit || 'None')}</td>
+            <td>${statusBadge}</td>
+            <td class="history-text">${escapeHtml(p.history_dates || 'None')}</td>
+            <td>${downgradeCell}</td>
+            <td class="notes-snippet">${escapeHtml(p.notes || '-')}</td>
+          `;
+
+          cdtTableBody.appendChild(tr);
+        });
       });
     }
 
@@ -3884,6 +4035,13 @@
     newVerificationBtn.addEventListener('click', () => {
       resetVerificationState();
     });
+
+    const bottomNewBreakdownBtn = document.getElementById('bottomNewBreakdownBtn');
+    if (bottomNewBreakdownBtn) {
+      bottomNewBreakdownBtn.addEventListener('click', () => {
+        resetVerificationState();
+      });
+    }
 
     // Format PMS Text
     function buildPmsNote() {
@@ -3926,23 +4084,36 @@
       txt += ` • NIGHT GUARD D9944: ${c.night_guard || 'NC'}\n`;
       txt += ` • Orthodontics:      ${c.ortho || '50%'} (Max: ${c.ortho_max || '$2,000'}, Age Limit: ${c.ortho_age_limit || 'NL'})\n`;
       txt += `----------------------------------------------------------\n`;
-      txt += `AUDITED CDT PROCEDURE CODES (EXACT CLINICAL SEQUENCE):\n`;
+      txt += `AUDITED CDT PROCEDURE CODES (SEPARATED BY CATEGORIES):\n`;
 
-      codes.forEach(cd => {
-        txt += `• ${cd.code} - ${cd.description}\n`;
-        txt += `  Coverage: ${cd.coverage_percentage} | Ded: ${cd.deductible_applied ? 'Applies' : 'Waived'} | Freq: ${cd.frequency_limitation} | Elig: ${cd.is_eligible ? 'ELIGIBLE' : 'NOT ELIGIBLE'}\n`;
-        if (cd.history_dates && cd.history_dates.toLowerCase() !== 'none') {
-          txt += `  History on File: ${cd.history_dates}\n`;
-        }
-        if (cd.downgrade_rule && cd.downgrade_rule.toLowerCase() !== 'none') {
-          txt += `  Downgrade: ${cd.downgrade_rule}\n`;
-        }
-        if (cd.notes && cd.notes.trim() !== '') {
-          txt += `  Note: ${cd.notes}\n`;
-        }
+      const categoriesDef = [
+        { key: 'preventative', title: '1. PREVENTATIVE' },
+        { key: 'periodontal', title: '2. PERIODONTAL' },
+        { key: 'restorative', title: '3. RESTORATIVE (D2391)' },
+        { key: 'major', title: '4. MAJOR' },
+        { key: 'ortho', title: '5. ORTHODONTICS (ORTHO)' },
+      ];
+
+      categoriesDef.forEach(catDef => {
+        const catCodes = codes.filter(cd => categorizeProcedureCode(cd) === catDef.key);
+        if (catCodes.length === 0) return;
+        txt += `\n[${catDef.title}]\n`;
+        catCodes.forEach(cd => {
+          txt += `• ${cd.code} - ${cd.description}\n`;
+          txt += `  Coverage: ${cd.coverage_percentage} | Ded: ${cd.deductible_applied ? 'Applies' : 'Waived'} | Freq: ${cd.frequency_limitation} | Elig: ${cd.is_eligible ? 'ELIGIBLE' : 'NOT ELIGIBLE'}\n`;
+          if (cd.history_dates && cd.history_dates.toLowerCase() !== 'none') {
+            txt += `  History on File: ${cd.history_dates}\n`;
+          }
+          if (cd.downgrade_rule && cd.downgrade_rule.toLowerCase() !== 'none') {
+            txt += `  Downgrade: ${cd.downgrade_rule}\n`;
+          }
+          if (cd.notes && cd.notes.trim() !== '') {
+            txt += `  Note: ${cd.notes}\n`;
+          }
+        });
       });
 
-      txt += `==========================================================\n`;
+      txt += `\n==========================================================\n`;
       txt += `Verified via DentVerify AI (iv.eonx.cz)\n`;
 
       pmsNoteContent.value = txt;
@@ -4253,30 +4424,25 @@
 
       const prevCodes = [];
       const perioCodes = [];
-      const basicCodes = [];
+      const restorativeCodes = [];
       const majorCodes = [];
+      const orthoCodes = [];
 
       allCodes.forEach(cd => {
-        const codeNum = parseInt((cd.code || '').replace(/\D/g, ''), 10);
-        const descLower = (cd.description || '').toLowerCase();
-        const codeUpper = (cd.code || '').toUpperCase();
-
-        if (codeUpper.includes('D4346') || (codeNum >= 100 && codeNum <= 1999) || descLower.includes('eval') || descLower.includes('prophy') || descLower.includes('clean') || descLower.includes('x-ray') || descLower.includes('bitewing') || descLower.includes('fluoride') || descLower.includes('sealant') || descLower.includes('palliative') || codeUpper.includes('D9110')) {
-          prevCodes.push(cd);
-        } else if ((codeNum >= 4000 && codeNum <= 4999) || descLower.includes('scaling') || descLower.includes('perio') || descLower.includes('srp') || descLower.includes('arestin')) {
-          perioCodes.push(cd);
-        } else if ((codeNum >= 2000 && codeNum <= 2699) || descLower.includes('amalgam') || descLower.includes('composite') || descLower.includes('filling') || descLower.includes('resin')) {
-          basicCodes.push(cd);
-        } else {
-          majorCodes.push(cd);
-        }
+        const cat = categorizeProcedureCode(cd);
+        if (cat === 'preventative') prevCodes.push(cd);
+        else if (cat === 'periodontal') perioCodes.push(cd);
+        else if (cat === 'restorative') restorativeCodes.push(cd);
+        else if (cat === 'ortho') orthoCodes.push(cd);
+        else majorCodes.push(cd);
       });
 
-      // Maintain exact 1-to-21 order within partitions
+      // Maintain exact clinical order within each of the 5 categories
       prevCodes.sort((a, b) => getProcedureOrderRank(a.code) - getProcedureOrderRank(b.code));
       perioCodes.sort((a, b) => getProcedureOrderRank(a.code) - getProcedureOrderRank(b.code));
-      basicCodes.sort((a, b) => getProcedureOrderRank(a.code) - getProcedureOrderRank(b.code));
+      restorativeCodes.sort((a, b) => getProcedureOrderRank(a.code) - getProcedureOrderRank(b.code));
       majorCodes.sort((a, b) => getProcedureOrderRank(a.code) - getProcedureOrderRank(b.code));
+      orthoCodes.sort((a, b) => getProcedureOrderRank(a.code) - getProcedureOrderRank(b.code));
 
       let html = `
         <div class="excel-sheet-doc">
@@ -4378,12 +4544,12 @@
             </tr>
           </table>
 
-          <!-- 1. PREVENTIVE & DIAGNOSTIC SECTION (Pink Header) -->
+          <!-- 1. PREVENTATIVE PROCEDURES (Pink Header) -->
           <table class="excel-grid-table">
             <thead>
               <tr>
                 <th colspan="8" class="excel-section-banner excel-banner-pink" style="background: #fce7f3; color: #9d174d; font-weight: 800;">
-                  PREVENTIVE & DIAGNOSTIC PROCEDURES
+                  PREVENTATIVE PROCEDURES
                 </th>
               </tr>
               <tr>
@@ -4402,12 +4568,12 @@
             </tbody>
           </table>
 
-          <!-- 2. PERIODONTAL SECTION (Green Header) -->
+          <!-- 2. PERIODONTAL PROCEDURES (Green Header) -->
           <table class="excel-grid-table">
             <thead>
               <tr>
                 <th colspan="8" class="excel-section-banner excel-banner-green" style="background: #ecfdf5; color: #065f46; font-weight: 800;">
-                  PERIODONTAL PROCEDURES & THERAPY
+                  PERIODONTAL PROCEDURES
                 </th>
               </tr>
               <tr>
@@ -4426,12 +4592,12 @@
             </tbody>
           </table>
 
-          <!-- 3. BASIC RESTORATIVE SECTION (Purple Header) -->
+          <!-- 3. RESTORATIVE PROCEDURES (D2391) (Purple Header) -->
           <table class="excel-grid-table">
             <thead>
               <tr>
                 <th colspan="8" class="excel-section-banner excel-banner-purple" style="background: #f3e8ff; color: #6b21a8; font-weight: 800;">
-                  BASIC RESTORATIVE (FILLINGS & REPAIRS)
+                  RESTORATIVE PROCEDURES (D2391)
                 </th>
               </tr>
               <tr>
@@ -4446,16 +4612,16 @@
               </tr>
             </thead>
             <tbody>
-              ${renderExcelRows(basicCodes)}
+              ${renderExcelRows(restorativeCodes)}
             </tbody>
           </table>
 
-          <!-- 4. MAJOR RESTORATIVE, SURGERY & PROSTHETICS (Blue Header) -->
+          <!-- 4. MAJOR PROCEDURES (Emerald Header) -->
           <table class="excel-grid-table">
             <thead>
               <tr>
-                <th colspan="8" class="excel-section-banner excel-banner-blue" style="background: #e0f2fe; color: #0369a1; font-weight: 800;">
-                  MAJOR RESTORATIVE, SURGERY, IMPLANTS & ORTHODONTICS
+                <th colspan="8" class="excel-section-banner excel-banner-green" style="background: #d1fae5; color: #047857; font-weight: 800;">
+                  MAJOR PROCEDURES
                 </th>
               </tr>
               <tr>
@@ -4471,6 +4637,30 @@
             </thead>
             <tbody>
               ${renderExcelRows(majorCodes)}
+            </tbody>
+          </table>
+
+          <!-- 5. ORTHODONTICS (ORTHO) (Sky Blue Header) -->
+          <table class="excel-grid-table">
+            <thead>
+              <tr>
+                <th colspan="8" class="excel-section-banner excel-banner-blue" style="background: #e0f2fe; color: #0369a1; font-weight: 800;">
+                  ORTHODONTICS (ORTHO)
+                </th>
+              </tr>
+              <tr>
+                <th style="width: 11%;">CDT Code</th>
+                <th style="width: 25%;">Procedure Description</th>
+                <th style="width: 9%;">Coverage %</th>
+                <th style="width: 8%;">Deductible</th>
+                <th style="width: 15%;">Frequency</th>
+                <th style="width: 11%;">History Date</th>
+                <th style="width: 7%;">Eligible</th>
+                <th style="width: 14%;">Notes & Limitations</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${renderExcelRows(orthoCodes)}
             </tbody>
           </table>
 
