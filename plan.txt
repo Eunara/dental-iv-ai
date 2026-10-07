@@ -210,7 +210,7 @@ Major:
 18. D9222 / D9223 (Sedation / Anesthesia)
 19. D9944 (Night Guard)
 20. D6010 (Implants)
-21. Ortho (Orthodontics)
+21. Ortho (Orthodontics) 
 
 For each code in this exact order, strictly extract:
 - Coverage Percentage

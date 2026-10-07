@@ -2519,14 +2519,27 @@
           <div class="loading-ticker" id="loadingTicker">Initializing Gemini 2.5 Flash pipeline...</div>
         </div>
 
-        <!-- Error Alert -->
+        <!-- Error Alert Banner -->
         <div class="ui-alert-error" id="uiAlertError">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <circle cx="12" cy="12" r="10"></circle>
-            <line x1="12" y1="8" x2="12" y2="12"></line>
-            <line x1="12" y1="16" x2="12.01" y2="16"></line>
-          </svg>
-          <div id="errorDetailsText">Verification error details.</div>
+          <div style="display: flex; gap: 0.85rem; align-items: flex-start; width: 100%;">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#f43f5e" stroke-width="2.2" style="flex-shrink: 0; margin-top: 2px;">
+              <circle cx="12" cy="12" r="10"></circle>
+              <line x1="12" y1="8" x2="12" y2="12"></line>
+              <line x1="12" y1="16" x2="12.01" y2="16"></line>
+            </svg>
+            <div style="flex: 1;">
+              <div id="errorTitleText" style="font-weight: 700; font-size: 0.95rem; margin-bottom: 0.25rem; color: #ffe4e6;">Verification Notice</div>
+              <div id="errorDetailsText" style="font-size: 0.85rem; line-height: 1.45; color: #fecdd3;">Verification error details.</div>
+              <div style="margin-top: 0.65rem; display: flex; gap: 0.5rem; flex-wrap: wrap;">
+                <button type="button" id="retryVerifyBtn" class="btn-action-ghost" style="padding: 4px 12px; font-size: 0.8rem; background: rgba(244,63,94,0.2); border-color: rgba(244,63,94,0.5); color: #fff;">
+                  🔄 Sulayi Pag-usab (Retry)
+                </button>
+                <button type="button" id="dismissAlertBtn" class="btn-action-ghost" style="padding: 4px 12px; font-size: 0.8rem; color: #cbd5e1;">
+                  Dismiss
+                </button>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
 
@@ -3189,7 +3202,10 @@
     const auditorLoading = document.getElementById('auditorLoading');
     const loadingTicker = document.getElementById('loadingTicker');
     const uiAlertError = document.getElementById('uiAlertError');
+    const errorTitleText = document.getElementById('errorTitleText');
     const errorDetailsText = document.getElementById('errorDetailsText');
+    const retryVerifyBtn = document.getElementById('retryVerifyBtn');
+    const dismissAlertBtn = document.getElementById('dismissAlertBtn');
     const reportDashboard = document.getElementById('reportDashboard');
     const newVerificationBtn = document.getElementById('newVerificationBtn');
     const loadSampleBtn = document.getElementById('loadSampleBtn');
@@ -3363,13 +3379,31 @@
       if (loadingTickerTimer) clearInterval(loadingTickerTimer);
     }
 
-    function showAlert(msg) {
-      errorDetailsText.textContent = msg;
+    function showAlert(msg, title = 'Verification Notice') {
+      if (typeof msg === 'object' && msg !== null) {
+        title = msg.title || title;
+        msg = msg.message || JSON.stringify(msg);
+      }
+      if (errorTitleText) errorTitleText.textContent = title;
+      if (errorDetailsText) errorDetailsText.textContent = msg;
       uiAlertError.classList.add('active');
     }
 
     function hideAlert() {
       uiAlertError.classList.remove('active');
+    }
+
+    if (retryVerifyBtn) {
+      retryVerifyBtn.addEventListener('click', () => {
+        hideAlert();
+        analyzeBtn.click();
+      });
+    }
+
+    if (dismissAlertBtn) {
+      dismissAlertBtn.addEventListener('click', () => {
+        hideAlert();
+      });
     }
 
     function displayToast(msg) {
@@ -3410,8 +3444,10 @@
 
     // Form submission
     analyzeBtn.addEventListener('click', async () => {
+      hideAlert();
+
       if (selectedFiles.length === 0) {
-        showAlert('Please upload or drag at least one dental breakdown file before analyzing.');
+        showAlert('Palihug pag-upload o pag-drag ug dental breakdown file (PDF o Image) sa dili pa mag-analyze.', 'Wala pay File Gi-upload');
         return;
       }
 
@@ -3442,10 +3478,61 @@
           body: formData,
         });
 
-        const resData = await response.json();
+        let resData = null;
+        let isJson = false;
+        const contentType = response.headers.get('content-type') || '';
 
-        if (!response.ok || !resData.success) {
-          throw new Error(resData.error || 'Failed to verify insurance document.');
+        if (contentType.includes('application/json')) {
+          try {
+            resData = await response.json();
+            isJson = true;
+          } catch (jsonErr) {
+            console.error('Error parsing JSON from server:', jsonErr);
+          }
+        }
+
+        // If HTTP status is not successful (e.g. 504 Timeout, 503 Overload, 502, 429, 500)
+        if (!response.ok) {
+          if (resData && resData.error) {
+            let errorTitle = 'AI Verification Notice';
+            if (resData.error_type === 'API_OVERLOAD') {
+              errorTitle = '⚠️ Google Gemini API Overload (503 High Demand)';
+            } else if (resData.error_type === 'RATE_LIMIT') {
+              errorTitle = '⚠️ Gemini Free Quota / Rate Limit (429)';
+            } else if (resData.error_type === 'TIMEOUT') {
+              errorTitle = '⏱️ Processing Timeout';
+            } else if (resData.error_type === 'AUTH_ERROR') {
+              errorTitle = '⚠️ Gemini API Key Issue (403)';
+            }
+            showAlert(resData.error, errorTitle);
+            return;
+          }
+
+          // If server or Nginx returned an HTML error page without JSON
+          if (response.status === 504) {
+            showAlert('Nadugay pag-proseso ang Google Gemini tungod sa kadako sa dokumento o temporaryong taas nga trapik sa Google network. Dili kinahanglan i-reload ang panid — i-click lang ang "Sulayi Pag-usab" sa ubos.', '⏱️ 504 Gateway Timeout (Gemini AI Busy)');
+            return;
+          } else if (response.status === 503) {
+            showAlert('Temporaryong taas kaayo ang demand sa Google Gemini AI karon (Global demand spike). Palihug paghulat og 5-10 segundos unya i-click ang "Sulayi Pag-usab".', '⚠️ 503 Gemini API Overload');
+            return;
+          } else if (response.status === 429) {
+            showAlert('Nalapas ang libreng request limit sa Gemini API key karon. Palihug pahuwayi kadiyot (1-2 minutos) sa dili pa mosulay pag-usab.', '⚠️ 429 Rate Limit Reached');
+            return;
+          } else if (response.status === 502) {
+            showAlert('Ang server nag-restart o temporaryong busy. Palihug paghulat og 5 ka segundo unya i-click ang "Sulayi Pag-usab".', '🔌 502 Bad Gateway');
+            return;
+          } else if (response.status === 413) {
+            showAlert('Dako ra kaayo ang gi-upload nga file (maximum 30MB). Palihug pag-upload og mas gamay nga file o bahina ang mga pahina.', '📁 413 File Too Large');
+            return;
+          } else {
+            showAlert(`Adunay problema sa server (HTTP Status ${response.status}). Palihug i-click ang "Sulayi Pag-usab".`, `⚠️ Server Error (${response.status})`);
+            return;
+          }
+        }
+
+        if (!resData || !resData.success) {
+          showAlert(resData?.error || 'Wala nagmalampuson ang insurance verification. Palihug sulayi pag-usab.', 'Verification Notice');
+          return;
         }
 
         currentAuditData = resData.data;
@@ -3458,8 +3545,16 @@
         renderReportDashboard(currentAuditData);
         saveAuditToHistory(currentAuditData);
       } catch (err) {
-        console.error(err);
-        showAlert(err.message || 'An error occurred during verification.');
+        console.error('Audit verification error:', err);
+        let errorMsg = err.message || 'Adunay problema sa pagkonektar sa server.';
+        let errorTitle = 'Network / Server Error';
+
+        if (errorMsg.includes('Unexpected token') || errorMsg.includes('JSON')) {
+          errorTitle = '⚠️ API Overload / Gateway Timeout (504)';
+          errorMsg = 'Nakadawat ang browser og HTML imbes JSON gikan sa server. Kasagaran kini mahitabo kung nag-timeout o busy ang Google Gemini API sa pag-proseso sa file. Dili kinahanglan i-reload ang panid — i-click lang ang "Sulayi Pag-usab" button sa ubos!';
+        }
+
+        showAlert(errorMsg, errorTitle);
       } finally {
         stopAuditorLoading();
       }

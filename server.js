@@ -502,6 +502,8 @@ app.post('/api/verify', upload.array('files', 10), async (req, res) => {
     // Candidate models to try in priority order for resilience
     const candidateModels = [
       process.env.GEMINI_MODEL,
+      'gemini-2.5-flash',
+      'gemini-flash-latest',
       'gemini-3.5-flash-lite',
       'gemini-flash-lite-latest',
       'gemini-3.1-flash-lite',
@@ -582,20 +584,31 @@ app.post('/api/verify', upload.array('files', 10), async (req, res) => {
     });
   } catch (error) {
     console.error('Error during dental breakdown verification:', error);
+    const rawMsg = (error.message || error.toString() || '').toLowerCase();
+    const errStatus = error.status || error.code || null;
     let userMessage = error.message || 'An unexpected error occurred during analysis.';
-    
-    // Human-friendly error translation for common Gemini API errors
-    if (userMessage.includes('503') || userMessage.toLowerCase().includes('high demand')) {
-      userMessage = 'Google Gemini API is currently experiencing a temporary high-demand spike. Please click "Analyze Breakdown" again in a few seconds.';
-    } else if (userMessage.includes('429') || userMessage.toLowerCase().includes('quota') || userMessage.toLowerCase().includes('rate limit')) {
-      userMessage = 'Gemini API rate limit reached. Please wait a moment before trying again.';
-    } else if (userMessage.includes('API_KEY_INVALID') || userMessage.includes('403')) {
-      userMessage = 'Invalid Gemini API key. Please check your GEMINI_API_KEY in the .env file.';
+    let errorType = 'SERVER_ERROR';
+
+    if (errStatus === 503 || rawMsg.includes('503') || rawMsg.includes('high demand') || rawMsg.includes('unavailable') || rawMsg.includes('overload')) {
+      errorType = 'API_OVERLOAD';
+      userMessage = '⚠️ Google Gemini API Overload (503 High Demand): Temporaryong taas kaayo ang demand sa Google AI models karon. Palihug hulat og 5-15 segundos unya i-click usab ang "Analyze Breakdown".';
+    } else if (errStatus === 429 || rawMsg.includes('429') || rawMsg.includes('quota') || rawMsg.includes('resource has been exhausted') || rawMsg.includes('rate limit')) {
+      errorType = 'RATE_LIMIT';
+      userMessage = '⚠️ Gemini Free Quota / Rate Limit Reached (429): Naabot ang libreng request limit sa Google API key karon. Palihug pahuwayi kadiyot (1-2 minutos) sa dili pa mosulay pag-usab.';
+    } else if (errStatus === 403 || rawMsg.includes('api_key_invalid') || rawMsg.includes('403') || rawMsg.includes('permission denied')) {
+      errorType = 'AUTH_ERROR';
+      userMessage = '⚠️ Invalid API Key (403): Dili balido o kulang og permissions ang Gemini API key sa server .env.';
+    } else if (rawMsg.includes('timeout') || errStatus === 504 || rawMsg.includes('etimedout') || rawMsg.includes('esockettimedout')) {
+      errorType = 'TIMEOUT';
+      userMessage = '⏱️ Processing Timeout: Nadugay pag-proseso ang AI tungod sa kadako sa file o trapik sa internet. Palihug sulayi pag-usab.';
     }
 
     res.status(500).json({
+      success: false,
       error: userMessage,
-      details: error.status || error.code || null,
+      error_type: errorType,
+      raw_error: error.message || String(error),
+      status_code: errStatus,
     });
   }
 });
