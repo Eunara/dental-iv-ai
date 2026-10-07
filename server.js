@@ -130,6 +130,15 @@ const dentalBreakdownSchema = {
           type: Type.STRING,
           description: 'Oral surgery coverage % (e.g., 80%, Basic, 50%)',
         },
+        implants: {
+          type: Type.STRING,
+          description: 'Implants D6010 coverage % or status (e.g., NC / Not Covered, 50%, 60%, 0%)',
+        },
+        waiting_period_details: {
+          type: Type.STRING,
+          description: 'Waiting period details (e.g. Basic 6mo Major 12mo, None, No)',
+          nullable: true,
+        },
         ortho: {
           type: Type.STRING,
           description: 'Orthodontics coverage % (e.g., 50%, Not Covered, 0%)',
@@ -140,7 +149,7 @@ const dentalBreakdownSchema = {
         },
         ortho_age_limit: {
           type: Type.STRING,
-          description: 'Orthodontic age limitation (e.g., Up to age 19, Adult & Child, None)',
+          description: 'Orthodontic age limitation (e.g., Up to age 19, Adult & Child, None, NL)',
         },
       },
       required: [
@@ -149,9 +158,8 @@ const dentalBreakdownSchema = {
         'major',
         'endo',
         'oral_surgery',
+        'implants',
         'ortho',
-        'ortho_max',
-        'ortho_age_limit',
       ],
     },
     procedure_codes: {
@@ -228,10 +236,12 @@ Your mission is to audit dental breakdown sheets, fee schedules, or insurance we
 CORE RULES:
 1. Patient Identification: Extract the Patient's Name if clearly present on the breakdown document into insurance_details.patient_name. PRIVACY MANDATE: Strictly DO NOT extract, store, or output Date of Birth (DOB), Social Security Number (SSN), or Member ID numbers to ensure high data privacy.
 2. Network Prioritization: If the user specifies a network tier (In-Network or Out-of-Network), strictly extract benefits for that tier. If dual-column tables exist, prioritize that tier.
-3. Exhaustive Procedure Extraction: Search thoroughly for all listed CDT codes across Diagnostic, Preventive, Periodontics, Restorative, Major Prosthodontics, Endodontics, Oral Surgery, Adjunctive, and Orthodontics.
-4. Frequency & Sharing: Accurately capture frequency rules (e.g., 2 in 12 rolling months, 1 in 150 days, 1 in 36m, 1/LT, NF / No Frequency) and shared frequencies (e.g., D4346 shared with D1110; D0330 shared with D0210).
-5. Not Covered (NC): If a code or service is excluded or marked Not Covered, set coverage_percentage to '0%' and is_eligible to false.
-6. History & Downgrades: Extract last service/claim dates (write 'None' if none). Note amalgam downgrades on posterior composites (D2391-D2394), missing tooth clauses, and waiting periods.`;
+3. Benefit Categories: Accurately extract coverage levels: Preventative (%), Basic (%), Major (%), ENDO (%), ORAL SURGERY (%), and IMPLANTS D6010 (coverage % or 'NC' if not covered).
+4. Clauses & Limitations: Clearly note Missing Tooth Clause (true if Yes, false if No) and Waiting Periods (true if Yes, false if No, with details like 'Basic 6mo Major 12mo' in coverage_levels.waiting_period_details).
+5. Exhaustive Procedure Extraction: Search thoroughly for all listed CDT codes across Diagnostic, Preventive, Periodontics, Restorative, Major Prosthodontics, Endodontics, Oral Surgery, Adjunctive, and Orthodontics.
+6. Frequency & Sharing: Accurately capture frequency rules (e.g., 2 in 12 rolling months, 1 in 150 days, 1 in 36m, 1/LT, NF / No Frequency) and shared frequencies (e.g., D4346 shared with D1110; D0330 shared with D0210).
+7. Not Covered (NC): If a code or service is excluded or marked Not Covered, set coverage_percentage to '0%' or 'NC' and is_eligible to false.
+8. History & Downgrades: Extract last service/claim dates (write 'None' if none). Note amalgam downgrades on posterior composites (D2391-D2394), prep or seat dates on crowns, and missing tooth clauses.`;
 
 const DEFAULT_CDT_CODES_PROMPT = `Carefully audit the attached dental insurance breakdown document.
 Extract all insurance financials, coverage percentage tiers, and procedure code benefits.

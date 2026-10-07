@@ -211,38 +211,38 @@
     }
 
     .hero-lead h2 {
-      font-size: 2.15rem;
+      font-size: 1.45rem;
       font-weight: 800;
-      letter-spacing: -0.03em;
-      line-height: 1.2;
+      letter-spacing: -0.02em;
+      line-height: 1.25;
       color: #fff;
-      margin-bottom: 0.6rem;
+      margin-bottom: 0.4rem;
     }
 
     .hero-lead p {
       color: var(--text-secondary);
-      font-size: 0.975rem;
-      line-height: 1.6;
+      font-size: 0.825rem;
+      line-height: 1.5;
     }
 
     .hero-actions {
       display: flex;
       align-items: center;
-      gap: 0.75rem;
+      gap: 0.6rem;
     }
 
     .btn-sample {
       background: rgba(23, 35, 62, 0.7);
       border: 1px solid var(--border-medium);
       color: #38bdf8;
-      font-size: 0.825rem;
+      font-size: 0.8rem;
       font-weight: 600;
-      padding: 0.65rem 1.15rem;
+      padding: 0.55rem 0.95rem;
       border-radius: var(--radius-md);
       cursor: pointer;
       display: inline-flex;
       align-items: center;
-      gap: 0.5rem;
+      gap: 0.45rem;
       transition: all 0.2s;
     }
 
@@ -252,18 +252,18 @@
       transform: translateY(-1px);
     }
 
-    /* Workspace Grid */
+    /* Workspace Grid - Compact Spacing */
     .workspace-layout {
       display: flex;
       flex-direction: column;
-      gap: 2.25rem;
+      gap: 1.15rem;
     }
 
     /* Cards */
     .ui-panel {
       background: var(--bg-card);
       border: 1px solid var(--border-subtle);
-      border-radius: var(--radius-xl);
+      border-radius: var(--radius-lg);
       box-shadow: var(--shadow-card);
       position: relative;
       overflow: hidden;
@@ -278,25 +278,25 @@
       background: linear-gradient(90deg, #0ea5e9, #06b6d4, #10b981);
     }
 
-    /* Verification Form Card */
+    /* Verification Form Card - Compact */
     .verification-form-box {
-      padding: 2rem 2.25rem;
+      padding: 1.25rem 1.4rem;
     }
 
     .step-header {
       display: flex;
       align-items: center;
-      gap: 0.75rem;
-      margin-bottom: 1.25rem;
+      gap: 0.65rem;
+      margin-bottom: 1rem;
     }
 
     .step-pill {
-      width: 26px;
-      height: 26px;
+      width: 24px;
+      height: 24px;
       border-radius: 50%;
       background: var(--teal-primary);
       color: white;
-      font-size: 0.8rem;
+      font-size: 0.75rem;
       font-weight: 800;
       display: flex;
       align-items: center;
@@ -304,22 +304,22 @@
     }
 
     .step-title {
-      font-size: 1.05rem;
+      font-size: 0.95rem;
       font-weight: 700;
       color: #fff;
     }
 
     .step-desc {
-      font-size: 0.825rem;
+      font-size: 0.775rem;
       color: var(--text-muted);
     }
 
-    /* Dropzone Upload */
+    /* Dropzone Upload - Compact */
     .dropzone-field {
       border: 2px dashed var(--border-medium);
-      border-radius: var(--radius-lg);
+      border-radius: var(--radius-md);
       background: rgba(15, 23, 42, 0.45);
-      padding: 2.75rem 2rem;
+      padding: 1.35rem 1.25rem;
       text-align: center;
       cursor: pointer;
       transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
@@ -333,8 +333,8 @@
     }
 
     .drop-illustration {
-      width: 58px;
-      height: 58px;
+      width: 44px;
+      height: 44px;
       border-radius: 50%;
       background: rgba(14, 165, 233, 0.12);
       border: 1px solid rgba(14, 165, 233, 0.25);
@@ -786,13 +786,13 @@
       to { opacity: 1; transform: translateY(0); }
     }
 
-    /* Patient / Policy Status Banner */
+    /* Patient / Policy Status Banner - Compact */
     .policy-hero-card {
       background: linear-gradient(135deg, rgba(23, 35, 62, 0.9) 0%, rgba(14, 23, 44, 0.95) 100%);
       border: 1px solid var(--border-medium);
-      border-radius: var(--radius-xl);
-      padding: 1.75rem 2rem;
-      margin-bottom: 1.75rem;
+      border-radius: var(--radius-lg);
+      padding: 1.15rem 1.4rem;
+      margin-bottom: 1.15rem;
       box-shadow: var(--shadow-card);
     }
 
@@ -801,20 +801,20 @@
       flex-wrap: wrap;
       align-items: center;
       justify-content: space-between;
-      gap: 1.25rem;
-      padding-bottom: 1.25rem;
+      gap: 0.85rem;
+      padding-bottom: 0.85rem;
       border-bottom: 1px solid var(--border-subtle);
     }
 
     .carrier-title-group {
       display: flex;
       align-items: center;
-      gap: 1.25rem;
+      gap: 0.85rem;
     }
 
     .carrier-badge-icon {
-      width: 48px;
-      height: 48px;
+      width: 38px;
+      height: 38px;
       border-radius: var(--radius-md);
       background: rgba(14, 165, 233, 0.15);
       border: 1px solid rgba(14, 165, 233, 0.3);
@@ -822,12 +822,13 @@
       display: flex;
       align-items: center;
       justify-content: center;
+      flex-shrink: 0;
     }
 
     .carrier-title-group h2 {
-      font-size: 1.85rem;
+      font-size: 1.35rem;
       font-weight: 800;
-      letter-spacing: -0.03em;
+      letter-spacing: -0.02em;
       color: #fff;
     }
 
@@ -866,44 +867,89 @@
 
     .banner-quick-actions {
       display: flex;
+      flex-wrap: wrap;
       align-items: center;
-      gap: 0.85rem;
+      gap: 0.6rem;
+    }
+
+    .btn-action-excel {
+      background: linear-gradient(135deg, #0284c7, #0369a1);
+      color: white;
+      border: 1px solid rgba(56, 189, 248, 0.4);
+      padding: 0.55rem 0.95rem;
+      border-radius: var(--radius-md);
+      font-size: 0.8rem;
+      font-weight: 700;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 0.45rem;
+      box-shadow: 0 4px 12px rgba(2, 132, 199, 0.3);
+      transition: all 0.2s;
+    }
+
+    .btn-action-excel:hover {
+      background: linear-gradient(135deg, #38bdf8, #0284c7);
+      transform: translateY(-1px);
+      box-shadow: 0 6px 16px rgba(2, 132, 199, 0.45);
+    }
+
+    .btn-action-calc {
+      background: linear-gradient(135deg, #8b5cf6, #7c3aed);
+      color: white;
+      border: 1px solid rgba(196, 181, 253, 0.4);
+      padding: 0.55rem 0.95rem;
+      border-radius: var(--radius-md);
+      font-size: 0.8rem;
+      font-weight: 700;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 0.45rem;
+      box-shadow: 0 4px 12px rgba(124, 58, 237, 0.3);
+      transition: all 0.2s;
+    }
+
+    .btn-action-calc:hover {
+      background: linear-gradient(135deg, #a78bfa, #7c3aed);
+      transform: translateY(-1px);
+      box-shadow: 0 6px 16px rgba(124, 58, 237, 0.45);
     }
 
     .btn-action-pms {
       background: linear-gradient(135deg, #10b981, #059669);
       color: white;
       border: none;
-      padding: 0.75rem 1.4rem;
+      padding: 0.55rem 0.95rem;
       border-radius: var(--radius-md);
-      font-size: 0.875rem;
+      font-size: 0.8rem;
       font-weight: 700;
       cursor: pointer;
       display: inline-flex;
       align-items: center;
-      gap: 0.5rem;
-      box-shadow: 0 4px 14px rgba(16, 185, 129, 0.3);
+      gap: 0.45rem;
+      box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
       transition: all 0.2s;
     }
 
     .btn-action-pms:hover {
       background: linear-gradient(135deg, #34d399, #10b981);
       transform: translateY(-1px);
-      box-shadow: 0 6px 18px rgba(16, 185, 129, 0.45);
+      box-shadow: 0 6px 16px rgba(16, 185, 129, 0.45);
     }
 
     .btn-action-ghost {
       background: rgba(23, 35, 62, 0.8);
       border: 1px solid var(--border-medium);
       color: var(--text-primary);
-      padding: 0.75rem 1.25rem;
+      padding: 0.55rem 0.9rem;
       border-radius: var(--radius-md);
-      font-size: 0.875rem;
+      font-size: 0.8rem;
       font-weight: 600;
       cursor: pointer;
       display: inline-flex;
       align-items: center;
-      gap: 0.5rem;
+      gap: 0.45rem;
       transition: all 0.2s;
     }
 
@@ -912,19 +958,19 @@
       border-color: var(--teal-primary);
     }
 
-    /* Financial Meters Grid */
+    /* Financial Meters Grid - Compact */
     .financials-grid {
       display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
-      gap: 1.15rem;
-      margin-top: 1.5rem;
+      grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+      gap: 0.85rem;
+      margin-top: 1.15rem;
     }
 
     .financial-card {
       background: rgba(18, 28, 51, 0.65);
       border: 1px solid var(--border-subtle);
-      border-radius: var(--radius-lg);
-      padding: 1.35rem 1.4rem;
+      border-radius: var(--radius-md);
+      padding: 0.85rem 1.05rem;
       position: relative;
     }
 
@@ -932,33 +978,33 @@
       display: flex;
       align-items: center;
       justify-content: space-between;
-      margin-bottom: 0.5rem;
+      margin-bottom: 0.35rem;
     }
 
     .financial-label {
-      font-size: 0.775rem;
+      font-size: 0.72rem;
       font-weight: 700;
       color: var(--text-secondary);
       text-transform: uppercase;
-      letter-spacing: 0.06em;
+      letter-spacing: 0.05em;
     }
 
     .financial-amount {
-      font-size: 1.75rem;
+      font-size: 1.35rem;
       font-weight: 800;
       color: #fff;
       font-family: var(--font-mono);
       letter-spacing: -0.02em;
-      margin-bottom: 0.4rem;
+      margin-bottom: 0.25rem;
     }
 
     .meter-progress-track {
       width: 100%;
-      height: 6px;
+      height: 5px;
       background: rgba(255, 255, 255, 0.08);
       border-radius: 9999px;
       overflow: hidden;
-      margin: 0.65rem 0 0.5rem;
+      margin: 0.45rem 0 0.35rem;
     }
 
     .meter-progress-bar {
@@ -1016,39 +1062,45 @@
       background: var(--text-muted);
     }
 
-    /* Category Benefit Percentages Grid */
+    /* Category Benefit Percentages Grid - Compact & Excel Categorization */
     .category-matrix-card {
       background: var(--bg-card);
       border: 1px solid var(--border-subtle);
-      border-radius: var(--radius-xl);
-      padding: 1.5rem 1.75rem;
-      margin-bottom: 1.75rem;
+      border-radius: var(--radius-lg);
+      padding: 1.1rem 1.35rem;
+      margin-bottom: 1.35rem;
       box-shadow: var(--shadow-card);
     }
 
     .matrix-heading {
-      font-size: 1.05rem;
+      font-size: 0.95rem;
       font-weight: 700;
       color: #fff;
       display: flex;
       align-items: center;
-      gap: 0.5rem;
-      margin-bottom: 1.15rem;
+      gap: 0.45rem;
+      margin-bottom: 0.85rem;
     }
 
     .category-cards-grid {
       display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-      gap: 0.85rem;
+      grid-template-columns: repeat(auto-fit, minmax(125px, 1fr));
+      gap: 0.65rem;
     }
 
     .category-box {
       background: rgba(23, 35, 62, 0.6);
       border: 1px solid var(--border-subtle);
       border-radius: var(--radius-md);
-      padding: 1rem 0.85rem;
+      padding: 0.75rem 0.65rem;
       text-align: center;
       transition: all 0.15s;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      word-break: break-word !important;
+      overflow-wrap: anywhere !important;
+      white-space: normal !important;
     }
 
     .category-box:hover {
@@ -1058,34 +1110,64 @@
     }
 
     .category-code-tag {
-      font-size: 0.68rem;
-      font-weight: 700;
+      font-size: 0.65rem;
+      font-weight: 800;
       color: var(--teal-primary);
       text-transform: uppercase;
       letter-spacing: 0.05em;
-      margin-bottom: 0.25rem;
+      margin-bottom: 0.2rem;
+      word-break: break-word;
+      overflow-wrap: anywhere;
     }
 
     .category-name-text {
-      font-size: 0.8rem;
+      font-size: 0.75rem;
       font-weight: 600;
       color: var(--text-secondary);
-      margin-bottom: 0.35rem;
+      margin-bottom: 0.25rem;
+      line-height: 1.25;
+      word-break: break-word;
+      overflow-wrap: anywhere;
     }
 
     .category-percentage-num {
-      font-size: 1.45rem;
+      font-size: 1.25rem;
       font-weight: 800;
       color: #fff;
       font-family: var(--font-mono);
+      margin: 0.1rem 0;
+      word-break: break-word;
+      overflow-wrap: anywhere;
     }
 
-    /* Procedure Codes Table Card */
+    .category-sub-note {
+      font-size: 0.68rem;
+      color: var(--text-muted);
+      font-weight: 600;
+      margin-top: 0.2rem;
+      word-break: break-word;
+      overflow-wrap: anywhere;
+    }
+
+    /* Color category card borders */
+    .cat-card-emerald { border-color: rgba(16, 185, 129, 0.35); }
+    .cat-card-emerald .category-percentage-num { color: #34d399; }
+    .cat-card-cyan { border-color: rgba(14, 165, 233, 0.35); }
+    .cat-card-cyan .category-percentage-num { color: #38bdf8; }
+    .cat-card-indigo { border-color: rgba(99, 102, 241, 0.35); }
+    .cat-card-indigo .category-percentage-num { color: #818cf8; }
+    .cat-card-amber { border-color: rgba(245, 158, 11, 0.35); }
+    .cat-card-amber .category-percentage-num { color: #fbbf24; }
+    .cat-card-rose { border-color: rgba(244, 63, 94, 0.35); }
+    .cat-card-rose .category-percentage-num { color: #fda4af; }
+    .cat-card-neutral { border-color: var(--border-subtle); }
+
+    /* Procedure Codes Table Card - Compact */
     .codes-table-panel {
       background: var(--bg-card);
       border: 1px solid var(--border-subtle);
-      border-radius: var(--radius-xl);
-      padding: 1.75rem;
+      border-radius: var(--radius-lg);
+      padding: 1.15rem 1.35rem;
       box-shadow: var(--shadow-card);
     }
 
@@ -1094,36 +1176,36 @@
       flex-wrap: wrap;
       align-items: center;
       justify-content: space-between;
-      gap: 1.25rem;
-      margin-bottom: 1.5rem;
+      gap: 0.85rem;
+      margin-bottom: 1rem;
     }
 
     .toolbar-left {
       display: flex;
       align-items: center;
-      gap: 0.75rem;
+      gap: 0.65rem;
     }
 
     .codes-count-pill {
       background: rgba(14, 165, 233, 0.15);
       border: 1px solid rgba(14, 165, 233, 0.3);
       color: var(--cyan-bright);
-      font-size: 0.775rem;
+      font-size: 0.72rem;
       font-weight: 700;
-      padding: 0.25rem 0.65rem;
+      padding: 0.2rem 0.55rem;
       border-radius: 9999px;
     }
 
     .search-input-container {
       position: relative;
-      min-width: 280px;
-      max-width: 420px;
+      min-width: 240px;
+      max-width: 380px;
       flex: 1;
     }
 
     .search-input-container svg {
       position: absolute;
-      left: 1rem;
+      left: 0.85rem;
       top: 50%;
       transform: translateY(-50%);
       color: var(--text-muted);
@@ -1134,9 +1216,9 @@
       background: var(--bg-input);
       border: 1px solid var(--border-medium);
       border-radius: var(--radius-md);
-      padding: 0.65rem 1rem 0.65rem 2.65rem;
+      padding: 0.5rem 0.85rem 0.5rem 2.35rem;
       color: #fff;
-      font-size: 0.875rem;
+      font-size: 0.8rem;
       font-family: var(--font-sans);
       outline: none;
       transition: all 0.2s;
@@ -1151,16 +1233,16 @@
       display: flex;
       flex-wrap: wrap;
       align-items: center;
-      gap: 0.5rem;
+      gap: 0.4rem;
     }
 
     .filter-chip {
       background: var(--bg-input);
       border: 1px solid var(--border-subtle);
       color: var(--text-secondary);
-      padding: 0.45rem 0.95rem;
+      padding: 0.35rem 0.75rem;
       border-radius: 9999px;
-      font-size: 0.775rem;
+      font-size: 0.725rem;
       font-weight: 600;
       cursor: pointer;
       transition: all 0.15s;
@@ -1184,7 +1266,7 @@
       width: 100%;
       border-collapse: collapse;
       text-align: left;
-      font-size: 0.85rem;
+      font-size: 0.8rem;
     }
 
     table.cdt-data-table thead {
@@ -1192,12 +1274,12 @@
     }
 
     table.cdt-data-table th {
-      padding: 0.95rem 1rem;
+      padding: 0.55rem 0.65rem;
       color: var(--text-secondary);
       font-weight: 700;
-      font-size: 0.725rem;
+      font-size: 0.68rem;
       text-transform: uppercase;
-      letter-spacing: 0.06em;
+      letter-spacing: 0.05em;
       border-bottom: 1px solid var(--border-subtle);
       white-space: nowrap;
     }
@@ -1212,9 +1294,12 @@
     }
 
     table.cdt-data-table td {
-      padding: 0.9rem 1rem;
+      padding: 0.55rem 0.65rem;
       color: var(--text-primary);
       vertical-align: middle;
+      font-size: 0.78rem;
+      word-break: break-word !important;
+      overflow-wrap: anywhere !important;
     }
 
     .cdt-badge {
@@ -1440,17 +1525,431 @@
       opacity: 1;
     }
 
-    /* Print Formatting */
+    /* Word-break and overflow prevention on all boxes/cards */
+    .word-wrap-safe,
+    .category-box,
+    .category-name-text,
+    .category-code-tag,
+    .category-percentage-num,
+    .category-sub-note,
+    .financial-card,
+    .financial-amount,
+    .financial-sub-text,
+    .financial-label,
+    .rule-chip,
+    .history-card-item,
+    .history-patient-row,
+    .history-meta-info,
+    table.cdt-data-table td,
+    table.cdt-data-table th,
+    .desc-text,
+    .history-text,
+    .notes-snippet,
+    .copay-estimator-panel,
+    .copay-card-title,
+    .copay-calc-row,
+    .excel-sheet-table td,
+    .excel-sheet-table th {
+      word-break: break-word !important;
+      overflow-wrap: anywhere !important;
+      white-space: normal !important;
+    }
+
+    /* Treatment Copay Estimator Panel */
+    .copay-estimator-panel {
+      background: var(--bg-card);
+      border: 1px solid var(--border-medium);
+      border-radius: var(--radius-lg);
+      padding: 1.15rem 1.35rem;
+      margin-bottom: 1.35rem;
+      box-shadow: var(--shadow-card);
+    }
+
+    .copay-calc-badge {
+      background: rgba(16, 185, 129, 0.15);
+      border: 1px solid rgba(16, 185, 129, 0.35);
+      color: #34d399;
+      font-size: 0.72rem;
+      font-weight: 700;
+      padding: 0.2rem 0.55rem;
+      border-radius: 999px;
+      margin-left: auto;
+    }
+
+    .copay-estimator-body {
+      display: grid;
+      grid-template-columns: 1.2fr 1fr;
+      gap: 1.15rem;
+      margin-top: 0.75rem;
+    }
+
+    @media (max-width: 900px) {
+      .copay-estimator-body {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .copay-inputs-col {
+      display: flex;
+      flex-direction: column;
+      gap: 0.75rem;
+    }
+
+    .copay-form-row {
+      display: flex;
+      gap: 0.75rem;
+    }
+
+    .copay-input-group {
+      display: flex;
+      flex-direction: column;
+      gap: 0.3rem;
+    }
+
+    .copay-label {
+      font-size: 0.72rem;
+      font-weight: 700;
+      color: var(--text-secondary);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    .copay-select, .copay-input {
+      background: var(--bg-input);
+      border: 1px solid var(--border-medium);
+      border-radius: var(--radius-md);
+      padding: 0.55rem 0.8rem;
+      color: #fff;
+      font-size: 0.8rem;
+      font-family: var(--font-sans);
+      outline: none;
+      transition: border-color 0.15s;
+      width: 100%;
+    }
+
+    .copay-select:focus, .copay-input:focus {
+      border-color: var(--teal-primary);
+    }
+
+    .input-money-wrap {
+      position: relative;
+      display: flex;
+      align-items: center;
+    }
+
+    .currency-symbol {
+      position: absolute;
+      left: 0.75rem;
+      color: var(--text-muted);
+      font-weight: 700;
+      font-size: 0.85rem;
+      pointer-events: none;
+    }
+
+    .input-money-wrap .copay-input {
+      padding-left: 1.75rem;
+    }
+
+    .copay-checkbox-row {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 0.25rem 0;
+    }
+
+    .copay-checkbox-label {
+      font-size: 0.78rem;
+      color: var(--text-primary);
+      display: flex;
+      align-items: center;
+      gap: 0.45rem;
+      cursor: pointer;
+    }
+
+    .copay-results-card {
+      background: rgba(15, 23, 42, 0.7);
+      border: 1px solid var(--border-medium);
+      border-radius: var(--radius-md);
+      padding: 1rem 1.15rem;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+    }
+
+    .copay-card-title {
+      font-size: 0.72rem;
+      font-weight: 700;
+      color: var(--text-secondary);
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      margin-bottom: 0.25rem;
+    }
+
+    .copay-big-patient-out {
+      font-size: 1.6rem;
+      font-weight: 800;
+      color: #34d399;
+      font-family: var(--font-mono);
+      margin-bottom: 0.5rem;
+    }
+
+    .copay-breakdown-table {
+      display: flex;
+      flex-direction: column;
+      gap: 0.35rem;
+      border-top: 1px solid var(--border-subtle);
+      padding-top: 0.55rem;
+    }
+
+    .copay-calc-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      font-size: 0.78rem;
+      color: var(--text-secondary);
+    }
+
+    .copay-calc-row strong, .copay-calc-row span:last-child {
+      font-family: var(--font-mono);
+      color: var(--text-primary);
+    }
+
+    .copay-calc-row.highlight-ins strong {
+      color: #38bdf8;
+    }
+
+    .copay-calc-row.highlight-total {
+      border-top: 1px dashed var(--border-medium);
+      padding-top: 0.4rem;
+      margin-top: 0.2rem;
+      font-size: 0.825rem;
+      font-weight: 700;
+    }
+
+    .copay-calc-row.highlight-total strong {
+      color: #34d399;
+      font-size: 0.95rem;
+    }
+
+    .copay-warning-box {
+      margin-top: 0.5rem;
+      background: rgba(245, 158, 11, 0.12);
+      border: 1px solid rgba(245, 158, 11, 0.3);
+      color: #fde68a;
+      padding: 0.4rem 0.6rem;
+      border-radius: var(--radius-sm);
+      font-size: 0.725rem;
+      display: flex;
+      align-items: center;
+      gap: 0.4rem;
+    }
+
+    /* Excel Breakdown Sheet Modal & Document */
+    .excel-modal-backdrop {
+      position: fixed;
+      inset: 0;
+      background: rgba(4, 8, 17, 0.88);
+      backdrop-filter: blur(8px);
+      z-index: 100;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      padding: 1rem;
+    }
+
+    .excel-modal-backdrop.active {
+      display: flex;
+    }
+
+    .excel-modal-box {
+      background: #0f172a;
+      border: 1px solid var(--border-medium);
+      border-radius: var(--radius-xl);
+      width: 100%;
+      max-width: 1080px;
+      max-height: 94vh;
+      display: flex;
+      flex-direction: column;
+      box-shadow: 0 25px 60px -15px rgba(0, 0, 0, 0.9);
+      overflow: hidden;
+      animation: modalSpring 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    .excel-sheet-viewport {
+      padding: 1.25rem;
+      overflow-y: auto;
+      background: #090f1d;
+    }
+
+    /* Clean Excel Bordered Sheet Document */
+    .excel-sheet-doc {
+      background: #ffffff;
+      color: #0f172a;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+      font-size: 11px;
+      line-height: 1.35;
+      padding: 1.5rem;
+      border-radius: 4px;
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
+      margin: 0 auto;
+      max-width: 980px;
+    }
+
+    .excel-sheet-header-title {
+      font-size: 14px;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      text-align: center;
+      padding: 6px 10px;
+      background: #1e293b;
+      color: #ffffff;
+      margin-bottom: 8px;
+      border: 1px solid #0f172a;
+    }
+
+    .excel-grid-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-bottom: 10px;
+      font-size: 10.5px;
+    }
+
+    .excel-grid-table th,
+    .excel-grid-table td {
+      border: 1px solid #475569;
+      padding: 4px 6px;
+      vertical-align: middle;
+      word-break: break-word;
+      overflow-wrap: anywhere;
+    }
+
+    .excel-grid-table th {
+      background: #f1f5f9;
+      font-weight: 700;
+      color: #0f172a;
+      text-transform: uppercase;
+      font-size: 9.5px;
+      letter-spacing: 0.04em;
+    }
+
+    .excel-label-cell {
+      background: #f8fafc;
+      font-weight: 700;
+      color: #334155;
+      width: 18%;
+    }
+
+    .excel-val-cell {
+      background: #ffffff;
+      color: #0f172a;
+      font-weight: 600;
+      width: 32%;
+    }
+
+    .excel-section-banner {
+      font-weight: 800;
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      padding: 5px 8px !important;
+      border: 1px solid #334155 !important;
+    }
+
+    .excel-banner-pink {
+      background: #fce7f3 !important;
+      color: #9d174d !important;
+    }
+
+    .excel-banner-green {
+      background: #ecfdf5 !important;
+      color: #065f46 !important;
+    }
+
+    .excel-banner-purple {
+      background: #f3e8ff !important;
+      color: #6b21a8 !important;
+    }
+
+    .excel-banner-blue {
+      background: #e0f2fe !important;
+      color: #0369a1 !important;
+    }
+
+    .excel-summary-cat-box {
+      text-align: center;
+      background: #f8fafc;
+      font-weight: 700;
+    }
+
+    .excel-summary-cat-box .cat-h {
+      font-size: 9px;
+      color: #475569;
+      text-transform: uppercase;
+      margin-bottom: 2px;
+    }
+
+    .excel-summary-cat-box .cat-v {
+      font-size: 12.5px;
+      font-weight: 800;
+      color: #0f172a;
+    }
+
+    .excel-summary-cat-box .cat-sub {
+      font-size: 8.5px;
+      color: #64748b;
+      font-weight: 600;
+    }
+
+    /* Print Formatting: Clean PDF Document with Excel Gridlines */
     @media print {
-      header, .verification-form-box, .banner-quick-actions, .table-toolbar { display: none !important; }
-      body { background: #fff !important; color: #000 !important; }
-      .ui-panel, .policy-hero-card, .table-responsive-box { border: 1px solid #ccc !important; box-shadow: none !important; }
-      table.cdt-data-table th, table.cdt-data-table td { color: #000 !important; border: 1px solid #ddd !important; }
+      body * {
+        visibility: hidden !important;
+      }
+      #excelPrintWrapper, #excelPrintWrapper * {
+        visibility: visible !important;
+      }
+      #excelPrintWrapper {
+        position: absolute !important;
+        left: 0 !important;
+        top: 0 !important;
+        width: 100% !important;
+        margin: 0 !important;
+        padding: 0 !important;
+        background: #ffffff !important;
+        display: block !important;
+      }
+      .excel-sheet-doc {
+        box-shadow: none !important;
+        padding: 0 !important;
+        margin: 0 !important;
+        max-width: 100% !important;
+        width: 100% !important;
+        color: #000000 !important;
+      }
+      .excel-grid-table th, .excel-grid-table td {
+        border: 1px solid #000000 !important;
+        color: #000000 !important;
+      }
+      .excel-sheet-header-title {
+        background: #000000 !important;
+        color: #ffffff !important;
+        -webkit-print-color-adjust: exact !important;
+        print-color-adjust: exact !important;
+      }
+      .excel-section-banner {
+        -webkit-print-color-adjust: exact !important;
+        print-color-adjust: exact !important;
+      }
+      .excel-banner-pink { background: #fce7f3 !important; color: #9d174d !important; }
+      .excel-banner-green { background: #ecfdf5 !important; color: #065f46 !important; }
+      .excel-banner-purple { background: #f3e8ff !important; color: #6b21a8 !important; }
+      .excel-banner-blue { background: #e0f2fe !important; color: #0369a1 !important; }
     }
 
     @media (max-width: 768px) {
       .nav-container { padding: 0.75rem 1rem; }
-      main { padding: 1.5rem 1rem 4rem; }
+      main { padding: 1.25rem 0.85rem 4rem; }
       .hero-section { flex-direction: column; align-items: flex-start; }
       .policy-banner-top { flex-direction: column; align-items: flex-start; }
       .banner-quick-actions { width: 100%; justify-content: flex-start; }
@@ -2057,15 +2556,33 @@
             </div>
 
             <div class="banner-quick-actions">
+              <button type="button" class="btn-action-excel" id="openExcelModalBtn" title="View, copy, or print clean Excel sheet to PDF">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+                  <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                  <polyline points="14 2 14 8 20 8"></polyline>
+                  <line x1="8" y1="13" x2="16" y2="13"></line>
+                  <line x1="8" y1="17" x2="16" y2="17"></line>
+                </svg>
+                Excel Sheet (PDF)
+              </button>
+              <button type="button" class="btn-action-calc" id="scrollToEstimatorBtn" title="Jump to Treatment Copay Estimator">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+                  <rect x="4" y="2" width="16" height="20" rx="2"></rect>
+                  <line x1="8" y1="6" x2="16" y2="6"></line>
+                  <line x1="16" y1="14" x2="16" y2="18"></line>
+                  <path d="M16 10h.01"></path><path d="M12 10h.01"></path><path d="M8 10h.01"></path>
+                </svg>
+                Copay Estimator
+              </button>
               <button type="button" class="btn-action-pms" id="openPmsModalBtn">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                   <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
                   <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
                 </svg>
                 Copy PMS Note
               </button>
               <button type="button" class="btn-action-ghost" id="newVerificationBtn">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                   <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
                   <polyline points="17 8 12 3 7 8"></polyline>
                   <line x1="12" y1="3" x2="12" y2="15"></line>
@@ -2131,16 +2648,119 @@
           <!-- Dynamically populated with Missing Tooth, Waiting Periods, Preventive Max -->
         </div>
 
-        <!-- CATEGORY COVERAGE MATRIX -->
+        <!-- CATEGORY COVERAGE MATRIX (8 CLINICAL EXCEL TIERS) -->
         <div class="category-matrix-card">
           <div class="matrix-heading">
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#0ea5e9" stroke-width="2">
               <path d="M22 12h-4l-3 9L9 3l-3 9H2"></path>
             </svg>
-            Coverage Percentage by Clinical Category
+            Benefit Coverage by Clinical Category (Excel Breakdown Standard)
           </div>
           <div class="category-cards-grid" id="categoryCardsGrid">
-            <!-- Dynamically populated -->
+            <!-- Dynamically populated with Preventative, Basic, Major, ENDO, Oral Surgery, Implants D6010, Missing Tooth, Waiting Period -->
+          </div>
+        </div>
+
+        <!-- TREATMENT COPAY & PATIENT OUT-OF-POCKET ESTIMATOR (OPTION 2) -->
+        <div class="copay-estimator-panel" id="copayEstimatorSection">
+          <div class="matrix-heading">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#10b981" stroke-width="2.2">
+              <rect x="4" y="2" width="16" height="20" rx="2"></rect>
+              <line x1="8" y1="6" x2="16" y2="6"></line>
+              <line x1="16" y1="14" x2="16" y2="18"></line>
+              <path d="M16 10h.01"></path>
+              <path d="M12 10h.01"></path>
+              <path d="M8 10h.01"></path>
+              <path d="M12 14h.01"></path>
+              <path d="M8 14h.01"></path>
+              <path d="M12 18h.01"></path>
+              <path d="M8 18h.01"></path>
+            </svg>
+            <span>Treatment Copay & Out-of-Pocket Estimator</span>
+            <span class="copay-calc-badge">Live Benefit Estimator</span>
+          </div>
+
+          <div class="copay-estimator-body">
+            <div class="copay-inputs-col">
+              <div class="copay-input-group">
+                <label for="copayProcedureSelect" class="copay-label">Select CDT Procedure Code</label>
+                <select id="copayProcedureSelect" class="copay-select">
+                  <!-- Populated from audit data -->
+                </select>
+              </div>
+
+              <div class="copay-form-row">
+                <div class="copay-input-group" style="flex: 1;">
+                  <label for="copayFeeInput" class="copay-label">Office / UCR Fee ($)</label>
+                  <div class="input-money-wrap">
+                    <span class="currency-symbol">$</span>
+                    <input type="number" id="copayFeeInput" class="copay-input" value="1200" min="0" step="10">
+                  </div>
+                </div>
+
+                <div class="copay-input-group" style="flex: 1;">
+                  <label for="copayCategorySelect" class="copay-label">Coverage Tier & Percentage</label>
+                  <select id="copayCategorySelect" class="copay-select">
+                    <option value="preventive">Preventative (100%)</option>
+                    <option value="basic">Basic Restorative (80%)</option>
+                    <option value="major" selected>Major Restorative (60%)</option>
+                    <option value="endo">Endodontics (80%)</option>
+                    <option value="oral_surgery">Oral Surgery (80%)</option>
+                    <option value="implants">Implants D6010 (NC / 0%)</option>
+                    <option value="ortho">Orthodontics (50%)</option>
+                    <option value="custom">Custom Coverage %...</option>
+                  </select>
+                </div>
+              </div>
+
+              <div class="copay-form-row" id="copayCustomPctRow" style="display: none;">
+                <div class="copay-input-group" style="flex: 1;">
+                  <label for="copayCustomPctInput" class="copay-label">Custom Coverage Percentage (%)</label>
+                  <input type="number" id="copayCustomPctInput" class="copay-input" value="50" min="0" max="100">
+                </div>
+              </div>
+
+              <div class="copay-checkbox-row">
+                <label class="copay-checkbox-label">
+                  <input type="checkbox" id="copayApplyDedCheckbox" checked>
+                  <span>Apply remaining deductible (<strong id="copayDedAmountDisplay">$50.00</strong>)</span>
+                </label>
+              </div>
+            </div>
+
+            <!-- Output HUD -->
+            <div class="copay-results-card">
+              <div>
+                <div class="copay-card-title">Estimated Patient Responsibility</div>
+                <div class="copay-big-patient-out" id="copayEstimatedOutDisplay">$530.00</div>
+              </div>
+              <div class="copay-breakdown-table">
+                <div class="copay-calc-row">
+                  <span>Procedure Fee:</span>
+                  <strong id="copayFeeDisplay">$1,200.00</strong>
+                </div>
+                <div class="copay-calc-row">
+                  <span>Deductible Applied:</span>
+                  <span id="copayDedAppliedDisplay">-$50.00</span>
+                </div>
+                <div class="copay-calc-row">
+                  <span>Covered Allowance:</span>
+                  <span id="copayAllowanceDisplay">$1,150.00</span>
+                </div>
+                <div class="copay-calc-row highlight-ins">
+                  <span>Insurance Est. Payment (<span id="copayPctDisplay">60%</span>):</span>
+                  <strong id="copayInsPaysDisplay">$690.00</strong>
+                </div>
+                <div class="copay-calc-row highlight-total">
+                  <span>Estimated Patient Out-of-Pocket:</span>
+                  <strong id="copayTotalPatientDisplay">$510.00</strong>
+                </div>
+              </div>
+              <div class="copay-warning-box" id="copayWarningBox" style="display: none;">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polygon points="12 2 2 22 22 22 12 2"></polygon><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>
+                <span id="copayWarningText">Posterior composite amalgam downgrade rule applies.</span>
+              </div>
+            </div>
           </div>
         </div>
 
@@ -2202,6 +2822,62 @@
       </div>
     </div>
   </main>
+
+  <!-- EXCEL BREAKDOWN SHEET MODAL (OPTION 4: CLEAN BORDERED EXCEL SPREADSHEET & PDF) -->
+  <div class="excel-modal-backdrop" id="excelModal">
+    <div class="excel-modal-box">
+      <div class="pms-modal-header">
+        <h3 style="color: #fff; font-size: 1.05rem; font-weight: 700; display: flex; align-items: center; gap: 0.5rem;">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#38bdf8" stroke-width="2">
+            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+            <polyline points="14 2 14 8 20 8"></polyline>
+            <line x1="8" y1="13" x2="16" y2="13"></line>
+            <line x1="8" y1="17" x2="16" y2="17"></line>
+          </svg>
+          Excel-Style Insurance Breakdown Sheet (Clean Bordered PDF)
+        </h3>
+        <button type="button" class="btn-close-modal" id="closeExcelModalBtn">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <line x1="18" y1="6" x2="6" y2="18"></line>
+            <line x1="6" y1="6" x2="18" y2="18"></line>
+          </svg>
+        </button>
+      </div>
+      <div class="excel-sheet-viewport">
+        <div id="excelSheetContainer">
+          <!-- Dynamically populated Excel sheet table -->
+        </div>
+      </div>
+      <div class="pms-modal-footer">
+        <div style="font-size: 0.775rem; color: var(--text-muted); display: flex; align-items: center; gap: 0.4rem;">
+          <span class="rule-status-circle good"></span>
+          <span>Excel gridline styling with color banners formatted for clinical PDF export & printing</span>
+        </div>
+        <div style="display: flex; gap: 0.65rem;">
+          <button type="button" class="btn-action-ghost" id="copyExcelTableBtn" style="padding: 0.55rem 0.95rem; font-size: 0.8rem;">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+              <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+            </svg>
+            Copy Text Sheet
+          </button>
+          <button type="button" class="btn-verify-primary" id="printExcelModalBtn" style="padding: 0.55rem 1.15rem; font-size: 0.825rem;">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+              <polyline points="6 9 6 2 18 2 18 9"></polyline>
+              <path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path>
+              <rect x="6" y="14" width="12" height="8"></rect>
+            </svg>
+            Print / Save as PDF
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- HIDDEN PRINT CONTAINER (Rendered purely during window.print()) -->
+  <div id="excelPrintWrapper" style="display: none;">
+    <!-- Cloned clean Excel document printed on paper -->
+  </div>
 
   <!-- PRACTICE MANAGEMENT SYSTEM (PMS) NOTE MODAL -->
   <div class="pms-modal-backdrop" id="pmsModal">
@@ -2361,24 +3037,27 @@
     // Sample Delta Dental Data for Demo Testing
     const SAMPLE_BREAKDOWN_DATA = {
       insurance_details: {
-        carrier: "Delta Dental Premier / PPO Plus",
-        effective_date: "01/01/2024 - 12/31/2024",
-        network_status: "In-Network (PPO Tier)",
+        patient_name: "Katherine Birdwell",
+        carrier: "Delta Dental PPO",
+        effective_date: "01/01/2026",
+        network_status: "In-Network",
         annual_maximum: 2000,
-        remaining_maximum: 1540,
+        remaining_maximum: 2000,
         preventive_applies_to_max: false,
         deductible_individual: 50,
-        deductible_remaining: 0,
+        deductible_remaining: 50,
         deductible_applies_to: "Basic & Major Services Only (Waived on Preventive)",
-        missing_tooth_clause: false,
+        missing_tooth_clause: true,
         waiting_period: false
       },
       coverage_levels: {
         preventive: "100%",
         basic: "80%",
-        major: "50%",
+        major: "60%",
         endo: "80%",
         oral_surgery: "80%",
+        implants: "NC",
+        waiting_period_details: "No",
         ortho: "50%",
         ortho_max: "$1,500 Lifetime",
         ortho_age_limit: "Up to age 19"
@@ -2872,32 +3551,102 @@
         rulesRow.appendChild(orthoChip);
       }
 
-      // Category Matrix Cards
+      // Category Matrix Cards (8 Clinical Excel Categories)
       const categoryCardsGrid = document.getElementById('categoryCardsGrid');
       categoryCardsGrid.innerHTML = '';
 
+      const hasMTC = Boolean(details.missing_tooth_clause);
+      const implantsVal = levels.implants || 'NC';
+      const isImplantCovered = implantsVal && !implantsVal.toLowerCase().includes('nc') && !implantsVal.includes('0%');
+
       const catMatrix = [
-        { code: 'D0100 - D1000', name: 'Preventive / Diag', val: levels.preventive || '100%' },
-        { code: 'D2000 - D2900', name: 'Basic Restorative', val: levels.basic || '80%' },
-        { code: 'D2700 - D6000', name: 'Major (Crown/Br)', val: levels.major || '50%' },
-        { code: 'D3000 - D3900', name: 'Endodontics', val: levels.endo || levels.basic || '80%' },
-        { code: 'D4000 - D4900', name: 'Periodontics', val: levels.basic || '80%' },
-        { code: 'D7000 - D7900', name: 'Oral Surgery', val: levels.oral_surgery || levels.basic || '80%' },
-        { code: 'D8000 - D8900', name: 'Orthodontics', val: levels.ortho || '0%' },
+        {
+          code: 'PREVENTATIVE',
+          name: 'Preventive / Diag',
+          val: levels.preventive || '100%',
+          sub: 'Ded Applied: No',
+          color: 'emerald'
+        },
+        {
+          code: 'BASIC',
+          name: 'Basic Restorative',
+          val: levels.basic || '80%',
+          sub: 'Ded Applied: Yes',
+          color: 'cyan'
+        },
+        {
+          code: 'MAJOR',
+          name: 'Major Restorative',
+          val: levels.major || '60%',
+          sub: 'Ded Applied: Yes',
+          color: 'indigo'
+        },
+        {
+          code: 'ENDO',
+          name: 'Endodontics',
+          val: levels.endo || levels.basic || '80%',
+          sub: 'Root Canals',
+          color: 'cyan'
+        },
+        {
+          code: 'ORAL SURGERY',
+          name: 'Oral Surgery',
+          val: levels.oral_surgery || levels.basic || '80%',
+          sub: 'Extractions',
+          color: 'cyan'
+        },
+        {
+          code: 'IMPLANTS D6010',
+          name: 'Implant Placement',
+          val: implantsVal,
+          sub: isImplantCovered ? 'Covered Benefit' : 'Not Covered (NC)',
+          color: isImplantCovered ? 'cyan' : 'rose'
+        },
+        {
+          code: 'MISSING TOOTH CLAUSE',
+          name: 'Pre-existing Excl.',
+          val: hasMTC ? 'Yes' : 'No',
+          sub: hasMTC ? 'Clause Active' : 'Waived',
+          color: hasMTC ? 'amber' : 'emerald'
+        },
+        {
+          code: 'WAITING PERIOD',
+          name: 'Waiting Period',
+          val: hasWP ? 'Yes' : 'No',
+          sub: hasWP ? (levels.waiting_period_details || 'Basic/Major') : 'None / Waived',
+          color: hasWP ? 'amber' : 'emerald'
+        },
       ];
+
+      if (levels.ortho || levels.ortho_max) {
+        catMatrix.push({
+          code: 'ORTHODONTICS',
+          name: 'Ortho Benefits',
+          val: levels.ortho || '0%',
+          sub: `Max: ${levels.ortho_max || 'N/A'}`,
+          color: 'neutral'
+        });
+      }
 
       catMatrix.forEach(item => {
         const cBox = document.createElement('div');
-        cBox.className = 'category-box';
+        cBox.className = `category-box cat-card-${item.color}`;
         cBox.innerHTML = `
           <div class="category-code-tag">${item.code}</div>
           <div class="category-name-text">${item.name}</div>
           <div class="category-percentage-num">${item.val}</div>
+          <div class="category-sub-note">${item.sub}</div>
         `;
         categoryCardsGrid.appendChild(cBox);
       });
 
-      // Populate Table
+      // Initialize Treatment Copay Estimator (Option 2)
+      setupCopayEstimator(data);
+
+      // Render Clean Bordered Excel Breakdown Sheet (Option 4)
+      renderExcelBreakdownSheet(data);
+
+      // Populate CDT Codes Table
       renderCdtTable();
 
       // Show Report Dashboard
@@ -3077,6 +3826,510 @@
         displayToast('PMS Note copied to clipboard!');
       });
     });
+
+    // ==========================================
+    // TREATMENT COPAY ESTIMATOR LOGIC (OPTION 2)
+    // ==========================================
+    const copayProcedureSelect = document.getElementById('copayProcedureSelect');
+    const copayFeeInput = document.getElementById('copayFeeInput');
+    const copayCategorySelect = document.getElementById('copayCategorySelect');
+    const copayCustomPctRow = document.getElementById('copayCustomPctRow');
+    const copayCustomPctInput = document.getElementById('copayCustomPctInput');
+    const copayApplyDedCheckbox = document.getElementById('copayApplyDedCheckbox');
+    const copayDedAmountDisplay = document.getElementById('copayDedAmountDisplay');
+    const copayEstimatedOutDisplay = document.getElementById('copayEstimatedOutDisplay');
+    const copayFeeDisplay = document.getElementById('copayFeeDisplay');
+    const copayDedAppliedDisplay = document.getElementById('copayDedAppliedDisplay');
+    const copayAllowanceDisplay = document.getElementById('copayAllowanceDisplay');
+    const copayPctDisplay = document.getElementById('copayPctDisplay');
+    const copayInsPaysDisplay = document.getElementById('copayInsPaysDisplay');
+    const copayTotalPatientDisplay = document.getElementById('copayTotalPatientDisplay');
+    const copayWarningBox = document.getElementById('copayWarningBox');
+    const copayWarningText = document.getElementById('copayWarningText');
+    const scrollToEstimatorBtn = document.getElementById('scrollToEstimatorBtn');
+
+    if (scrollToEstimatorBtn) {
+      scrollToEstimatorBtn.addEventListener('click', () => {
+        const estimatorSec = document.getElementById('copayEstimatorSection');
+        if (estimatorSec) {
+          estimatorSec.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+      });
+    }
+
+    function setupCopayEstimator(data) {
+      if (!copayProcedureSelect) return;
+      copayProcedureSelect.innerHTML = '';
+
+      const codes = data.procedure_codes || [];
+      const details = data.insurance_details || {};
+
+      // Update deductible amount display
+      const remDed = (details.deductible_remaining !== null && details.deductible_remaining !== undefined) 
+        ? Number(details.deductible_remaining) 
+        : (details.deductible_individual ? Number(details.deductible_individual) : 0);
+      
+      if (copayDedAmountDisplay) {
+        copayDedAmountDisplay.textContent = `$${remDed.toFixed(2)}`;
+      }
+      if (copayApplyDedCheckbox) {
+        copayApplyDedCheckbox.checked = remDed > 0;
+      }
+
+      // Populate dropdown with all CDT codes from the audit
+      codes.forEach(cd => {
+        const opt = document.createElement('option');
+        opt.value = cd.code;
+        opt.textContent = `${cd.code} - ${cd.description} (${cd.coverage_percentage || '0%'})`;
+        opt.dataset.desc = cd.description || '';
+        opt.dataset.pct = cd.coverage_percentage || '0%';
+        opt.dataset.ded = cd.deductible_applied ? 'true' : 'false';
+        opt.dataset.downgrade = cd.downgrade_rule || '';
+        copayProcedureSelect.appendChild(opt);
+      });
+
+      // Default to Crown D2740 or Filling D2391 or first
+      const defaultCode = codes.find(c => c.code === 'D2740') || codes.find(c => c.code === 'D2391') || codes[0];
+      if (defaultCode) {
+        copayProcedureSelect.value = defaultCode.code;
+      }
+
+      updateCopayProcedureSelection();
+      calculateCopay();
+    }
+
+    function updateCopayProcedureSelection() {
+      if (!copayProcedureSelect || !copayProcedureSelect.options.length) return;
+      const selectedOpt = copayProcedureSelect.options[copayProcedureSelect.selectedIndex];
+      if (!selectedOpt) return;
+
+      const code = selectedOpt.value;
+      const dedApplies = selectedOpt.dataset.ded === 'true';
+      const downgrade = selectedOpt.dataset.downgrade || '';
+
+      // Standard Fee defaults
+      let defaultFee = 150;
+      if (code === 'D2740' || code === 'D2750' || code === 'D2790') defaultFee = 1200;
+      else if (code.startsWith('D23')) defaultFee = 250;
+      else if (code.startsWith('D21')) defaultFee = 190;
+      else if (code.startsWith('D33')) defaultFee = 1100;
+      else if (code.startsWith('D4341')) defaultFee = 280;
+      else if (code.startsWith('D4910')) defaultFee = 160;
+      else if (code.startsWith('D7140')) defaultFee = 220;
+      else if (code.startsWith('D7210')) defaultFee = 380;
+      else if (code.startsWith('D6010')) defaultFee = 2100;
+      else if (code.startsWith('D1110')) defaultFee = 110;
+      else if (code.startsWith('D0120')) defaultFee = 65;
+      else if (code.startsWith('D0210')) defaultFee = 165;
+      else if (code.startsWith('D0274')) defaultFee = 85;
+
+      if (copayFeeInput) copayFeeInput.value = defaultFee;
+
+      // Map to category
+      const codeNum = parseInt(code.replace(/\D/g, ''), 10);
+      if (copayCategorySelect) {
+        if (codeNum >= 100 && codeNum <= 1999) {
+          copayCategorySelect.value = 'preventive';
+        } else if (code.startsWith('D6010')) {
+          copayCategorySelect.value = 'implants';
+        } else if (codeNum >= 3000 && codeNum <= 3999) {
+          copayCategorySelect.value = 'endo';
+        } else if (codeNum >= 7000 && codeNum <= 7999) {
+          copayCategorySelect.value = 'oral_surgery';
+        } else if (codeNum >= 2700 && codeNum <= 6999) {
+          copayCategorySelect.value = 'major';
+        } else if (codeNum >= 2000 && codeNum <= 2999) {
+          copayCategorySelect.value = 'basic';
+        } else if (codeNum >= 8000 && codeNum <= 8999) {
+          copayCategorySelect.value = 'ortho';
+        }
+      }
+
+      if (copayCustomPctRow) copayCustomPctRow.style.display = 'none';
+
+      // Deductible check
+      const d = currentAuditData?.insurance_details || {};
+      const remDed = (d.deductible_remaining !== null && d.deductible_remaining !== undefined) ? Number(d.deductible_remaining) : 50;
+      if (copayApplyDedCheckbox) {
+        copayApplyDedCheckbox.checked = dedApplies && remDed > 0;
+      }
+
+      // Downgrade warning
+      if (copayWarningBox && copayWarningText) {
+        if (downgrade && downgrade.toLowerCase() !== 'none') {
+          copayWarningText.textContent = `${code}: ${downgrade}`;
+          copayWarningBox.style.display = 'flex';
+        } else {
+          copayWarningBox.style.display = 'none';
+        }
+      }
+    }
+
+    function calculateCopay() {
+      if (!copayFeeInput || !copayCategorySelect) return;
+      const fee = Math.max(0, parseFloat(copayFeeInput.value) || 0);
+      const catVal = copayCategorySelect.value;
+      const levels = currentAuditData?.coverage_levels || {};
+      const details = currentAuditData?.insurance_details || {};
+
+      let pct = 80;
+      if (catVal === 'preventive') {
+        pct = parseInt((levels.preventive || '100%').replace(/\D/g, ''), 10) || 100;
+      } else if (catVal === 'basic') {
+        pct = parseInt((levels.basic || '80%').replace(/\D/g, ''), 10) || 80;
+      } else if (catVal === 'major') {
+        pct = parseInt((levels.major || '60%').replace(/\D/g, ''), 10) || 60;
+      } else if (catVal === 'endo') {
+        pct = parseInt((levels.endo || levels.basic || '80%').replace(/\D/g, ''), 10) || 80;
+      } else if (catVal === 'oral_surgery') {
+        pct = parseInt((levels.oral_surgery || levels.basic || '80%').replace(/\D/g, ''), 10) || 80;
+      } else if (catVal === 'implants') {
+        const imp = levels.implants || 'NC';
+        pct = imp.toLowerCase().includes('nc') ? 0 : (parseInt(imp.replace(/\D/g, ''), 10) || 0);
+      } else if (catVal === 'ortho') {
+        pct = parseInt((levels.ortho || '50%').replace(/\D/g, ''), 10) || 50;
+      } else if (catVal === 'custom') {
+        pct = Math.min(100, Math.max(0, parseInt(copayCustomPctInput.value, 10) || 0));
+      }
+
+      const remDed = (details.deductible_remaining !== null && details.deductible_remaining !== undefined) 
+        ? Number(details.deductible_remaining) 
+        : 50;
+
+      let appliedDed = 0;
+      if (copayApplyDedCheckbox && copayApplyDedCheckbox.checked) {
+        appliedDed = Math.min(fee, remDed);
+      }
+
+      const coveredBase = Math.max(0, fee - appliedDed);
+      const insPays = Math.round(coveredBase * (pct / 100) * 100) / 100;
+      const patientCoinsurance = Math.max(0, coveredBase - insPays);
+      const patientTotal = Math.round((appliedDed + patientCoinsurance) * 100) / 100;
+
+      // Update UI
+      if (copayFeeDisplay) copayFeeDisplay.textContent = `$${fee.toFixed(2)}`;
+      if (copayDedAppliedDisplay) copayDedAppliedDisplay.textContent = appliedDed > 0 ? `-$${appliedDed.toFixed(2)}` : '$0.00';
+      if (copayAllowanceDisplay) copayAllowanceDisplay.textContent = `$${coveredBase.toFixed(2)}`;
+      if (copayPctDisplay) copayPctDisplay.textContent = `${pct}%`;
+      if (copayInsPaysDisplay) copayInsPaysDisplay.textContent = `$${insPays.toFixed(2)}`;
+      if (copayTotalPatientDisplay) copayTotalPatientDisplay.textContent = `$${patientTotal.toFixed(2)}`;
+      if (copayEstimatedOutDisplay) copayEstimatedOutDisplay.textContent = `$${patientTotal.toFixed(2)}`;
+    }
+
+    copayProcedureSelect?.addEventListener('change', () => {
+      updateCopayProcedureSelection();
+      calculateCopay();
+    });
+
+    copayFeeInput?.addEventListener('input', calculateCopay);
+
+    copayCategorySelect?.addEventListener('change', () => {
+      if (copayCategorySelect.value === 'custom') {
+        if (copayCustomPctRow) copayCustomPctRow.style.display = 'flex';
+      } else {
+        if (copayCustomPctRow) copayCustomPctRow.style.display = 'none';
+      }
+      calculateCopay();
+    });
+
+    copayCustomPctInput?.addEventListener('input', calculateCopay);
+    copayApplyDedCheckbox?.addEventListener('change', calculateCopay);
+
+    // ==========================================
+    // EXCEL BREAKDOWN SHEET & PDF (OPTION 4)
+    // ==========================================
+    const openExcelModalBtn = document.getElementById('openExcelModalBtn');
+    const excelModal = document.getElementById('excelModal');
+    const closeExcelModalBtn = document.getElementById('closeExcelModalBtn');
+    const printExcelModalBtn = document.getElementById('printExcelModalBtn');
+    const copyExcelTableBtn = document.getElementById('copyExcelTableBtn');
+
+    openExcelModalBtn?.addEventListener('click', () => {
+      if (currentAuditData) {
+        renderExcelBreakdownSheet(currentAuditData);
+      }
+      excelModal.classList.add('active');
+    });
+
+    closeExcelModalBtn?.addEventListener('click', () => {
+      excelModal.classList.remove('active');
+    });
+
+    excelModal?.addEventListener('click', (e) => {
+      if (e.target === excelModal) {
+        excelModal.classList.remove('active');
+      }
+    });
+
+    printExcelModalBtn?.addEventListener('click', () => {
+      if (currentAuditData) {
+        renderExcelBreakdownSheet(currentAuditData);
+      }
+      window.print();
+    });
+
+    copyExcelTableBtn?.addEventListener('click', () => {
+      const pmsText = buildPmsNote();
+      navigator.clipboard.writeText(pmsText).then(() => {
+        displayToast('Excel breakdown sheet text copied to clipboard!');
+      }).catch(() => {
+        document.execCommand('copy');
+        displayToast('Excel breakdown sheet text copied to clipboard!');
+      });
+    });
+
+    function renderExcelBreakdownSheet(data) {
+      if (!data) return;
+      const d = data.insurance_details || {};
+      const c = data.coverage_levels || {};
+      const codes = data.procedure_codes || [];
+
+      const patientName = (d.patient_name && d.patient_name.trim() !== '' && d.patient_name.toLowerCase() !== 'n/a') ? d.patient_name.trim() : 'Patient (Not Specified)';
+      const carrier = d.carrier || 'Dental Insurance';
+      const network = d.network_status || 'In-Network';
+      const effective = d.effective_date || 'Current Benefit Period';
+      const annualMax = fmtMoney(d.annual_maximum);
+      const remainingMax = fmtMoney(d.remaining_maximum);
+      const ded = fmtMoney(d.deductible_individual);
+      const dedRemaining = fmtMoney(d.deductible_remaining);
+      const prevToMax = d.preventive_applies_to_max ? 'Yes' : 'No';
+      const dedScope = d.deductible_applies_to || 'Basic & Major';
+      const missingTooth = d.missing_tooth_clause ? 'Yes' : 'No';
+      const waitingPeriod = d.waiting_period ? (c.waiting_period_details || 'Yes') : 'No';
+
+      const prevCodes = [];
+      const perioCodes = [];
+      const basicCodes = [];
+      const majorCodes = [];
+
+      codes.forEach(cd => {
+        const codeNum = parseInt((cd.code || '').replace(/\D/g, ''), 10);
+        const descLower = (cd.description || '').toLowerCase();
+
+        if ((codeNum >= 100 && codeNum <= 1999) || descLower.includes('eval') || descLower.includes('prophy') || descLower.includes('clean') || descLower.includes('x-ray') || descLower.includes('bitewing') || descLower.includes('fluoride') || descLower.includes('sealant')) {
+          prevCodes.push(cd);
+        } else if ((codeNum >= 4000 && codeNum <= 4999) || descLower.includes('scaling') || descLower.includes('perio') || descLower.includes('srp') || descLower.includes('arestin')) {
+          perioCodes.push(cd);
+        } else if ((codeNum >= 2000 && codeNum <= 2699) || descLower.includes('amalgam') || descLower.includes('composite') || descLower.includes('filling') || descLower.includes('resin')) {
+          basicCodes.push(cd);
+        } else {
+          majorCodes.push(cd);
+        }
+      });
+
+      let html = `
+        <div class="excel-sheet-doc">
+          <div class="excel-sheet-header-title">DENTAL INSURANCE BENEFIT BREAKDOWN FORM</div>
+          
+          <!-- Patient & Policy Header Table (Excel Gridline Aesthetic) -->
+          <table class="excel-grid-table">
+            <tr>
+              <td class="excel-label-cell">Patient Name:</td>
+              <td class="excel-val-cell">${escapeHtml(patientName)}</td>
+              <td class="excel-label-cell">Network Participation:</td>
+              <td class="excel-val-cell">${escapeHtml(network)}</td>
+            </tr>
+            <tr>
+              <td class="excel-label-cell">Insurance Carrier:</td>
+              <td class="excel-val-cell">${escapeHtml(carrier)}</td>
+              <td class="excel-label-cell">Plan Benefits:</td>
+              <td class="excel-val-cell">Calendar Year</td>
+            </tr>
+            <tr>
+              <td class="excel-label-cell">Effective Date:</td>
+              <td class="excel-val-cell">${escapeHtml(effective)}</td>
+              <td class="excel-label-cell">Fee Schedule / Tier:</td>
+              <td class="excel-val-cell">${escapeHtml(carrier)} PPO</td>
+            </tr>
+            <tr>
+              <td class="excel-label-cell">Yearly Maximum:</td>
+              <td class="excel-val-cell">${escapeHtml(annualMax)}</td>
+              <td class="excel-label-cell">Individual Deductible:</td>
+              <td class="excel-val-cell">${escapeHtml(ded)}</td>
+            </tr>
+            <tr>
+              <td class="excel-label-cell">Remaining Benefits:</td>
+              <td class="excel-val-cell">${escapeHtml(remainingMax)}</td>
+              <td class="excel-label-cell">Ded Remaining:</td>
+              <td class="excel-val-cell">${escapeHtml(dedRemaining)}</td>
+            </tr>
+            <tr>
+              <td class="excel-label-cell">Prev Applies to Max:</td>
+              <td class="excel-val-cell">${escapeHtml(prevToMax)}</td>
+              <td class="excel-label-cell">Deductible Scope:</td>
+              <td class="excel-val-cell">${escapeHtml(dedScope)}</td>
+            </tr>
+          </table>
+
+          <!-- Excel Category Summary Matrix (The exact 8 items) -->
+          <table class="excel-grid-table">
+            <tr>
+              <td class="excel-summary-cat-box" style="width: 12.5%;">
+                <div class="cat-h">Preventative</div>
+                <div class="cat-v">${escapeHtml(c.preventive || '100%')}</div>
+                <div class="cat-sub">Ded: No</div>
+              </td>
+              <td class="excel-summary-cat-box" style="width: 12.5%;">
+                <div class="cat-h">Basic</div>
+                <div class="cat-v">${escapeHtml(c.basic || '80%')}</div>
+                <div class="cat-sub">Ded: Yes</div>
+              </td>
+              <td class="excel-summary-cat-box" style="width: 12.5%;">
+                <div class="cat-h">Major</div>
+                <div class="cat-v">${escapeHtml(c.major || '60%')}</div>
+                <div class="cat-sub">Ded: Yes</div>
+              </td>
+              <td class="excel-summary-cat-box" style="width: 12.5%;">
+                <div class="cat-h">ENDO</div>
+                <div class="cat-v">${escapeHtml(c.endo || c.basic || '80%')}</div>
+                <div class="cat-sub">Root Canals</div>
+              </td>
+              <td class="excel-summary-cat-box" style="width: 12.5%;">
+                <div class="cat-h">ORAL SURGERY</div>
+                <div class="cat-v">${escapeHtml(c.oral_surgery || c.basic || '80%')}</div>
+                <div class="cat-sub">Extractions</div>
+              </td>
+              <td class="excel-summary-cat-box" style="width: 12.5%;">
+                <div class="cat-h">IMPLANTS D6010</div>
+                <div class="cat-v">${escapeHtml(c.implants || 'NC')}</div>
+                <div class="cat-sub">Surgical Body</div>
+              </td>
+              <td class="excel-summary-cat-box" style="width: 12.5%;">
+                <div class="cat-h">Missing Tooth</div>
+                <div class="cat-v" style="color: ${d.missing_tooth_clause ? '#b91c1c' : '#047857'};">${escapeHtml(missingTooth)}</div>
+                <div class="cat-sub">Clause Active</div>
+              </td>
+              <td class="excel-summary-cat-box" style="width: 12.5%;">
+                <div class="cat-h">Waiting Period</div>
+                <div class="cat-v" style="color: ${d.waiting_period ? '#b91c1c' : '#047857'};">${escapeHtml(waitingPeriod)}</div>
+                <div class="cat-sub">Limitations</div>
+              </td>
+            </tr>
+          </table>
+
+          <!-- 1. PREVENTIVE & DIAGNOSTIC SECTION (Pink Header) -->
+          <table class="excel-grid-table">
+            <thead>
+              <tr>
+                <th colspan="7" class="excel-section-banner excel-banner-pink">
+                  PREVENTIVE & DIAGNOSTIC PROCEDURES
+                </th>
+              </tr>
+              <tr>
+                <th style="width: 10%;">CDT Code</th>
+                <th style="width: 25%;">Procedure Description</th>
+                <th style="width: 10%;">Coverage %</th>
+                <th style="width: 9%;">Deductible</th>
+                <th style="width: 22%;">Frequency / Limitation</th>
+                <th style="width: 12%;">History Date</th>
+                <th style="width: 12%;">Status & Notes</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${renderExcelRows(prevCodes)}
+            </tbody>
+          </table>
+
+          <!-- 2. PERIODONTAL SECTION (Green Header) -->
+          <table class="excel-grid-table">
+            <thead>
+              <tr>
+                <th colspan="7" class="excel-section-banner excel-banner-green">
+                  PERIODONTAL PROCEDURES & THERAPY
+                </th>
+              </tr>
+              <tr>
+                <th style="width: 10%;">CDT Code</th>
+                <th style="width: 25%;">Procedure Description</th>
+                <th style="width: 10%;">Coverage %</th>
+                <th style="width: 9%;">Deductible</th>
+                <th style="width: 22%;">Frequency / Limitation</th>
+                <th style="width: 12%;">History Date</th>
+                <th style="width: 12%;">Status & Notes</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${renderExcelRows(perioCodes)}
+            </tbody>
+          </table>
+
+          <!-- 3. BASIC RESTORATIVE SECTION (Purple Header) -->
+          <table class="excel-grid-table">
+            <thead>
+              <tr>
+                <th colspan="7" class="excel-section-banner excel-banner-purple">
+                  BASIC RESTORATIVE (FILLINGS & REPAIRS)
+                </th>
+              </tr>
+              <tr>
+                <th style="width: 10%;">CDT Code</th>
+                <th style="width: 25%;">Procedure Description</th>
+                <th style="width: 10%;">Coverage %</th>
+                <th style="width: 9%;">Deductible</th>
+                <th style="width: 22%;">Frequency / Limitation</th>
+                <th style="width: 12%;">History Date</th>
+                <th style="width: 12%;">Status & Notes</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${renderExcelRows(basicCodes)}
+            </tbody>
+          </table>
+
+          <!-- 4. MAJOR RESTORATIVE, SURGERY & PROSTHETICS (Blue Header) -->
+          <table class="excel-grid-table">
+            <thead>
+              <tr>
+                <th colspan="7" class="excel-section-banner excel-banner-blue">
+                  MAJOR RESTORATIVE, ENDODONTICS, ORAL SURGERY & PROSTHODONTICS
+                </th>
+              </tr>
+              <tr>
+                <th style="width: 10%;">CDT Code</th>
+                <th style="width: 25%;">Procedure Description</th>
+                <th style="width: 10%;">Coverage %</th>
+                <th style="width: 9%;">Deductible</th>
+                <th style="width: 22%;">Frequency / Limitation</th>
+                <th style="width: 12%;">History Date</th>
+                <th style="width: 12%;">Status & Notes</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${renderExcelRows(majorCodes)}
+            </tbody>
+          </table>
+
+          <div style="font-size: 9.5px; color: #64748b; text-align: right; margin-top: 6px;">
+            Generated by DentVerify AI (iv.eonx.cz) • Verification audit grounded in uploaded carrier breakdown
+          </div>
+        </div>
+      `;
+
+      const sheetContainer = document.getElementById('excelSheetContainer');
+      const printWrapper = document.getElementById('excelPrintWrapper');
+      if (sheetContainer) sheetContainer.innerHTML = html;
+      if (printWrapper) printWrapper.innerHTML = html;
+    }
+
+    function renderExcelRows(codesList) {
+      if (!codesList || codesList.length === 0) {
+        return `<tr><td colspan="7" style="text-align: center; color: #94a3b8; font-style: italic; padding: 6px;">None specified in breakdown</td></tr>`;
+      }
+      return codesList.map(item => `
+        <tr>
+          <td style="font-weight: 700; color: #0284c7; font-family: monospace;">${escapeHtml(item.code)}</td>
+          <td style="font-weight: 600;">${escapeHtml(item.description)}</td>
+          <td style="text-align: center; font-weight: 700;">${escapeHtml(item.coverage_percentage || '0%')}</td>
+          <td style="text-align: center;">${item.deductible_applied ? 'Applies' : 'Waived'}</td>
+          <td>${escapeHtml(item.frequency_limitation || '-')}</td>
+          <td style="font-family: monospace;">${escapeHtml(item.history_dates || 'None')}</td>
+          <td>
+            ${item.downgrade_rule && item.downgrade_rule.toLowerCase() !== 'none' ? `<strong style="color: #b45309;">${escapeHtml(item.downgrade_rule)}</strong> ` : ''}
+            ${escapeHtml(item.notes || '')}
+          </td>
+        </tr>
+      `).join('');
+    }
 
     // ==========================================
     // AI SETTINGS & PROMPTS CONFIGURATION LOGIC
