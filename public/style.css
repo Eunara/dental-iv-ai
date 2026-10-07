@@ -2138,47 +2138,6 @@
       letter-spacing: 0.02em;
     }
 
-    .patient-input-group {
-      margin-top: 1.25rem;
-      background: rgba(23, 35, 62, 0.5);
-      border: 1px solid var(--border-subtle);
-      border-radius: var(--radius-md);
-      padding: 0.85rem 1.15rem;
-      display: flex;
-      flex-direction: column;
-      gap: 0.4rem;
-    }
-
-    .patient-input-label {
-      font-size: 0.8rem;
-      font-weight: 600;
-      color: var(--text-secondary);
-      display: flex;
-      align-items: center;
-      gap: 0.4rem;
-    }
-
-    .patient-name-field {
-      width: 100%;
-      background: #080e1b;
-      border: 1px solid var(--border-medium);
-      border-radius: var(--radius-sm);
-      color: #fff;
-      padding: 0.6rem 0.85rem;
-      font-size: 0.9rem;
-      outline: none;
-      transition: border-color 0.2s;
-    }
-
-    .patient-name-field:focus {
-      border-color: var(--teal-primary);
-    }
-
-    .patient-input-hint {
-      font-size: 0.725rem;
-      color: var(--text-muted);
-    }
-
     /* Verification History Drawer / Modal */
     .history-drawer-backdrop {
       position: fixed;
