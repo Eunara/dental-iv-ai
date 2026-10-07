@@ -33,8 +33,9 @@
         night_guard: "NC",
         waiting_period_details: "Basic 6mo Major 12",
         ortho: "50%",
-        ortho_max: "$2,000",
-        ortho_age_limit: "NL"
+        ortho_max: "$1,000",
+        ortho_remaining: "$1,000",
+        ortho_age_limit: "14 Maximum"
       },
       procedure_codes: [
         // 1. D4346
@@ -74,11 +75,7 @@
         // 18. D9222 / D9223
         { code: "D9222 / D9223", description: "Sedation / General Anesthesia", coverage_percentage: "80%", deductible_applied: true, frequency_limitation: "With surgery", age_limit: "None", is_eligible: true, history_dates: "None", downgrade_rule: "None", notes: "Billed to Med First?: No" },
         // 19. D9944
-        { code: "D9944", description: "Night Guard (Occlusal Guard)", coverage_percentage: "NC", deductible_applied: false, frequency_limitation: "Not Covered", age_limit: "None", is_eligible: false, history_dates: "None", downgrade_rule: "None", notes: "Not Covered (NC)" },
-        // 20. D6010
-        { code: "D6010", description: "Implants (Surgical Placement of Endosteal Implant)", coverage_percentage: "NC", deductible_applied: false, frequency_limitation: "Not Covered", age_limit: "None", is_eligible: false, history_dates: "None", downgrade_rule: "None", notes: "Not Covered (NC)" },
-        // 21. Ortho
-        { code: "Ortho", description: "Ortho (Orthodontics)", coverage_percentage: "50%", deductible_applied: false, frequency_limitation: "Lifetime", age_limit: "NL", is_eligible: true, history_dates: "None", downgrade_rule: "None", notes: "Lifetime Max: $2,000 • Age Limit: NL (No Limit)" }
+        { code: "D9944", description: "Night Guard (Occlusal Guard)", coverage_percentage: "NC", deductible_applied: false, frequency_limitation: "Not Covered", age_limit: "None", is_eligible: false, history_dates: "None", downgrade_rule: "None", notes: "Not Covered (NC)" }
       ]
     };
 
@@ -93,41 +90,35 @@
         .replace(/'/g, '&#039;');
     }
 
-    // Exact 21 Procedure Clinical Sequence Mapping (Strict order from plan.txt & Excel breakdown form)
-    const CLINICAL_PROCEDURE_ORDER = [
-      'D4346',
-      'D1110',
-      'D0274',
-      'D0210', 'D0330', 'D0210 / D0330',
-      'D0220',
-      'D9110',
-      'D0120',
-      'D0140',
-      'D1351',
-      'D1206',
-      'D4341',
-      'D4910',
-      'D2391',
-      'D2740',
-      'D2920',
-      'D7140',
-      'D7210',
-      'D9222', 'D9223', 'D9222 / D9223',
-      'D9944',
-      'D6010',
-      'ORTHO', 'D8080', 'D8090', 'D8670'
-    ];
-
+    // Exact Procedure Clinical Sequence Mapping (Strict order 1-19 from plan.txt)
     function getProcedureOrderRank(code) {
       if (!code) return 999;
       const c = String(code).trim().toUpperCase();
-      for (let i = 0; i < CLINICAL_PROCEDURE_ORDER.length; i++) {
-        const target = CLINICAL_PROCEDURE_ORDER[i];
-        if (c === target || c.includes(target) || target.includes(c)) {
-          return i;
-        }
-      }
-      return 900;
+      // 1-10: Preventative
+      if (c.includes('D4346')) return 1;
+      if (c.includes('D1110')) return 2;
+      if (c.includes('D0274')) return 3;
+      if (c.includes('D0210') || c.includes('D0330')) return 4;
+      if (c.includes('D0220')) return 5;
+      if (c.includes('D9110')) return 6;
+      if (c.includes('D0120')) return 7;
+      if (c.includes('D0140')) return 8;
+      if (c.includes('D1351')) return 9;
+      if (c.includes('D1206')) return 10;
+      // 11-12: Periodontal
+      if (c.includes('D4341')) return 11;
+      if (c.includes('D4910')) return 12;
+      // 13: Restorative (D2391)
+      if (c.includes('D2391')) return 13;
+      // 14-19: Major
+      if (c.includes('D2740')) return 14;
+      if (c.includes('D2920')) return 15;
+      if (c.includes('D7140')) return 16;
+      if (c.includes('D7210')) return 17;
+      if (c.includes('D9222') || c.includes('D9223')) return 18;
+      if (c.includes('D9944')) return 19;
+      if (c.includes('D6010')) return 20;
+      return 100;
     }
 
     // Strict categorization into the 5 clinical breakdown categories:
@@ -1001,7 +992,9 @@
       txt += `EFFECTIVE DATE:       ${d.effective_date || '01/01/2026'}\n`;
       txt += `ANNUAL MAXIMUM:       ${fmtMoney(d.annual_maximum)} | REMAINING: ${fmtMoney(d.remaining_maximum)}\n`;
       txt += `INDIVIDUAL DED:       ${fmtMoney(d.deductible_individual)} | REMAINING: ${fmtMoney(d.deductible_remaining)}\n`;
-      txt += `DEDUCTIBLE APPLIES:   ${d.deductible_applies_to || 'Basic & Major'}\n`;
+      txt += `DEDUCTIBLE APPLIES:   ${d.deductible_applies_to || 'Basic & Major only, Waived on Preventive'}\n`;
+      txt += `ORTHO MAX:            ${c.ortho_max || '$1,000'} | REMAINING ORTHO: ${c.ortho_remaining || c.ortho_max || '$1,000'}\n`;
+      txt += `ORTHO AGE LIMIT:      ${c.ortho_age_limit || '14 Maximum'} | ORTHO COVERAGE: ${c.ortho || '50%'}\n`;
       txt += `PREVENTIVE TO MAX:    ${d.preventive_applies_to_max ? 'YES (Counts toward max)' : 'NO (Waived from max)'}\n`;
       txt += `MISSING TOOTH CLAUSE: ${d.missing_tooth_clause ? 'YES' : 'NO'}\n`;
       txt += `WAITING PERIODS:      ${d.waiting_period ? 'YES' : 'NO'} (${c.waiting_period_details || 'Basic 6mo Major 12'})\n`;
@@ -1014,7 +1007,7 @@
       txt += ` • ORAL SURGERY:      ${c.oral_surgery || '80%'}\n`;
       txt += ` • IMPLANTS D6010:    ${c.implants || 'NC'}\n`;
       txt += ` • NIGHT GUARD D9944: ${c.night_guard || 'NC'}\n`;
-      txt += ` • Orthodontics:      ${c.ortho || '50%'} (Max: ${c.ortho_max || '$2,000'}, Age Limit: ${c.ortho_age_limit || 'NL'})\n`;
+      txt += ` • Orthodontics:      ${c.ortho || '50%'} (Max: ${c.ortho_max || '$1,000'}, Remaining: ${c.ortho_remaining || c.ortho_max || '$1,000'}, Age Limit: ${c.ortho_age_limit || '14 Maximum'})\n`;
       txt += `----------------------------------------------------------\n`;
       txt += `AUDITED CDT PROCEDURE CODES (SEPARATED BY CATEGORIES):\n`;
 
@@ -1023,7 +1016,6 @@
         { key: 'periodontal', title: '2. PERIODONTAL' },
         { key: 'restorative', title: '3. RESTORATIVE (D2391)' },
         { key: 'major', title: '4. MAJOR' },
-        { key: 'ortho', title: '5. ORTHODONTICS (ORTHO)' },
       ];
 
       categoriesDef.forEach(catDef => {
@@ -1329,6 +1321,146 @@
       });
     });
 
+    const downloadExcelCsvBtn = document.getElementById('downloadExcelCsvBtn');
+    downloadExcelCsvBtn?.addEventListener('click', () => {
+      const data = currentAuditData || SAMPLE_BREAKDOWN_DATA;
+      const csv = generateExcelCsv(data);
+      const d = data.insurance_details || {};
+      const safeName = (d.patient_name || 'Breakdown').trim().replace(/[^a-zA-Z0-9_-]/g, '_');
+      const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+      const link = document.createElement('a');
+      const url = URL.createObjectURL(blob);
+      link.setAttribute('href', url);
+      link.setAttribute('download', `Dental_Breakdown_${safeName}.csv`);
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+      displayToast('Excel CSV breakdown sheet downloaded!');
+    });
+
+    function generateExcelCsv(data) {
+      if (!data) return '';
+      const d = data.insurance_details || {};
+      const c = data.coverage_levels || {};
+      const patientName = (d.patient_name && d.patient_name.trim() !== '' && d.patient_name.toLowerCase() !== 'n/a') ? d.patient_name.trim() : 'Katherine Birdwell';
+      const carrier = d.carrier || 'Delta Dental PPO';
+      const network = d.network_status || 'In Network';
+      const effective = d.effective_date || '01/01/2026';
+      const planBenefits = d.plan_benefits || 'Calendar Year';
+      const feeSchedule = d.fee_schedule || (carrier + ' PPO');
+      const paymentTo = d.payment_recipient || 'Office';
+      const annualMax = fmtMoney(d.annual_maximum);
+      const remainingMax = fmtMoney(d.remaining_maximum);
+      const ded = fmtMoney(d.deductible_individual);
+      const dedRemaining = fmtMoney(d.deductible_remaining);
+      const prevToMax = d.preventive_applies_to_max ? 'Yes' : 'No';
+      const dedScope = d.deductible_applies_to || 'Basic & Major only, Waived on Preventive';
+      const orthoMax = c.ortho_max || '$1,000';
+      const orthoRemaining = c.ortho_remaining || c.ortho_max || '$1,000';
+      const orthoAgeLimit = c.ortho_age_limit || '14 Maximum';
+      const orthoCoverage = c.ortho || '50%';
+      const missingTooth = d.missing_tooth_clause ? 'Yes' : 'No';
+      const waitingPeriod = d.waiting_period ? (c.waiting_period_details || 'Yes') : ('No (' + (c.waiting_period_details || 'Basic 6mo Major 12') + ')');
+
+      function csvCell(val) {
+        if (val === null || val === undefined) return '""';
+        return `"${String(val).replace(/"/g, '""')}"`;
+      }
+
+      let lines = [];
+      lines.push([csvCell('DENTAL INSURANCE BENEFIT BREAKDOWN FORM')].join(','));
+      lines.push('');
+      lines.push([csvCell('Patient Name:'), csvCell(patientName), csvCell('Network Participation:'), csvCell(network)].join(','));
+      lines.push([csvCell('Effective Date:'), csvCell(effective), csvCell('Plan Benefits:'), csvCell(planBenefits)].join(','));
+      lines.push([csvCell('Insurance Payment goes to:'), csvCell(paymentTo), csvCell('Fee Schedule / Tier:'), csvCell(feeSchedule)].join(','));
+      lines.push([csvCell('Yearly Maximum:'), csvCell(annualMax), csvCell('Remaining Benefits:'), csvCell(remainingMax)].join(','));
+      lines.push([csvCell('Annual Max applies to preventative?:'), csvCell(prevToMax), csvCell('Individual Deductible:'), csvCell(ded)].join(','));
+      lines.push([csvCell('Deductible Remaining:'), csvCell(dedRemaining), csvCell('Deductible Scope:'), csvCell(dedScope)].join(','));
+      lines.push([csvCell('Ortho Max:'), csvCell(orthoMax), csvCell('Remaining Ortho:'), csvCell(orthoRemaining)].join(','));
+      lines.push([csvCell('Ortho Age Limit:'), csvCell(orthoAgeLimit), csvCell('Ortho Coverage:'), csvCell(orthoCoverage)].join(','));
+      lines.push('');
+      lines.push([csvCell('SUMMARY CATEGORIES MATRIX')].join(','));
+      lines.push([
+        csvCell('Preventative'),
+        csvCell('Basic'),
+        csvCell('Major'),
+        csvCell('ENDO'),
+        csvCell('ORAL SURGERY'),
+        csvCell('IMPLANTS D6010'),
+        csvCell('NIGHT GUARD'),
+        csvCell('Missing Tooth'),
+        csvCell('Waiting Period'),
+        csvCell('Ortho')
+      ].join(','));
+      lines.push([
+        csvCell(c.preventive || '100%'),
+        csvCell(c.basic || '80%'),
+        csvCell(c.major || '60%'),
+        csvCell(c.endo || c.basic || '80%'),
+        csvCell(c.oral_surgery || c.basic || '80%'),
+        csvCell(c.implants || 'NC'),
+        csvCell(c.night_guard || 'NC'),
+        csvCell(missingTooth),
+        csvCell(waitingPeriod),
+        csvCell(`${orthoCoverage} (Rem: ${orthoRemaining}, Age: ${orthoAgeLimit})`)
+      ].join(','));
+      lines.push('');
+
+      const allCodes = (data.procedure_codes || []).slice();
+      const prevCodes = [];
+      const perioCodes = [];
+      const restorativeCodes = [];
+      const majorCodes = [];
+
+      allCodes.forEach(cd => {
+        const cat = categorizeProcedureCode(cd);
+        if (cat === 'preventative') prevCodes.push(cd);
+        else if (cat === 'periodontal') perioCodes.push(cd);
+        else if (cat === 'restorative') restorativeCodes.push(cd);
+        else if (cat === 'major') majorCodes.push(cd);
+      });
+
+      prevCodes.sort((a, b) => getProcedureOrderRank(a.code) - getProcedureOrderRank(b.code));
+      perioCodes.sort((a, b) => getProcedureOrderRank(a.code) - getProcedureOrderRank(b.code));
+      restorativeCodes.sort((a, b) => getProcedureOrderRank(a.code) - getProcedureOrderRank(b.code));
+      majorCodes.sort((a, b) => getProcedureOrderRank(a.code) - getProcedureOrderRank(b.code));
+
+      function appendCsvSection(title, list) {
+        lines.push([csvCell(title)].join(','));
+        lines.push([
+          csvCell('CDT Code'),
+          csvCell('Procedure Description'),
+          csvCell('Coverage %'),
+          csvCell('Deductible'),
+          csvCell('Frequency'),
+          csvCell('History Date'),
+          csvCell('Eligible'),
+          csvCell('Notes & Limitations')
+        ].join(','));
+        list.forEach(item => {
+          lines.push([
+            csvCell(item.code || ''),
+            csvCell(item.description || ''),
+            csvCell(item.coverage_percentage || ''),
+            csvCell(item.deductible_applied ? 'Applies' : 'Waived'),
+            csvCell(item.frequency_limitation || ''),
+            csvCell(item.history_dates || 'None'),
+            csvCell(item.is_eligible ? 'Yes' : 'No'),
+            csvCell(item.notes || '')
+          ].join(','));
+        });
+        lines.push('');
+      }
+
+      appendCsvSection('PREVENTATIVE PROCEDURES', prevCodes);
+      appendCsvSection('PERIODONTAL PROCEDURES', perioCodes);
+      appendCsvSection('RESTORATIVE PROCEDURES (D2391)', restorativeCodes);
+      appendCsvSection('MAJOR PROCEDURES', majorCodes);
+
+      return lines.join('\r\n');
+    }
+
     function renderExcelBreakdownSheet(data) {
       if (!data) return;
       const d = data.insurance_details || {};
@@ -1351,30 +1483,32 @@
       const missingTooth = d.missing_tooth_clause ? 'Yes' : 'No';
       const waitingPeriod = d.waiting_period ? (c.waiting_period_details || 'Yes') : ('No (' + (c.waiting_period_details || 'Basic 6mo Major 12') + ')');
 
-      // Sort all codes strictly in clinical 1-to-21 sequence
+      const orthoMax = c.ortho_max || '$1,000';
+      const orthoRemaining = c.ortho_remaining || c.ortho_max || '$1,000';
+      const orthoAgeLimit = c.ortho_age_limit || '14 Maximum';
+      const orthoCoverage = c.ortho || '50%';
+
+      // Sort all codes strictly in clinical 1-to-19 sequence
       allCodes.sort((a, b) => getProcedureOrderRank(a.code) - getProcedureOrderRank(b.code));
 
       const prevCodes = [];
       const perioCodes = [];
       const restorativeCodes = [];
       const majorCodes = [];
-      const orthoCodes = [];
 
       allCodes.forEach(cd => {
         const cat = categorizeProcedureCode(cd);
         if (cat === 'preventative') prevCodes.push(cd);
         else if (cat === 'periodontal') perioCodes.push(cd);
         else if (cat === 'restorative') restorativeCodes.push(cd);
-        else if (cat === 'ortho') orthoCodes.push(cd);
-        else majorCodes.push(cd);
+        else if (cat === 'major') majorCodes.push(cd);
       });
 
-      // Maintain exact clinical order within each of the 5 categories
+      // Maintain exact clinical order within each of the 4 categories
       prevCodes.sort((a, b) => getProcedureOrderRank(a.code) - getProcedureOrderRank(b.code));
       perioCodes.sort((a, b) => getProcedureOrderRank(a.code) - getProcedureOrderRank(b.code));
       restorativeCodes.sort((a, b) => getProcedureOrderRank(a.code) - getProcedureOrderRank(b.code));
       majorCodes.sort((a, b) => getProcedureOrderRank(a.code) - getProcedureOrderRank(b.code));
-      orthoCodes.sort((a, b) => getProcedureOrderRank(a.code) - getProcedureOrderRank(b.code));
 
       let html = `
         <div class="excel-sheet-doc">
@@ -1417,6 +1551,18 @@
               <td class="excel-val-cell">${escapeHtml(dedRemaining)}</td>
               <td class="excel-label-cell">Deductible Scope:</td>
               <td class="excel-val-cell">${escapeHtml(dedScope)}</td>
+            </tr>
+            <tr style="background: #f0fdf4;">
+              <td class="excel-label-cell" style="font-weight: 700; color: #065f46;">Ortho Max:</td>
+              <td class="excel-val-cell" style="font-weight: 700; color: #065f46;">${escapeHtml(orthoMax)}</td>
+              <td class="excel-label-cell" style="font-weight: 700; color: #065f46;">Remaining Ortho:</td>
+              <td class="excel-val-cell" style="font-weight: 700; color: #047857;">${escapeHtml(orthoRemaining)}</td>
+            </tr>
+            <tr style="background: #f0fdf4;">
+              <td class="excel-label-cell" style="font-weight: 600; color: #065f46;">Ortho Age Limit:</td>
+              <td class="excel-val-cell">${escapeHtml(orthoAgeLimit)}</td>
+              <td class="excel-label-cell" style="font-weight: 600; color: #065f46;">Ortho Coverage:</td>
+              <td class="excel-val-cell">${escapeHtml(orthoCoverage)}</td>
             </tr>
           </table>
 
@@ -1470,8 +1616,8 @@
               </td>
               <td class="excel-summary-cat-box" style="width: 10%;">
                 <div class="cat-h">Ortho</div>
-                <div class="cat-v">${escapeHtml(c.ortho || '50%')}</div>
-                <div class="cat-sub">${escapeHtml(c.ortho_max || '$2,000')} • ${escapeHtml(c.ortho_age_limit || 'NL')}</div>
+                <div class="cat-v">${escapeHtml(orthoCoverage)}</div>
+                <div class="cat-sub">Rem: ${escapeHtml(orthoRemaining)} • ${escapeHtml(orthoAgeLimit)}</div>
               </td>
             </tr>
           </table>
@@ -1569,30 +1715,6 @@
             </thead>
             <tbody>
               ${renderExcelRows(majorCodes)}
-            </tbody>
-          </table>
-
-          <!-- 5. ORTHODONTICS (ORTHO) (Sky Blue Header) -->
-          <table class="excel-grid-table">
-            <thead>
-              <tr>
-                <th colspan="8" class="excel-section-banner excel-banner-blue" style="background: #e0f2fe; color: #0369a1; font-weight: 800;">
-                  ORTHODONTICS (ORTHO)
-                </th>
-              </tr>
-              <tr>
-                <th style="width: 11%;">CDT Code</th>
-                <th style="width: 25%;">Procedure Description</th>
-                <th style="width: 9%;">Coverage %</th>
-                <th style="width: 8%;">Deductible</th>
-                <th style="width: 15%;">Frequency</th>
-                <th style="width: 11%;">History Date</th>
-                <th style="width: 7%;">Eligible</th>
-                <th style="width: 14%;">Notes & Limitations</th>
-              </tr>
-            </thead>
-            <tbody>
-              ${renderExcelRows(orthoCodes)}
             </tbody>
           </table>
 

@@ -185,7 +185,12 @@ const dentalBreakdownSchema = {
         },
         ortho_age_limit: {
           type: Type.STRING,
-          description: 'Orthodontic age limitation (e.g., NL, No Limit, Up to age 19)',
+          description: 'Orthodontic age limitation (e.g., NL, No Limit, 14 Maximum, Up to age 19)',
+        },
+        ortho_remaining: {
+          type: Type.STRING,
+          description: 'Orthodontic remaining benefit balance (e.g., $1,000, $2,000, N/A)',
+          nullable: true,
         },
       },
       required: [
@@ -376,9 +381,10 @@ YOU MUST SPECIFICALLY AUDIT AND EXTRACT THE REQUIRED CDT PROCEDURES IF PRESENT O
    - D8090: Comprehensive Orthodontic Treatment of the Adult Dentition
    - D8670: Periodic Orthodontic Treatment Visit
 
-CRITICAL CLINICAL PROCEDURE SEQUENCE BY 5 CATEGORIES:
+CRITICAL CLINICAL PROCEDURE SEQUENCE BY CATEGORIES:
 Audit the attached insurance breakdown sheet and extract the Procedure Table.
-Strictly maintain the following sequence and exact order of procedure codes in the procedure_codes array, separated into 5 clinical categories:
+Strictly capture Orthodontic terms in the header (Ortho Lifetime Max, Remaining Ortho, Ortho Coverage %, and Ortho Age Limit).
+Strictly maintain the following sequence and exact order of procedure codes in the procedure_codes array:
 
 CATEGORY 1: PREVENTATIVE
 1. D4346 (Scaling in presence of gingival inflammation)
@@ -407,9 +413,6 @@ CATEGORY 4: MAJOR
 18. D9222 / D9223 (Sedation / Anesthesia)
 19. D9944 (Night Guard)
 20. D6010 (Implants, if present)
-
-CATEGORY 5: ORTHO
-21. Ortho (Orthodontics)
 
 For each code in this exact order, strictly extract:
 - Coverage Percentage

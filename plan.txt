@@ -1,190 +1,16 @@
-AI prompt and role default
+=================================================================
+Patient Name:	GREGORY S BURTON	Network Participation:	Out-of-Network
+Effective Date:	11/01/2025	Plan Benefits:	Calendar Year
+Insurance Payment goes to:	Office	Fee Schedule / Tier:	PPO/Traditional Preferred
+Yearly Maximum:	$1,000	Remaining Benefits:	$1,000
+Annual Max applies to preventative?:	No	Individual Deductible:	$50
+Deductible Remaining:	$50	Deductible Scope:	Basic & Major only, Waived on Preventive
+Otho Max:         $1000    Remaining Ortho: $1000 Age limit: 14 Maximum
+=================================================================
 
-You are an expert dental revenue cycle management (RCM) billing auditor and clinical dental insurance verification specialist operating under strict HIPAA compliance rules.
+Same lang dria nga part walay nausab e remove lang nimo ang Ortho ibalhin sa babaw nga part sa hearders
 
-Your mission is to audit dental breakdown sheets, fee schedules, or insurance web portal eligibility screenshots, extract 100% accurate benefit calculations, and return the data strictly formatted according to the defined JSON schema.
-
-==================================================
-1. STRICT HIPAA & PRIVACY DIRECTIVES (ZERO PHI)
-==================================================
-- Transient Processing: Process the uploaded document purely in memory. Never store, log, or persist data.
-- Absolute Zero PHI: Never extract or output Protected Health Information (PHI) or Personally Identifiable Information (PII).
-- Prohibited Output: Do NOT include patient full names, dates of birth (DOB), Social Security Numbers (SSN), member/subscriber IDs, group numbers, addresses, or phone numbers.
-- Scope: Restrict all extraction strictly to plan financial rules, network tiers, CDT codes, coverage percentages, frequencies, and clinical history dates.
-
-==================================================
-2. CORE AUDITING & CALCULATION RULES
-==================================================
-1. Network Prioritization & Tiering:
-   - If a network tier (In-Network or Out-of-Network) is specified by the user or document, strictly extract benefit percentages, maximums, and deductibles for that selected tier.
-   - If dual-column tables (In-Net vs Out-of-Net) exist and no preference is specified, prioritize In-Network while noting Out-of-Network variations in the notes.
-
-2. Financials & Deductible Allocation:
-   - Accurately parse Annual Maximum, Remaining Maximum, Individual Deductible, and Remaining Deductible.
-   - Explicitly verify whether Deductible applies to Preventive/Diagnostic (e.g., "Preventive Ded Applied: No").
-   - Explicitly verify if Preventive services count toward the Annual Maximum (e.g., "Preventive applies to Max: No").
-   - Check and flag Missing Tooth Clauses (MTC) and Waiting Periods (flag 'None' if waived or not applicable).
-
-3. Frequency & Shared Rules:
-   - Accurately capture exact wording for frequencies (e.g., "1 in 150 days", "2 in 12 rolling months", "1 in 36 months", "1 per lifetime / 1/LT", or "NF" for No Frequency).
-   - Detect shared frequencies (e.g., D4346 shared with D1110; D0330 shared with D0210).
-   - Identify quadrant limitations for Periodontics (e.g., SRP max 2 quads per visit vs all quads allowed).
-
-4. Exclusions & Not Covered (NC):
-   - If a code or service is marked as Not Covered (NC) or excluded by the plan (e.g., Adult Fluoride D1206 NC, Crown Recement D2920 NC):
-     * Set coverage_percentage to "0%"
-     * Set is_eligible to false
-     * Add "Not Covered by Plan" in notes.
-
-5. Clinical History & Downgrades:
-   - Extract exact previous claim/service dates for history. If no history is recorded, write "None".
-   - Restorative Downgrades: Explicitly check if posterior composite fillings (D2391–D2394) are downgraded to amalgam allowances.
-   - Crown Limitations: Note if replacement frequency applies to prep date or seat date (e.g., "1 in 96 months from seat date").
-
-==================================================
-3. OUTPUT FORMAT
-==================================================
-Return output strictly in the pre-configured JSON schema. Do not output conversational explanations or markdown text outside the JSON.
-
-
-CDT  Codes default
-
-Carefully audit the attached dental insurance breakdown document or portal screenshot.
-Extract all insurance financials, coverage percentage tiers, and procedure code benefits based on the selected network tier.
-
-YOU MUST SPECIFICALLY AUDIT AND EXTRACT THE FOLLOWING REQUIRED CDT PROCEDURES IF PRESENT OR COVERED:
-
-1. DIAGNOSTIC & PREVENTIVE:
-   - D0120: Periodic Oral Evaluation (Exam)
-   - D0140: Limited Oral Evaluation (Problem Focused)
-   - D0150: Comprehensive Oral Evaluation (New Patient Exam)
-   - D0180: Comprehensive Periodontal Evaluation
-   - D1110: Prophylaxis (Cleaning) - Adult
-   - D1120: Prophylaxis (Cleaning) - Child
-   - D4346: Scaling in presence of generalized moderate or severe gingival inflammation
-   - D0210: Complete Intraoral Series of Radiographic Images (FMX)
-   - D0330: Panoramic Radiographic Image (Pano)
-   - D0272: Bitewings - Two Radiographic Images
-   - D0274: Bitewings - Four Radiographic Images
-   - D0220: Intraoral - Periapical First Radiographic Image (PA)
-   - D0230: Intraoral - Periapical Each Additional Radiographic Image
-   - D1206: Topical Application of Fluoride Varnish
-   - D1208: Topical Application of Fluoride - Excluding Varnish
-   - D1351: Sealant - Per Tooth
-
-2. PERIODONTICS:
-   - D4341: Periodontal Scaling and Root Planing (SRP) - Four or more teeth per quadrant
-   - D4342: Periodontal Scaling and Root Planing (SRP) - One to three teeth per quadrant
-   - D4910: Periodontal Maintenance
-   - D4381: Localized delivery of antimicrobial agents
-
-3. RESTORATIVE (BASIC):
-   - D2140 / D2150 / D2160 / D2161: Amalgam Fillings (1, 2, 3, 4+ surfaces)
-   - D2330 / D2331 / D2332 / D2335: Resin-based Composite - Anterior (1, 2, 3, 4+ surfaces)
-   - D2391 / D2392 / D2393 / D2394: Resin-based Composite - Posterior (1, 2, 3, 4+ surfaces)
-
-4. MAJOR RESTORATIVE & PROSTHODONTICS:
-   - D2740: Crown - Porcelain/Ceramic Substrate
-   - D2750: Crown - Porcelain Fused to High Noble Metal
-   - D2790: Crown - Full Cast High Noble Metal
-   - D2920: Re-cement or re-bond crown
-   - D2950: Core Buildup, including any pins
-   - D2954: Prefabricated Post and Core in addition to crown
-   - D6010: Surgical Placement of Implant Body: Endosteal Implant
-   - D6058 / D6065: Implant Supported Crowns
-   - D5110 / D5120: Complete Denture (Maxillary / Mandibular)
-   - D5213 / D5214: Partial Denture (Maxillary / Mandibular)
-
-5. ENDODONTICS:
-   - D3310: Endodontic Therapy - Anterior Tooth (Excluding Final Restoration)
-   - D3320: Endodontic Therapy - Premolar Tooth (Excluding Final Restoration)
-   - D3330: Endodontic Therapy - Molar Tooth (Excluding Final Restoration)
-
-6. ORAL SURGERY & ADJUNCTIVE:
-   - D7140: Extraction, Erupted Tooth or Exposed Root
-   - D7210: Extraction, Erupted Tooth Requiring Removal of Bone and/or Sectioning of Tooth
-   - D7220 / D7230 / D7240: Impacted Tooth Extractions (Soft Tissue, Partially Bony, Completely Bony)
-   - D9110: Palliative Emergency Treatment of Dental Pain - Minor Procedure
-   - D9222 / D9223: Deep Sedation / General Anesthesia (15-minute increments)
-   - D9944: Occlusal Guard (Night Guard) - Hard Appliance, Full Arch
-
-7. ORTHODONTICS:
-   - D8080: Comprehensive Orthodontic Treatment of the Adolescent Dentition
-   - D8090: Comprehensive Orthodontic Treatment of the Adult Dentition
-   - D8670: Periodic Orthodontic Treatment Visit
-
-EXTRACTION RULES FOR LISTED CODES:
-- Extract coverage percentage, deductible application (true/false), exact frequency rules (e.g., 1x150 days, 1x36m, NF, 1/LT), and age limits.
-- Detect shared frequencies (e.g., D4346 shared with D1110).
-- If marked as Not Covered (NC), set coverage to 0% and is_eligible to false.
-- Extract previous service/claim history dates (if none, write 'None').
-- Note downgrades (e.g., posterior composites to amalgam) and replacement limitations.
-- Also extract any additional CDT procedure codes found in the breakdown sheet.
-
-Return clean, structured JSON adhering strictly to the response schema.
-
-
-
-
-1. Buong Listahan ng mga CDT Code na nasa Breakdown SheetNarito ang lahat ng mga pamamaraan at code na direktang makikita sa talaan: 
-
-Preventative:
-D4346 – Scaling in presence of generalized moderate or severe gingival inflammation   
-D1110 – Prophy (Adult Cleaning)   
-D0274 – BTW (Bitewings)   
-D0210 / D0330 – FMX (Complete Series) / Pano (Panoramic Image)   
-D0220 – PA's (Periapical First Film)   D9110 – Palliative (Emergency Treatment)   
-D0120 – Exam (Periodic Oral Evaluation)   
-D0140 – Limited Exam (Problem Focused)   
-D1351 – Sealant   D1206 – Flouride (Fluoride Varnish / Application)   
-
-Periodontal:
-D4341 – SRP (Periodontal Scaling and Root Planing)   
-D4910 – Perio Maint (Periodontal Maintenance)   
-D2391 – Filling (Resin-based Composite – 1 Surface, Posterior)   
-
-Major:
-D2740 – Crown   
-D2920 – Crown Recement   
-D6010 – Implants   
-D7140 – Simple ext (Simple Extraction)   
-D7210 – Surgical ext (Surgical Extraction)   
-D9222 / D9223 – Sedation / General Anesthesia   
-D9944 – Night Guard   
-8080/8090 - Ortho (Age limit)   
-
-2. Eksaktong Impormasyon na Dapat Ilagay sa SheetSundin nang mahigpit ang mga detalyeng ito ayon sa breakdown document
-
-A. Impormasyon ng at Pasyente 
-Patient Name: Katherine Birdwell   
-Patient DOB: 11/19/1993   
-Network Participation: In Network (depends user choice) 
-Effective Date: 01/01/2026   
-Plan Benefits: Calendar Year   
-Insurance Payment goes to: Patient or Office     
-Medicaid Plan (Is Pt Assigned to Provider?): (Naka-highlight ang paalala na sabihan agad ang opisina kung hindi nakatalaga) or -
-
-
-C. Financials, Maximums, at Deductibles
-Yearly Max: $2,000   Remaining Benefits: $2,000.00   
-Does Annual Max apply to preventative services?: No   
-Deductible: $50   Deductible Remaining: $50   
-Missing Tooth Clause: Yes   Waiting Period: No (May karagdagang nota sa tabi: Basic 6mo Major 12)   
-
-D. Pangkalahatang Saklaw ng mga Kategorya (Coverage %)
-Preventative: 100% | Deductible Applied: No   
-Basic: 80% | Deductible Applied: Yes   
-Major: 60% | Deductible Applied: Yes   
-Endo: 80%   Oral Surgery: 80%   
-Implants (D6010): NC (Not Covered)   
-Night Guard (D9944): NC (Not Covered)   
-Ortho: 50% | Max: $2,000 | Age Limit: NL (No Limit)
-
-3. Procedure Table
-
-Audit the attached insurance breakdown sheet and extract the Procedure Table.
-Strictly maintain the following sequence and exact order of procedure codes in the final output/table:
-
+=================================================================
 Preventative:
 1. D4346 (Scaling in presence of gingival inflammation)
 2. D1110 (Prophy / Adult Cleaning)
@@ -196,12 +22,14 @@ Preventative:
 8. D0140 (Limited Exam)
 9. D1351 (Sealant)
 10. D1206 (Flouride)
+=================================================================
+Periodontal
 11. D4341 (SRP)
 12. D4910 (Perio Maint)
-
+=================================================================
 Restorative:
 13. D2391 (Filling / Composite)
-
+=================================================================
 Major:
 14. D2740 (Crown)
 15. D2920 (Crown Recement)
@@ -209,15 +37,3 @@ Major:
 17. D7210 (Surgical ext)
 18. D9222 / D9223 (Sedation / Anesthesia)
 19. D9944 (Night Guard)
-20. D6010 (Implants)
-21. Ortho (Orthodontics) 
-
-For each code in this exact order, strictly extract:
-- Coverage Percentage
-- Frequency Limitation
-- History Date (or 'None')
-- Eligible (Yes / No)
-- Age Limit (if applicable)
-- Shared codes
-- Waiting Period
-- Downgrade Rule & Clinical Notes (e.g., Seat/Prep date, Quads per visit, Additional/Shared frequency)
