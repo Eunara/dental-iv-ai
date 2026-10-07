@@ -2545,15 +2545,21 @@
                 </svg>
               </div>
               <div>
-                <h2 id="carrierNameDisplay">Delta Dental of California</h2>
-                <div class="policy-meta-sub">
+                <h2 id="carrierNameDisplay">Delta Dental PPO</h2>
+                <div class="policy-meta-sub" style="flex-wrap: wrap; gap: 0.45rem;">
                   <span id="patientHeroBadge" class="patient-hero-badge" style="display: none;">
                     <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
-                    <span id="patientHeroName">Patient Name</span>
+                    <span id="patientHeroName">Katherine Birdwell</span>
                   </span>
-                  <span id="planEffectiveDateDisplay">Effective: 01/01/2024</span>
+                  <span id="planEffectiveDateDisplay">Effective: 01/01/2026</span>
                   <span>•</span>
                   <span id="networkStatusBadge" class="network-indicator-pill in-network">In-Network</span>
+                  <span>•</span>
+                  <span id="planBenefitsDisplay" style="font-size: 0.75rem; color: #94a3b8;">Plan: Calendar Year</span>
+                  <span>•</span>
+                  <span id="feeScheduleDisplay" style="font-size: 0.75rem; color: #94a3b8;">Fee: Delta Dental PPO</span>
+                  <span>•</span>
+                  <span id="paymentToDisplay" style="font-size: 0.75rem; color: #94a3b8;">Pay To: Patient or Office</span>
                 </div>
               </div>
             </div>
@@ -3043,7 +3049,10 @@
         patient_name: "Katherine Birdwell",
         carrier: "Delta Dental PPO",
         effective_date: "01/01/2026",
-        network_status: "In-Network",
+        network_status: "In Network",
+        plan_benefits: "Calendar Year",
+        fee_schedule: "Delta Dental PPO",
+        payment_recipient: "Patient or Office",
         annual_maximum: 2000,
         remaining_maximum: 2000,
         preventive_applies_to_max: false,
@@ -3060,85 +3069,55 @@
         endo: "80%",
         oral_surgery: "80%",
         implants: "NC",
-        waiting_period_details: "No",
+        night_guard: "NC",
+        waiting_period_details: "Basic 6mo Major 12",
         ortho: "50%",
-        ortho_max: "$1,500 Lifetime",
-        ortho_age_limit: "Up to age 19"
+        ortho_max: "$2,000",
+        ortho_age_limit: "NL"
       },
       procedure_codes: [
-        // DIAGNOSTIC & PREVENTIVE
-        { code: "D0120", description: "Periodic Oral Evaluation (Exam)", coverage_percentage: "100%", deductible_applied: false, frequency_limitation: "2 in 12 rolling months", age_limit: "None", is_eligible: true, history_dates: "04/10/2024", downgrade_rule: "None", notes: "Shared freq with D0150/D0180" },
-        { code: "D0140", description: "Limited Oral Evaluation (Problem Focused)", coverage_percentage: "100%", deductible_applied: false, frequency_limitation: "2 in 12 months", age_limit: "None", is_eligible: true, history_dates: "None", downgrade_rule: "None", notes: "Emergency exam covered at 100%" },
-        { code: "D0150", description: "Comprehensive Oral Evaluation (New Patient Exam)", coverage_percentage: "100%", deductible_applied: false, frequency_limitation: "1 in 36 months", age_limit: "None", is_eligible: false, history_dates: "01/15/2023", downgrade_rule: "None", notes: "Eligible 01/15/2026" },
-        { code: "D0180", description: "Comprehensive Periodontal Evaluation", coverage_percentage: "100%", deductible_applied: false, frequency_limitation: "1 in 36 months", age_limit: "None", is_eligible: true, history_dates: "None", downgrade_rule: "None", notes: "Shared benefit with D0150" },
-        { code: "D1110", description: "Prophylaxis (Cleaning) - Adult", coverage_percentage: "100%", deductible_applied: false, frequency_limitation: "2 in 12 months (150 days apart)", age_limit: "Age 14+", is_eligible: true, history_dates: "04/10/2024", downgrade_rule: "None", notes: "Next eligible 09/07/2024" },
-        { code: "D1120", description: "Prophylaxis (Cleaning) - Child", coverage_percentage: "100%", deductible_applied: false, frequency_limitation: "2 in 12 months", age_limit: "Through age 13", is_eligible: false, history_dates: "None", downgrade_rule: "None", notes: "Patient is adult" },
-        { code: "D4346", description: "Scaling in presence of generalized moderate or severe gingival inflammation", coverage_percentage: "100%", deductible_applied: false, frequency_limitation: "1 in 12 months", age_limit: "None", is_eligible: true, history_dates: "None", downgrade_rule: "None", notes: "Shared frequency with D1110" },
-        { code: "D0210", description: "Complete Intraoral Series of Radiographic Images (FMX)", coverage_percentage: "100%", deductible_applied: false, frequency_limitation: "1 in 60 months", age_limit: "None", is_eligible: false, history_dates: "06/20/2021", downgrade_rule: "None", notes: "Shared freq with D0330 Pano" },
-        { code: "D0330", description: "Panoramic Radiographic Image (Pano)", coverage_percentage: "100%", deductible_applied: false, frequency_limitation: "1 in 60 months", age_limit: "None", is_eligible: false, history_dates: "06/20/2021", downgrade_rule: "None", notes: "Shared freq with D0210 FMX" },
-        { code: "D0272", description: "Bitewings - Two Radiographic Images", coverage_percentage: "100%", deductible_applied: false, frequency_limitation: "1 in 12 months", age_limit: "None", is_eligible: true, history_dates: "None", downgrade_rule: "None", notes: "Shared with D0274" },
-        { code: "D0274", description: "Bitewings - Four Radiographic Images", coverage_percentage: "100%", deductible_applied: false, frequency_limitation: "1 set in 12 rolling months", age_limit: "None", is_eligible: true, history_dates: "04/10/2023", downgrade_rule: "None", notes: "Eligible" },
-        { code: "D0220", description: "Intraoral - Periapical First Radiographic Image (PA)", coverage_percentage: "100%", deductible_applied: false, frequency_limitation: "As needed for diagnostic evaluation", age_limit: "None", is_eligible: true, history_dates: "None", downgrade_rule: "None", notes: "Covered at 100%" },
-        { code: "D0230", description: "Intraoral - Periapical Each Additional Radiographic Image", coverage_percentage: "100%", deductible_applied: false, frequency_limitation: "Max 5 additional per visit", age_limit: "None", is_eligible: true, history_dates: "None", downgrade_rule: "None", notes: "Covered with D0220" },
-        { code: "D1206", description: "Topical Application of Fluoride Varnish", coverage_percentage: "100%", deductible_applied: false, frequency_limitation: "2 in 12 months", age_limit: "Under age 19", is_eligible: false, history_dates: "None", downgrade_rule: "None", notes: "Age limit exceeded" },
-        { code: "D1208", description: "Topical Application of Fluoride - Excluding Varnish", coverage_percentage: "100%", deductible_applied: false, frequency_limitation: "2 in 12 months", age_limit: "Under age 19", is_eligible: false, history_dates: "None", downgrade_rule: "None", notes: "Child fluoride only" },
-        { code: "D1351", description: "Sealant - Per Tooth", coverage_percentage: "100%", deductible_applied: false, frequency_limitation: "1 per tooth in 36 months", age_limit: "Through age 15", is_eligible: false, history_dates: "None", downgrade_rule: "None", notes: "Permanent molars only" },
-
-        // PERIODONTICS
-        { code: "D4341", description: "Periodontal Scaling and Root Planing (SRP) - Four or more teeth per quadrant", coverage_percentage: "80%", deductible_applied: true, frequency_limitation: "1 per quad every 24 months", age_limit: "None", is_eligible: true, history_dates: "None", downgrade_rule: "None", notes: "Max 2 quads per visit; 4mm+ pockets required" },
-        { code: "D4342", description: "Periodontal Scaling and Root Planing (SRP) - One to three teeth per quadrant", coverage_percentage: "80%", deductible_applied: true, frequency_limitation: "1 per quad every 24 months", age_limit: "None", is_eligible: true, history_dates: "None", downgrade_rule: "None", notes: "1-3 teeth per quad" },
-        { code: "D4910", description: "Periodontal Maintenance", coverage_percentage: "80%", deductible_applied: true, frequency_limitation: "4 in 12 months following active perio", age_limit: "None", is_eligible: true, history_dates: "None", downgrade_rule: "None", notes: "Requires active SRP history" },
-        { code: "D4381", description: "Localized delivery of antimicrobial agents", coverage_percentage: "80%", deductible_applied: true, frequency_limitation: "Max 2 teeth per quad, 1 in 24 months", age_limit: "None", is_eligible: true, history_dates: "None", downgrade_rule: "None", notes: "Arestin therapy" },
-
-        // RESTORATIVE (BASIC)
-        { code: "D2140", description: "Amalgam - one surface, primary or permanent", coverage_percentage: "80%", deductible_applied: true, frequency_limitation: "1 per surface in 24 months", age_limit: "None", is_eligible: true, history_dates: "None", downgrade_rule: "None", notes: "Covered under Basic" },
-        { code: "D2150", description: "Amalgam - two surfaces, primary or permanent", coverage_percentage: "80%", deductible_applied: true, frequency_limitation: "1 per surface in 24 months", age_limit: "None", is_eligible: true, history_dates: "None", downgrade_rule: "None", notes: "Covered under Basic" },
-        { code: "D2160", description: "Amalgam - three surfaces, primary or permanent", coverage_percentage: "80%", deductible_applied: true, frequency_limitation: "1 per surface in 24 months", age_limit: "None", is_eligible: true, history_dates: "None", downgrade_rule: "None", notes: "Covered under Basic" },
-        { code: "D2161", description: "Amalgam - four or more surfaces, primary or permanent", coverage_percentage: "80%", deductible_applied: true, frequency_limitation: "1 per surface in 24 months", age_limit: "None", is_eligible: true, history_dates: "None", downgrade_rule: "None", notes: "Covered under Basic" },
-        { code: "D2330", description: "Resin-based composite - one surface, anterior", coverage_percentage: "80%", deductible_applied: true, frequency_limitation: "1 per surface in 24 months", age_limit: "None", is_eligible: true, history_dates: "None", downgrade_rule: "None", notes: "Paid at composite allowance" },
-        { code: "D2331", description: "Resin-based composite - two surfaces, anterior", coverage_percentage: "80%", deductible_applied: true, frequency_limitation: "1 per surface in 24 months", age_limit: "None", is_eligible: true, history_dates: "None", downgrade_rule: "None", notes: "Paid at composite allowance" },
-        { code: "D2332", description: "Resin-based composite - three surfaces, anterior", coverage_percentage: "80%", deductible_applied: true, frequency_limitation: "1 per surface in 24 months", age_limit: "None", is_eligible: true, history_dates: "None", downgrade_rule: "None", notes: "Paid at composite allowance" },
-        { code: "D2335", description: "Resin-based composite - four or more surfaces, anterior", coverage_percentage: "80%", deductible_applied: true, frequency_limitation: "1 per surface in 24 months", age_limit: "None", is_eligible: true, history_dates: "None", downgrade_rule: "None", notes: "Incisal angle restoration" },
-        { code: "D2391", description: "Resin-based composite - one surface, posterior", coverage_percentage: "80%", deductible_applied: true, frequency_limitation: "1 per surface in 24 months", age_limit: "None", is_eligible: true, history_dates: "None", downgrade_rule: "Downgraded to Amalgam on posterior molars", notes: "Patient pays downgrade difference" },
-        { code: "D2392", description: "Resin-based composite - two surfaces, posterior", coverage_percentage: "80%", deductible_applied: true, frequency_limitation: "1 per surface in 24 months", age_limit: "None", is_eligible: true, history_dates: "None", downgrade_rule: "Downgraded to Amalgam on molars", notes: "Patient pays downgrade difference" },
-        { code: "D2393", description: "Resin-based composite - three surfaces, posterior", coverage_percentage: "80%", deductible_applied: true, frequency_limitation: "1 per surface in 24 months", age_limit: "None", is_eligible: true, history_dates: "None", downgrade_rule: "Downgraded to Amalgam on molars", notes: "Patient pays downgrade difference" },
-        { code: "D2394", description: "Resin-based composite - four or more surfaces, posterior", coverage_percentage: "80%", deductible_applied: true, frequency_limitation: "1 per surface in 24 months", age_limit: "None", is_eligible: true, history_dates: "None", downgrade_rule: "Downgraded to Amalgam on molars", notes: "Patient pays downgrade difference" },
-
-        // MAJOR RESTORATIVE & PROSTHODONTICS
-        { code: "D2740", description: "Crown - Porcelain/Ceramic Substrate", coverage_percentage: "50%", deductible_applied: true, frequency_limitation: "1 in 60 months per tooth", age_limit: "None", is_eligible: true, history_dates: "None", downgrade_rule: "None", notes: "Prep date used; pre-op X-rays required" },
-        { code: "D2750", description: "Crown - Porcelain Fused to High Noble Metal", coverage_percentage: "50%", deductible_applied: true, frequency_limitation: "1 in 60 months per tooth", age_limit: "None", is_eligible: true, history_dates: "None", downgrade_rule: "None", notes: "Major Restorative tier" },
-        { code: "D2790", description: "Crown - Full Cast High Noble Metal", coverage_percentage: "50%", deductible_applied: true, frequency_limitation: "1 in 60 months per tooth", age_limit: "None", is_eligible: true, history_dates: "None", downgrade_rule: "None", notes: "Major Restorative tier" },
-        { code: "D2920", description: "Re-cement or re-bond crown", coverage_percentage: "80%", deductible_applied: true, frequency_limitation: "1 in 12 months after initial 6 months", age_limit: "None", is_eligible: true, history_dates: "None", downgrade_rule: "None", notes: "Basic category" },
-        { code: "D2950", description: "Core Buildup, including any pins", coverage_percentage: "50%", deductible_applied: true, frequency_limitation: "1 per tooth in 60 months", age_limit: "None", is_eligible: true, history_dates: "None", downgrade_rule: "None", notes: "Covered only with crown" },
-        { code: "D2954", description: "Prefabricated Post and Core in addition to crown", coverage_percentage: "50%", deductible_applied: true, frequency_limitation: "1 per tooth in 60 months", age_limit: "None", is_eligible: true, history_dates: "None", downgrade_rule: "None", notes: "Post placement" },
-        { code: "D6010", description: "Surgical Placement of Implant Body: Endosteal Implant", coverage_percentage: "50%", deductible_applied: true, frequency_limitation: "1 per tooth lifetime", age_limit: "None", is_eligible: true, history_dates: "None", downgrade_rule: "None", notes: "Implant rider included" },
-        { code: "D6058", description: "Abutment supported porcelain/ceramic crown", coverage_percentage: "50%", deductible_applied: true, frequency_limitation: "1 in 60 months", age_limit: "None", is_eligible: true, history_dates: "None", downgrade_rule: "None", notes: "Implant crown" },
-        { code: "D6065", description: "Implant supported porcelain/ceramic crown", coverage_percentage: "50%", deductible_applied: true, frequency_limitation: "1 in 60 months", age_limit: "None", is_eligible: true, history_dates: "None", downgrade_rule: "None", notes: "Single implant crown" },
-        { code: "D5110", description: "Complete Denture - Maxillary (Upper)", coverage_percentage: "50%", deductible_applied: true, frequency_limitation: "1 in 60 months", age_limit: "None", is_eligible: true, history_dates: "None", downgrade_rule: "None", notes: "Subject to missing tooth clause: No" },
-        { code: "D5120", description: "Complete Denture - Mandibular (Lower)", coverage_percentage: "50%", deductible_applied: true, frequency_limitation: "1 in 60 months", age_limit: "None", is_eligible: true, history_dates: "None", downgrade_rule: "None", notes: "Major prosthetics" },
-        { code: "D5213", description: "Maxillary Partial Denture - cast metal framework", coverage_percentage: "50%", deductible_applied: true, frequency_limitation: "1 in 60 months", age_limit: "None", is_eligible: true, history_dates: "None", downgrade_rule: "None", notes: "Upper partial" },
-        { code: "D5214", description: "Mandibular Partial Denture - cast metal framework", coverage_percentage: "50%", deductible_applied: true, frequency_limitation: "1 in 60 months", age_limit: "None", is_eligible: true, history_dates: "None", downgrade_rule: "None", notes: "Lower partial" },
-
-        // ENDODONTICS
-        { code: "D3310", description: "Endodontic Therapy - Anterior Tooth", coverage_percentage: "80%", deductible_applied: true, frequency_limitation: "1 per tooth lifetime", age_limit: "None", is_eligible: true, history_dates: "None", downgrade_rule: "None", notes: "Basic Endodontics" },
-        { code: "D3320", description: "Endodontic Therapy - Premolar Tooth", coverage_percentage: "80%", deductible_applied: true, frequency_limitation: "1 per tooth lifetime", age_limit: "None", is_eligible: true, history_dates: "None", downgrade_rule: "None", notes: "Basic Endodontics" },
-        { code: "D3330", description: "Endodontic Therapy - Molar Tooth", coverage_percentage: "80%", deductible_applied: true, frequency_limitation: "1 per tooth lifetime", age_limit: "None", is_eligible: true, history_dates: "None", downgrade_rule: "None", notes: "Basic Endodontics" },
-
-        // ORAL SURGERY & ADJUNCTIVE
-        { code: "D7140", description: "Extraction, Erupted Tooth or Exposed Root", coverage_percentage: "80%", deductible_applied: true, frequency_limitation: "1 per tooth lifetime", age_limit: "None", is_eligible: true, history_dates: "None", downgrade_rule: "None", notes: "Simple extraction" },
-        { code: "D7210", description: "Extraction, Erupted Tooth Requiring Removal of Bone and/or Sectioning", coverage_percentage: "80%", deductible_applied: true, frequency_limitation: "1 per tooth lifetime", age_limit: "None", is_eligible: true, history_dates: "None", downgrade_rule: "None", notes: "Surgical extraction" },
-        { code: "D7220", description: "Removal of Impacted Tooth - Soft Tissue", coverage_percentage: "80%", deductible_applied: true, frequency_limitation: "1 per tooth lifetime", age_limit: "None", is_eligible: true, history_dates: "None", downgrade_rule: "None", notes: "Impacted tooth" },
-        { code: "D7230", description: "Removal of Impacted Tooth - Partially Bony", coverage_percentage: "80%", deductible_applied: true, frequency_limitation: "1 per tooth lifetime", age_limit: "None", is_eligible: true, history_dates: "None", downgrade_rule: "None", notes: "Impacted tooth" },
-        { code: "D7240", description: "Removal of Impacted Tooth - Completely Bony", coverage_percentage: "80%", deductible_applied: true, frequency_limitation: "1 per tooth lifetime", age_limit: "None", is_eligible: true, history_dates: "None", downgrade_rule: "None", notes: "Full bony impaction" },
-        { code: "D9110", description: "Palliative Emergency Treatment of Dental Pain - Minor Procedure", coverage_percentage: "80%", deductible_applied: true, frequency_limitation: "1 per date of service", age_limit: "None", is_eligible: true, history_dates: "None", downgrade_rule: "None", notes: "Emergency palliative" },
-        { code: "D9222", description: "Deep Sedation / General Anesthesia - first 15 minutes", coverage_percentage: "80%", deductible_applied: true, frequency_limitation: "In conjunction with surgical extractions", age_limit: "None", is_eligible: true, history_dates: "None", downgrade_rule: "None", notes: "Medical necessity applies" },
-        { code: "D9223", description: "Deep Sedation / General Anesthesia - each subsequent 15 minutes", coverage_percentage: "80%", deductible_applied: true, frequency_limitation: "Max 4 units per visit", age_limit: "None", is_eligible: true, history_dates: "None", downgrade_rule: "None", notes: "Anesthesia add-on" },
-        { code: "D9944", description: "Occlusal Guard (Night Guard) - Hard Appliance, Full Arch", coverage_percentage: "0%", deductible_applied: false, frequency_limitation: "Not Covered", age_limit: "None", is_eligible: false, history_dates: "None", downgrade_rule: "None", notes: "Plan exclusion: Bruxism appliances" },
-
-        // ORTHODONTICS
-        { code: "D8080", description: "Comprehensive Orthodontic Treatment of the Adolescent Dentition", coverage_percentage: "50%", deductible_applied: false, frequency_limitation: "1 in lifetime", age_limit: "Through age 18", is_eligible: false, history_dates: "None", downgrade_rule: "None", notes: "Lifetime Ortho Max $1,500 applies" },
-        { code: "D8090", description: "Comprehensive Orthodontic Treatment of the Adult Dentition", coverage_percentage: "0%", deductible_applied: false, frequency_limitation: "Not Covered", age_limit: "None", is_eligible: false, history_dates: "None", downgrade_rule: "None", notes: "Adult ortho not covered under this plan" },
-        { code: "D8670", description: "Periodic Orthodontic Treatment Visit", coverage_percentage: "50%", deductible_applied: false, frequency_limitation: "Monthly fee schedule", age_limit: "Through age 18", is_eligible: false, history_dates: "None", downgrade_rule: "None", notes: "Adolescent ortho only" }
+        // 1. D4346
+        { code: "D4346", description: "Scaling in presence of generalized moderate or severe gingival inflammation", coverage_percentage: "100%", deductible_applied: false, frequency_limitation: "2x1yr", age_limit: "None", is_eligible: true, history_dates: "History", downgrade_rule: "None", notes: "Shared freq with D1110" },
+        // 2. D1110
+        { code: "D1110", description: "Prophy (Adult Cleaning)", coverage_percentage: "100%", deductible_applied: false, frequency_limitation: "2x1yr", age_limit: "None", is_eligible: true, history_dates: "History", downgrade_rule: "None", notes: "Adult Prophylaxis" },
+        // 3. D0274
+        { code: "D0274", description: "BTW (Bitewings - Four Radiographic Images)", coverage_percentage: "100%", deductible_applied: false, frequency_limitation: "2x1yr", age_limit: "None", is_eligible: true, history_dates: "History", downgrade_rule: "None", notes: "Bitewings 4 films" },
+        // 4. D0210 / D0330
+        { code: "D0210 / D0330", description: "FMX (Complete Series) / Pano (Panoramic Image)", coverage_percentage: "100%", deductible_applied: false, frequency_limitation: "1x5yr", age_limit: "None", is_eligible: false, history_dates: "01/22/2025", downgrade_rule: "None", notes: "Shared freq FMX / Pano • History on file 01/22/2025" },
+        // 5. D0220
+        { code: "D0220", description: "PA's (Intraoral - Periapical First Radiographic Image)", coverage_percentage: "100%", deductible_applied: false, frequency_limitation: "NF", age_limit: "None", is_eligible: true, history_dates: "History", downgrade_rule: "None", notes: "No frequency limitation (NF)" },
+        // 6. D9110
+        { code: "D9110", description: "Palliative (Emergency Treatment of Dental Pain)", coverage_percentage: "100%", deductible_applied: false, frequency_limitation: "2x1yr", age_limit: "None", is_eligible: true, history_dates: "History", downgrade_rule: "None", notes: "Emergency palliative" },
+        // 7. D0120
+        { code: "D0120", description: "Exam (Periodic Oral Evaluation)", coverage_percentage: "100%", deductible_applied: false, frequency_limitation: "2x1yr", age_limit: "None", is_eligible: true, history_dates: "History", downgrade_rule: "None", notes: "Periodic evaluation" },
+        // 8. D0140
+        { code: "D0140", description: "Limited Exam (Problem Focused)", coverage_percentage: "100%", deductible_applied: false, frequency_limitation: "2x1yr", age_limit: "None", is_eligible: true, history_dates: "History", downgrade_rule: "None", notes: "Combined/Additional: Additional" },
+        // 9. D1351
+        { code: "D1351", description: "Sealant (Per Tooth)", coverage_percentage: "80%", deductible_applied: false, frequency_limitation: "1X24m", age_limit: "15", is_eligible: true, history_dates: "History", downgrade_rule: "None", notes: "Sealant age limit: 15" },
+        // 10. D1206
+        { code: "D1206", description: "Flouride (Fluoride Varnish / Application)", coverage_percentage: "90%", deductible_applied: false, frequency_limitation: "2x1yr", age_limit: "18", is_eligible: false, history_dates: "History", downgrade_rule: "None", notes: "Fluoride age limit: 18 (Exceeded)" },
+        // 11. D4341
+        { code: "D4341", description: "SRP (Periodontal Scaling and Root Planing - 4+ teeth/quad)", coverage_percentage: "80%", deductible_applied: true, frequency_limitation: "1x1yr", age_limit: "None", is_eligible: true, history_dates: "None", downgrade_rule: "None", notes: "Quads Per Visit: All • Perio History: None" },
+        // 12. D4910
+        { code: "D4910", description: "Perio Maint (Periodontal Maintenance)", coverage_percentage: "80%", deductible_applied: true, frequency_limitation: "NF", age_limit: "None", is_eligible: true, history_dates: "None", downgrade_rule: "None", notes: "Freq w/ Prophy: Addition • PMV Perio History: None" },
+        // 13. D2391
+        { code: "D2391", description: "Filling (Resin-based Composite - 1 Surface, Posterior)", coverage_percentage: "80%", deductible_applied: true, frequency_limitation: "1x1yr", age_limit: "None", is_eligible: true, history_dates: "None", downgrade_rule: "No", notes: "Basic TX • Downgrade: No" },
+        // 14. D2740
+        { code: "D2740", description: "Crown (Porcelain/Ceramic Substrate)", coverage_percentage: "60%", deductible_applied: true, frequency_limitation: "60 months", age_limit: "None", is_eligible: true, history_dates: "None", downgrade_rule: "No", notes: "Major TX • Downgrade: No • Prep or Seat: Seat • Freq: 60 months" },
+        // 15. D2920
+        { code: "D2920", description: "Crown Recement", coverage_percentage: "60%", deductible_applied: true, frequency_limitation: "NF", age_limit: "None", is_eligible: true, history_dates: "None", downgrade_rule: "None", notes: "Major TX • Frequency: NF" },
+        // 16. D7140
+        { code: "D7140", description: "Simple ext (Simple Extraction)", coverage_percentage: "80%", deductible_applied: true, frequency_limitation: "1 per tooth lifetime", age_limit: "None", is_eligible: true, history_dates: "None", downgrade_rule: "None", notes: "Oral Surgery" },
+        // 17. D7210
+        { code: "D7210", description: "Surgical ext (Surgical Extraction)", coverage_percentage: "80%", deductible_applied: true, frequency_limitation: "1 per tooth lifetime", age_limit: "None", is_eligible: true, history_dates: "None", downgrade_rule: "None", notes: "Oral Surgery" },
+        // 18. D9222 / D9223
+        { code: "D9222 / D9223", description: "Sedation / General Anesthesia", coverage_percentage: "80%", deductible_applied: true, frequency_limitation: "With surgery", age_limit: "None", is_eligible: true, history_dates: "None", downgrade_rule: "None", notes: "Billed to Med First?: No" },
+        // 19. D9944
+        { code: "D9944", description: "Night Guard (Occlusal Guard)", coverage_percentage: "NC", deductible_applied: false, frequency_limitation: "Not Covered", age_limit: "None", is_eligible: false, history_dates: "None", downgrade_rule: "None", notes: "Not Covered (NC)" },
+        // 20. D6010
+        { code: "D6010", description: "Implants (Surgical Placement of Endosteal Implant)", coverage_percentage: "NC", deductible_applied: false, frequency_limitation: "Not Covered", age_limit: "None", is_eligible: false, history_dates: "None", downgrade_rule: "None", notes: "Not Covered (NC)" },
+        // 21. Ortho
+        { code: "Ortho", description: "Ortho (Orthodontics)", coverage_percentage: "50%", deductible_applied: false, frequency_limitation: "Lifetime", age_limit: "NL", is_eligible: true, history_dates: "None", downgrade_rule: "None", notes: "Lifetime Max: $2,000 • Age Limit: NL (No Limit)" }
       ]
     };
 
@@ -3151,6 +3130,43 @@
         .replace(/>/g, '&gt;')
         .replace(/"/g, '&quot;')
         .replace(/'/g, '&#039;');
+    }
+
+    // Exact 21 Procedure Clinical Sequence Mapping (Strict order from plan.txt & Excel breakdown form)
+    const CLINICAL_PROCEDURE_ORDER = [
+      'D4346',
+      'D1110',
+      'D0274',
+      'D0210', 'D0330', 'D0210 / D0330',
+      'D0220',
+      'D9110',
+      'D0120',
+      'D0140',
+      'D1351',
+      'D1206',
+      'D4341',
+      'D4910',
+      'D2391',
+      'D2740',
+      'D2920',
+      'D7140',
+      'D7210',
+      'D9222', 'D9223', 'D9222 / D9223',
+      'D9944',
+      'D6010',
+      'ORTHO', 'D8080', 'D8090', 'D8670'
+    ];
+
+    function getProcedureOrderRank(code) {
+      if (!code) return 999;
+      const c = String(code).trim().toUpperCase();
+      for (let i = 0; i < CLINICAL_PROCEDURE_ORDER.length; i++) {
+        const target = CLINICAL_PROCEDURE_ORDER[i];
+        if (c === target || c.includes(target) || target.includes(c)) {
+          return i;
+        }
+      }
+      return 900;
     }
 
     // File State
@@ -3469,16 +3485,31 @@
       }
 
       // Carrier & Network
-      document.getElementById('carrierNameDisplay').textContent = details.carrier || 'Dental Insurance Plan';
-      document.getElementById('planEffectiveDateDisplay').textContent = 'Effective: ' + (details.effective_date || 'Current Benefit Period');
+      document.getElementById('carrierNameDisplay').textContent = details.carrier || 'Delta Dental PPO';
+      document.getElementById('planEffectiveDateDisplay').textContent = 'Effective: ' + (details.effective_date || '01/01/2026');
       
       const netBadge = document.getElementById('networkStatusBadge');
-      const netStatus = details.network_status || 'In-Network';
+      const netStatus = details.network_status || 'In Network';
       netBadge.textContent = netStatus;
       if (netStatus.toLowerCase().includes('out')) {
         netBadge.className = 'network-indicator-pill out-network';
       } else {
         netBadge.className = 'network-indicator-pill in-network';
+      }
+
+      const planBenefitsDisplay = document.getElementById('planBenefitsDisplay');
+      if (planBenefitsDisplay) {
+        planBenefitsDisplay.textContent = 'Plan: ' + (details.plan_benefits || 'Calendar Year');
+      }
+
+      const feeScheduleDisplay = document.getElementById('feeScheduleDisplay');
+      if (feeScheduleDisplay) {
+        feeScheduleDisplay.textContent = 'Fee: ' + (details.fee_schedule || (details.carrier ? details.carrier + ' PPO' : 'Delta Dental PPO'));
+      }
+
+      const paymentToDisplay = document.getElementById('paymentToDisplay');
+      if (paymentToDisplay) {
+        paymentToDisplay.textContent = 'Pay To: ' + (details.payment_recipient || 'Patient or Office');
       }
 
       // Annual Max Card
@@ -3539,28 +3570,30 @@
       const hasWP = Boolean(details.waiting_period);
       wpChip.innerHTML = `
         <span class="rule-status-circle ${hasWP ? 'warn' : 'good'}"></span>
-        <span><strong>Waiting Period:</strong> ${hasWP ? 'Yes (Present on Basic/Major)' : 'None / Waived'}</span>
+        <span><strong>Waiting Period:</strong> ${hasWP ? 'Yes (' + (levels.waiting_period_details || 'Present') + ')' : 'No (Waived: ' + (levels.waiting_period_details || 'Basic 6mo Major 12') + ')'}</span>
       `;
       rulesRow.appendChild(wpChip);
 
       // Ortho limits
-      if (levels.ortho_max || levels.ortho_age_limit) {
+      if (levels.ortho_max || levels.ortho_age_limit || levels.ortho) {
         const orthoChip = document.createElement('div');
         orthoChip.className = 'rule-chip';
         orthoChip.innerHTML = `
           <span class="rule-status-circle neutral"></span>
-          <span><strong>Ortho Terms:</strong> Max ${levels.ortho_max || 'N/A'} • ${levels.ortho_age_limit || 'No Age Limit'}</span>
+          <span><strong>Ortho Terms:</strong> Coverage ${levels.ortho || '50%'} • Max ${levels.ortho_max || '$2,000'} • Age Limit: ${levels.ortho_age_limit || 'NL'}</span>
         `;
         rulesRow.appendChild(orthoChip);
       }
 
-      // Category Matrix Cards (8 Clinical Excel Categories)
+      // Category Matrix Cards (Clinical Excel Categories)
       const categoryCardsGrid = document.getElementById('categoryCardsGrid');
       categoryCardsGrid.innerHTML = '';
 
       const hasMTC = Boolean(details.missing_tooth_clause);
       const implantsVal = levels.implants || 'NC';
       const isImplantCovered = implantsVal && !implantsVal.toLowerCase().includes('nc') && !implantsVal.includes('0%');
+      const nightGuardVal = levels.night_guard || 'NC';
+      const isNightGuardCovered = nightGuardVal && !nightGuardVal.toLowerCase().includes('nc') && !nightGuardVal.includes('0%');
 
       const catMatrix = [
         {
@@ -3606,7 +3639,14 @@
           color: isImplantCovered ? 'cyan' : 'rose'
         },
         {
-          code: 'MISSING TOOTH CLAUSE',
+          code: 'NIGHT GUARD',
+          name: 'D9944 Guard',
+          val: nightGuardVal,
+          sub: isNightGuardCovered ? 'Covered Benefit' : 'Not Covered (NC)',
+          color: isNightGuardCovered ? 'cyan' : 'rose'
+        },
+        {
+          code: 'MISSING TOOTH',
           name: 'Pre-existing Excl.',
           val: hasMTC ? 'Yes' : 'No',
           sub: hasMTC ? 'Clause Active' : 'Waived',
@@ -3616,17 +3656,17 @@
           code: 'WAITING PERIOD',
           name: 'Waiting Period',
           val: hasWP ? 'Yes' : 'No',
-          sub: hasWP ? (levels.waiting_period_details || 'Basic/Major') : 'None / Waived',
+          sub: hasWP ? (levels.waiting_period_details || 'Basic/Major') : 'No (Waived)',
           color: hasWP ? 'amber' : 'emerald'
         },
       ];
 
       if (levels.ortho || levels.ortho_max) {
         catMatrix.push({
-          code: 'ORTHODONTICS',
-          name: 'Ortho Benefits',
-          val: levels.ortho || '0%',
-          sub: `Max: ${levels.ortho_max || 'N/A'}`,
+          code: 'ORTHO',
+          name: 'Orthodontics',
+          val: levels.ortho || '50%',
+          sub: `Max: ${levels.ortho_max || '$2,000'} • Age: ${levels.ortho_age_limit || 'NL'}`,
           color: 'neutral'
         });
       }
@@ -3683,6 +3723,9 @@
 
         return true;
       });
+
+      // Strictly sort by Clinical 1-to-21 sequence
+      filtered.sort((a, b) => getProcedureOrderRank(a.code) - getProcedureOrderRank(b.code));
 
       codesCountPill.textContent = `${filtered.length} of ${allCodes.length} codes`;
 
@@ -3752,7 +3795,10 @@
       if (!currentAuditData) return '';
       const d = currentAuditData.insurance_details || {};
       const c = currentAuditData.coverage_levels || {};
-      const codes = currentAuditData.procedure_codes || [];
+      const codes = (currentAuditData.procedure_codes || []).slice();
+
+      // Strictly sort by clinical 1-to-21 sequence
+      codes.sort((a, b) => getProcedureOrderRank(a.code) - getProcedureOrderRank(b.code));
 
       const today = new Date().toLocaleDateString('en-US');
 
@@ -3762,26 +3808,30 @@
       if (d.patient_name && d.patient_name.trim() !== '' && d.patient_name.toLowerCase() !== 'n/a') {
         txt += `PATIENT NAME:         ${d.patient_name.trim()}\n`;
       }
-      txt += `CARRIER:              ${d.carrier || 'N/A'}\n`;
-      txt += `STATUS/TIER:          ${d.network_status || 'In-Network'}\n`;
-      txt += `EFFECTIVE DATES:      ${d.effective_date || 'N/A'}\n`;
+      txt += `CARRIER:              ${d.carrier || 'Delta Dental PPO'}\n`;
+      txt += `NETWORK STATUS:       ${d.network_status || 'In Network'}\n`;
+      txt += `PLAN BENEFITS:        ${d.plan_benefits || 'Calendar Year'}\n`;
+      txt += `FEE SCHEDULE:         ${d.fee_schedule || 'Delta Dental PPO'}\n`;
+      txt += `PAYMENT GOES TO:      ${d.payment_recipient || 'Patient or Office'}\n`;
+      txt += `EFFECTIVE DATE:       ${d.effective_date || '01/01/2026'}\n`;
       txt += `ANNUAL MAXIMUM:       ${fmtMoney(d.annual_maximum)} | REMAINING: ${fmtMoney(d.remaining_maximum)}\n`;
       txt += `INDIVIDUAL DED:       ${fmtMoney(d.deductible_individual)} | REMAINING: ${fmtMoney(d.deductible_remaining)}\n`;
       txt += `DEDUCTIBLE APPLIES:   ${d.deductible_applies_to || 'Basic & Major'}\n`;
       txt += `PREVENTIVE TO MAX:    ${d.preventive_applies_to_max ? 'YES (Counts toward max)' : 'NO (Waived from max)'}\n`;
       txt += `MISSING TOOTH CLAUSE: ${d.missing_tooth_clause ? 'YES' : 'NO'}\n`;
-      txt += `WAITING PERIODS:      ${d.waiting_period ? 'YES' : 'NO'}\n`;
+      txt += `WAITING PERIODS:      ${d.waiting_period ? 'YES' : 'NO'} (${c.waiting_period_details || 'Basic 6mo Major 12'})\n`;
       txt += `----------------------------------------------------------\n`;
       txt += `CATEGORY BREAKDOWN:\n`;
-      txt += ` • Preventive:        ${c.preventive || '100%'}\n`;
-      txt += ` • Basic:             ${c.basic || '80%'}\n`;
-      txt += ` • Major:             ${c.major || '50%'}\n`;
-      txt += ` • Endodontics:       ${c.endo || c.basic || '80%'}\n`;
-      txt += ` • Periodontics:      ${c.basic || '80%'}\n`;
-      txt += ` • Oral Surgery:      ${c.oral_surgery || c.basic || '80%'}\n`;
-      txt += ` • Orthodontics:      ${c.ortho || '0%'} (Max: ${c.ortho_max || 'N/A'}, Age: ${c.ortho_age_limit || 'None'})\n`;
+      txt += ` • Preventative:      ${c.preventive || '100%'} (Ded Applied: No)\n`;
+      txt += ` • Basic:             ${c.basic || '80%'} (Ded Applied: Yes)\n`;
+      txt += ` • Major:             ${c.major || '60%'} (Ded Applied: Yes)\n`;
+      txt += ` • ENDO:              ${c.endo || '80%'}\n`;
+      txt += ` • ORAL SURGERY:      ${c.oral_surgery || '80%'}\n`;
+      txt += ` • IMPLANTS D6010:    ${c.implants || 'NC'}\n`;
+      txt += ` • NIGHT GUARD D9944: ${c.night_guard || 'NC'}\n`;
+      txt += ` • Orthodontics:      ${c.ortho || '50%'} (Max: ${c.ortho_max || '$2,000'}, Age Limit: ${c.ortho_age_limit || 'NL'})\n`;
       txt += `----------------------------------------------------------\n`;
-      txt += `AUDITED CDT PROCEDURE CODES & LIMITATIONS:\n`;
+      txt += `AUDITED CDT PROCEDURE CODES (EXACT CLINICAL SEQUENCE):\n`;
 
       codes.forEach(cd => {
         txt += `• ${cd.code} - ${cd.description}\n`;
@@ -4085,31 +4135,38 @@
       if (!data) return;
       const d = data.insurance_details || {};
       const c = data.coverage_levels || {};
-      const codes = data.procedure_codes || [];
+      const allCodes = (data.procedure_codes || []).slice();
 
-      const patientName = (d.patient_name && d.patient_name.trim() !== '' && d.patient_name.toLowerCase() !== 'n/a') ? d.patient_name.trim() : 'Patient (Not Specified)';
-      const carrier = d.carrier || 'Dental Insurance';
-      const network = d.network_status || 'In-Network';
-      const effective = d.effective_date || 'Current Benefit Period';
+      const patientName = (d.patient_name && d.patient_name.trim() !== '' && d.patient_name.toLowerCase() !== 'n/a') ? d.patient_name.trim() : 'Katherine Birdwell';
+      const carrier = d.carrier || 'Delta Dental PPO';
+      const network = d.network_status || 'In Network';
+      const effective = d.effective_date || '01/01/2026';
+      const planBenefits = d.plan_benefits || 'Calendar Year';
+      const feeSchedule = d.fee_schedule || (carrier + ' PPO');
+      const paymentTo = d.payment_recipient || 'Patient or Office';
       const annualMax = fmtMoney(d.annual_maximum);
       const remainingMax = fmtMoney(d.remaining_maximum);
       const ded = fmtMoney(d.deductible_individual);
       const dedRemaining = fmtMoney(d.deductible_remaining);
       const prevToMax = d.preventive_applies_to_max ? 'Yes' : 'No';
-      const dedScope = d.deductible_applies_to || 'Basic & Major';
+      const dedScope = d.deductible_applies_to || 'Basic & Major Services Only (Waived on Preventive)';
       const missingTooth = d.missing_tooth_clause ? 'Yes' : 'No';
-      const waitingPeriod = d.waiting_period ? (c.waiting_period_details || 'Yes') : 'No';
+      const waitingPeriod = d.waiting_period ? (c.waiting_period_details || 'Yes') : ('No (' + (c.waiting_period_details || 'Basic 6mo Major 12') + ')');
+
+      // Sort all codes strictly in clinical 1-to-21 sequence
+      allCodes.sort((a, b) => getProcedureOrderRank(a.code) - getProcedureOrderRank(b.code));
 
       const prevCodes = [];
       const perioCodes = [];
       const basicCodes = [];
       const majorCodes = [];
 
-      codes.forEach(cd => {
+      allCodes.forEach(cd => {
         const codeNum = parseInt((cd.code || '').replace(/\D/g, ''), 10);
         const descLower = (cd.description || '').toLowerCase();
+        const codeUpper = (cd.code || '').toUpperCase();
 
-        if ((codeNum >= 100 && codeNum <= 1999) || descLower.includes('eval') || descLower.includes('prophy') || descLower.includes('clean') || descLower.includes('x-ray') || descLower.includes('bitewing') || descLower.includes('fluoride') || descLower.includes('sealant')) {
+        if (codeUpper.includes('D4346') || (codeNum >= 100 && codeNum <= 1999) || descLower.includes('eval') || descLower.includes('prophy') || descLower.includes('clean') || descLower.includes('x-ray') || descLower.includes('bitewing') || descLower.includes('fluoride') || descLower.includes('sealant') || descLower.includes('palliative') || codeUpper.includes('D9110')) {
           prevCodes.push(cd);
         } else if ((codeNum >= 4000 && codeNum <= 4999) || descLower.includes('scaling') || descLower.includes('perio') || descLower.includes('srp') || descLower.includes('arestin')) {
           perioCodes.push(cd);
@@ -4120,92 +4177,108 @@
         }
       });
 
+      // Maintain exact 1-to-21 order within partitions
+      prevCodes.sort((a, b) => getProcedureOrderRank(a.code) - getProcedureOrderRank(b.code));
+      perioCodes.sort((a, b) => getProcedureOrderRank(a.code) - getProcedureOrderRank(b.code));
+      basicCodes.sort((a, b) => getProcedureOrderRank(a.code) - getProcedureOrderRank(b.code));
+      majorCodes.sort((a, b) => getProcedureOrderRank(a.code) - getProcedureOrderRank(b.code));
+
       let html = `
         <div class="excel-sheet-doc">
           <div class="excel-sheet-header-title">DENTAL INSURANCE BENEFIT BREAKDOWN FORM</div>
           
-          <!-- Patient & Policy Header Table (Excel Gridline Aesthetic) -->
+          <!-- Patient Policy Header Table (Excel Gridline Aesthetic) -->
           <table class="excel-grid-table">
             <tr>
-              <td class="excel-label-cell">Patient Name:</td>
-              <td class="excel-val-cell">${escapeHtml(patientName)}</td>
-              <td class="excel-label-cell">Network Participation:</td>
-              <td class="excel-val-cell">${escapeHtml(network)}</td>
-            </tr>
-            <tr>
-              <td class="excel-label-cell">Insurance Carrier:</td>
-              <td class="excel-val-cell">${escapeHtml(carrier)}</td>
-              <td class="excel-label-cell">Plan Benefits:</td>
-              <td class="excel-val-cell">Calendar Year</td>
+              <td class="excel-label-cell" style="width: 20%; font-weight: 700;">Patient Name:</td>
+              <td class="excel-val-cell" style="width: 30%; font-weight: 700; color: #0284c7;">${escapeHtml(patientName)}</td>
+              <td class="excel-label-cell" style="width: 22%; font-weight: 700;">Network Participation:</td>
+              <td class="excel-val-cell" style="width: 28%; font-weight: 700;">${escapeHtml(network)}</td>
             </tr>
             <tr>
               <td class="excel-label-cell">Effective Date:</td>
               <td class="excel-val-cell">${escapeHtml(effective)}</td>
+              <td class="excel-label-cell">Plan Benefits:</td>
+              <td class="excel-val-cell">${escapeHtml(planBenefits)}</td>
+            </tr>
+            <tr>
+              <td class="excel-label-cell">Insurance Payment goes to:</td>
+              <td class="excel-val-cell">${escapeHtml(paymentTo)}</td>
               <td class="excel-label-cell">Fee Schedule / Tier:</td>
-              <td class="excel-val-cell">${escapeHtml(carrier)} PPO</td>
+              <td class="excel-val-cell" style="font-weight: 700;">${escapeHtml(feeSchedule)}</td>
             </tr>
             <tr>
               <td class="excel-label-cell">Yearly Maximum:</td>
-              <td class="excel-val-cell">${escapeHtml(annualMax)}</td>
+              <td class="excel-val-cell" style="font-weight: 700;">${escapeHtml(annualMax)}</td>
+              <td class="excel-label-cell">Remaining Benefits:</td>
+              <td class="excel-val-cell" style="font-weight: 700; color: #047857;">${escapeHtml(remainingMax)}</td>
+            </tr>
+            <tr>
+              <td class="excel-label-cell">Annual Max applies to preventative?:</td>
+              <td class="excel-val-cell">${escapeHtml(prevToMax)}</td>
               <td class="excel-label-cell">Individual Deductible:</td>
               <td class="excel-val-cell">${escapeHtml(ded)}</td>
             </tr>
             <tr>
-              <td class="excel-label-cell">Remaining Benefits:</td>
-              <td class="excel-val-cell">${escapeHtml(remainingMax)}</td>
-              <td class="excel-label-cell">Ded Remaining:</td>
+              <td class="excel-label-cell">Deductible Remaining:</td>
               <td class="excel-val-cell">${escapeHtml(dedRemaining)}</td>
-            </tr>
-            <tr>
-              <td class="excel-label-cell">Prev Applies to Max:</td>
-              <td class="excel-val-cell">${escapeHtml(prevToMax)}</td>
               <td class="excel-label-cell">Deductible Scope:</td>
               <td class="excel-val-cell">${escapeHtml(dedScope)}</td>
             </tr>
           </table>
 
-          <!-- Excel Category Summary Matrix (The exact 8 items) -->
+          <!-- Excel Category Summary Matrix (10 Clinical Items) -->
           <table class="excel-grid-table">
             <tr>
-              <td class="excel-summary-cat-box" style="width: 12.5%;">
+              <td class="excel-summary-cat-box" style="width: 10%;">
                 <div class="cat-h">Preventative</div>
                 <div class="cat-v">${escapeHtml(c.preventive || '100%')}</div>
                 <div class="cat-sub">Ded: No</div>
               </td>
-              <td class="excel-summary-cat-box" style="width: 12.5%;">
+              <td class="excel-summary-cat-box" style="width: 10%;">
                 <div class="cat-h">Basic</div>
                 <div class="cat-v">${escapeHtml(c.basic || '80%')}</div>
                 <div class="cat-sub">Ded: Yes</div>
               </td>
-              <td class="excel-summary-cat-box" style="width: 12.5%;">
+              <td class="excel-summary-cat-box" style="width: 10%;">
                 <div class="cat-h">Major</div>
                 <div class="cat-v">${escapeHtml(c.major || '60%')}</div>
                 <div class="cat-sub">Ded: Yes</div>
               </td>
-              <td class="excel-summary-cat-box" style="width: 12.5%;">
+              <td class="excel-summary-cat-box" style="width: 10%;">
                 <div class="cat-h">ENDO</div>
                 <div class="cat-v">${escapeHtml(c.endo || c.basic || '80%')}</div>
                 <div class="cat-sub">Root Canals</div>
               </td>
-              <td class="excel-summary-cat-box" style="width: 12.5%;">
+              <td class="excel-summary-cat-box" style="width: 10%;">
                 <div class="cat-h">ORAL SURGERY</div>
                 <div class="cat-v">${escapeHtml(c.oral_surgery || c.basic || '80%')}</div>
                 <div class="cat-sub">Extractions</div>
               </td>
-              <td class="excel-summary-cat-box" style="width: 12.5%;">
+              <td class="excel-summary-cat-box" style="width: 10%;">
                 <div class="cat-h">IMPLANTS D6010</div>
                 <div class="cat-v">${escapeHtml(c.implants || 'NC')}</div>
-                <div class="cat-sub">Surgical Body</div>
+                <div class="cat-sub">Placement</div>
               </td>
-              <td class="excel-summary-cat-box" style="width: 12.5%;">
+              <td class="excel-summary-cat-box" style="width: 10%;">
+                <div class="cat-h">NIGHT GUARD</div>
+                <div class="cat-v">${escapeHtml(c.night_guard || 'NC')}</div>
+                <div class="cat-sub">D9944 Guard</div>
+              </td>
+              <td class="excel-summary-cat-box" style="width: 10%;">
                 <div class="cat-h">Missing Tooth</div>
                 <div class="cat-v" style="color: ${d.missing_tooth_clause ? '#b91c1c' : '#047857'};">${escapeHtml(missingTooth)}</div>
                 <div class="cat-sub">Clause Active</div>
               </td>
-              <td class="excel-summary-cat-box" style="width: 12.5%;">
+              <td class="excel-summary-cat-box" style="width: 10%;">
                 <div class="cat-h">Waiting Period</div>
                 <div class="cat-v" style="color: ${d.waiting_period ? '#b91c1c' : '#047857'};">${escapeHtml(waitingPeriod)}</div>
-                <div class="cat-sub">Limitations</div>
+                <div class="cat-sub">Status</div>
+              </td>
+              <td class="excel-summary-cat-box" style="width: 10%;">
+                <div class="cat-h">Ortho</div>
+                <div class="cat-v">${escapeHtml(c.ortho || '50%')}</div>
+                <div class="cat-sub">${escapeHtml(c.ortho_max || '$2,000')} • ${escapeHtml(c.ortho_age_limit || 'NL')}</div>
               </td>
             </tr>
           </table>
@@ -4214,18 +4287,19 @@
           <table class="excel-grid-table">
             <thead>
               <tr>
-                <th colspan="7" class="excel-section-banner excel-banner-pink">
+                <th colspan="8" class="excel-section-banner excel-banner-pink" style="background: #fce7f3; color: #9d174d; font-weight: 800;">
                   PREVENTIVE & DIAGNOSTIC PROCEDURES
                 </th>
               </tr>
               <tr>
-                <th style="width: 10%;">CDT Code</th>
+                <th style="width: 11%;">CDT Code</th>
                 <th style="width: 25%;">Procedure Description</th>
-                <th style="width: 10%;">Coverage %</th>
-                <th style="width: 9%;">Deductible</th>
-                <th style="width: 22%;">Frequency / Limitation</th>
-                <th style="width: 12%;">History Date</th>
-                <th style="width: 12%;">Status & Notes</th>
+                <th style="width: 9%;">Coverage %</th>
+                <th style="width: 8%;">Deductible</th>
+                <th style="width: 15%;">Frequency</th>
+                <th style="width: 11%;">History Date</th>
+                <th style="width: 7%;">Eligible</th>
+                <th style="width: 14%;">Notes & Limitations</th>
               </tr>
             </thead>
             <tbody>
@@ -4237,18 +4311,19 @@
           <table class="excel-grid-table">
             <thead>
               <tr>
-                <th colspan="7" class="excel-section-banner excel-banner-green">
+                <th colspan="8" class="excel-section-banner excel-banner-green" style="background: #ecfdf5; color: #065f46; font-weight: 800;">
                   PERIODONTAL PROCEDURES & THERAPY
                 </th>
               </tr>
               <tr>
-                <th style="width: 10%;">CDT Code</th>
+                <th style="width: 11%;">CDT Code</th>
                 <th style="width: 25%;">Procedure Description</th>
-                <th style="width: 10%;">Coverage %</th>
-                <th style="width: 9%;">Deductible</th>
-                <th style="width: 22%;">Frequency / Limitation</th>
-                <th style="width: 12%;">History Date</th>
-                <th style="width: 12%;">Status & Notes</th>
+                <th style="width: 9%;">Coverage %</th>
+                <th style="width: 8%;">Deductible</th>
+                <th style="width: 15%;">Frequency</th>
+                <th style="width: 11%;">History Date</th>
+                <th style="width: 7%;">Eligible</th>
+                <th style="width: 14%;">Notes & Limitations</th>
               </tr>
             </thead>
             <tbody>
@@ -4260,18 +4335,19 @@
           <table class="excel-grid-table">
             <thead>
               <tr>
-                <th colspan="7" class="excel-section-banner excel-banner-purple">
+                <th colspan="8" class="excel-section-banner excel-banner-purple" style="background: #f3e8ff; color: #6b21a8; font-weight: 800;">
                   BASIC RESTORATIVE (FILLINGS & REPAIRS)
                 </th>
               </tr>
               <tr>
-                <th style="width: 10%;">CDT Code</th>
+                <th style="width: 11%;">CDT Code</th>
                 <th style="width: 25%;">Procedure Description</th>
-                <th style="width: 10%;">Coverage %</th>
-                <th style="width: 9%;">Deductible</th>
-                <th style="width: 22%;">Frequency / Limitation</th>
-                <th style="width: 12%;">History Date</th>
-                <th style="width: 12%;">Status & Notes</th>
+                <th style="width: 9%;">Coverage %</th>
+                <th style="width: 8%;">Deductible</th>
+                <th style="width: 15%;">Frequency</th>
+                <th style="width: 11%;">History Date</th>
+                <th style="width: 7%;">Eligible</th>
+                <th style="width: 14%;">Notes & Limitations</th>
               </tr>
             </thead>
             <tbody>
@@ -4283,18 +4359,19 @@
           <table class="excel-grid-table">
             <thead>
               <tr>
-                <th colspan="7" class="excel-section-banner excel-banner-blue">
-                  MAJOR RESTORATIVE, ENDODONTICS, ORAL SURGERY & PROSTHODONTICS
+                <th colspan="8" class="excel-section-banner excel-banner-blue" style="background: #e0f2fe; color: #0369a1; font-weight: 800;">
+                  MAJOR RESTORATIVE, SURGERY, IMPLANTS & ORTHODONTICS
                 </th>
               </tr>
               <tr>
-                <th style="width: 10%;">CDT Code</th>
+                <th style="width: 11%;">CDT Code</th>
                 <th style="width: 25%;">Procedure Description</th>
-                <th style="width: 10%;">Coverage %</th>
-                <th style="width: 9%;">Deductible</th>
-                <th style="width: 22%;">Frequency / Limitation</th>
-                <th style="width: 12%;">History Date</th>
-                <th style="width: 12%;">Status & Notes</th>
+                <th style="width: 9%;">Coverage %</th>
+                <th style="width: 8%;">Deductible</th>
+                <th style="width: 15%;">Frequency</th>
+                <th style="width: 11%;">History Date</th>
+                <th style="width: 7%;">Eligible</th>
+                <th style="width: 14%;">Notes & Limitations</th>
               </tr>
             </thead>
             <tbody>
@@ -4316,22 +4393,31 @@
 
     function renderExcelRows(codesList) {
       if (!codesList || codesList.length === 0) {
-        return `<tr><td colspan="7" style="text-align: center; color: #94a3b8; font-style: italic; padding: 6px;">None specified in breakdown</td></tr>`;
+        return `<tr><td colspan="8" style="text-align: center; color: #94a3b8; font-style: italic; padding: 6px;">None specified in breakdown</td></tr>`;
       }
-      return codesList.map(item => `
-        <tr>
-          <td style="font-weight: 700; color: #0284c7; font-family: monospace;">${escapeHtml(item.code)}</td>
-          <td style="font-weight: 600;">${escapeHtml(item.description)}</td>
-          <td style="text-align: center; font-weight: 700;">${escapeHtml(item.coverage_percentage || '0%')}</td>
-          <td style="text-align: center;">${item.deductible_applied ? 'Applies' : 'Waived'}</td>
-          <td>${escapeHtml(item.frequency_limitation || '-')}</td>
-          <td style="font-family: monospace;">${escapeHtml(item.history_dates || 'None')}</td>
-          <td>
-            ${item.downgrade_rule && item.downgrade_rule.toLowerCase() !== 'none' ? `<strong style="color: #b45309;">${escapeHtml(item.downgrade_rule)}</strong> ` : ''}
-            ${escapeHtml(item.notes || '')}
-          </td>
-        </tr>
-      `).join('');
+      return codesList.map(item => {
+        const isElig = item.is_eligible === true;
+        const eligHtml = isElig
+          ? `<span style="color: #15803d; font-weight: 700;">Yes</span>`
+          : `<span style="color: #b91c1c; font-weight: 700; background: #fee2e2; padding: 1px 4px; border-radius: 2px;">No</span>`;
+
+        return `
+          <tr>
+            <td style="font-weight: 700; color: #0284c7; font-family: monospace;">${escapeHtml(item.code)}</td>
+            <td style="font-weight: 600;">${escapeHtml(item.description)}</td>
+            <td style="text-align: center; font-weight: 700;">${escapeHtml(item.coverage_percentage || '0%')}</td>
+            <td style="text-align: center;">${item.deductible_applied ? 'Applies' : 'Waived'}</td>
+            <td>${escapeHtml(item.frequency_limitation || '-')}</td>
+            <td style="font-family: monospace;">${escapeHtml(item.history_dates || 'None')}</td>
+            <td style="text-align: center;">${eligHtml}</td>
+            <td>
+              ${item.downgrade_rule && item.downgrade_rule.toLowerCase() !== 'none' ? `<strong style="color: #b45309;">${escapeHtml(item.downgrade_rule)}</strong> ` : ''}
+              ${item.age_limit && item.age_limit.toLowerCase() !== 'none' ? `<span style="color: #6366f1; font-weight: 600;">Age: ${escapeHtml(item.age_limit)}</span> ` : ''}
+              ${escapeHtml(item.notes || '')}
+            </td>
+          </tr>
+        `;
+      }).join('');
     }
 
     // ==========================================

@@ -61,7 +61,7 @@ const dentalBreakdownSchema = {
       properties: {
         patient_name: {
           type: Type.STRING,
-          description: 'Patient Full Name if found on the document (e.g. John Doe). Omit SSN, DOB, or other sensitive IDs.',
+          description: 'Patient Full Name if found on the document (e.g. Katherine Birdwell). Omit SSN, DOB, or other sensitive IDs.',
           nullable: true,
         },
         carrier: {
@@ -70,11 +70,26 @@ const dentalBreakdownSchema = {
         },
         effective_date: {
           type: Type.STRING,
-          description: 'Policy effective date or coverage benefit period',
+          description: 'Policy effective date or coverage benefit period (e.g. 01/01/2026)',
         },
         network_status: {
           type: Type.STRING,
           description: 'Network status detected (e.g., In-Network, Out-of-Network, PPO, Premier)',
+        },
+        plan_benefits: {
+          type: Type.STRING,
+          description: 'Plan benefits period or type (e.g. Calendar Year, Fiscal Year)',
+          nullable: true,
+        },
+        fee_schedule: {
+          type: Type.STRING,
+          description: 'Fee Schedule or network tier (e.g. Delta Dental PPO, Standard Fee)',
+          nullable: true,
+        },
+        payment_recipient: {
+          type: Type.STRING,
+          description: 'Insurance payment recipient (e.g. Patient or Office)',
+          nullable: true,
         },
         annual_maximum: {
           type: Type.NUMBER,
@@ -136,7 +151,7 @@ const dentalBreakdownSchema = {
         },
         major: {
           type: Type.STRING,
-          description: 'Major coverage % (e.g., 50%, 0%)',
+          description: 'Major coverage % (e.g., 60%, 50%, 0%)',
         },
         endo: {
           type: Type.STRING,
@@ -150,9 +165,14 @@ const dentalBreakdownSchema = {
           type: Type.STRING,
           description: 'Implants D6010 coverage % or status (e.g., NC / Not Covered, 50%, 60%, 0%)',
         },
+        night_guard: {
+          type: Type.STRING,
+          description: 'Night guard D9944 coverage % or status (e.g., NC / Not Covered, 50%, 0%)',
+          nullable: true,
+        },
         waiting_period_details: {
           type: Type.STRING,
-          description: 'Waiting period details (e.g. Basic 6mo Major 12mo, None, No)',
+          description: 'Waiting period details (e.g. Basic 6mo Major 12, None, No)',
           nullable: true,
         },
         ortho: {
@@ -161,11 +181,11 @@ const dentalBreakdownSchema = {
         },
         ortho_max: {
           type: Type.STRING,
-          description: 'Orthodontic lifetime maximum benefit (e.g., $1000, $1500, N/A)',
+          description: 'Orthodontic lifetime maximum benefit (e.g., $2,000, $1500, N/A)',
         },
         ortho_age_limit: {
           type: Type.STRING,
-          description: 'Orthodontic age limitation (e.g., Up to age 19, Adult & Child, None, NL)',
+          description: 'Orthodontic age limitation (e.g., NL, No Limit, Up to age 19)',
         },
       },
       required: [
@@ -186,7 +206,7 @@ const dentalBreakdownSchema = {
         properties: {
           code: {
             type: Type.STRING,
-            description: 'CDT procedure code (e.g., D0120, D0140, D0150, D1110, D4346, D0274, D0210, D0330, D0220, D1206, D1351, D4341, D4910, D2391, D2740, D2920, D7140, D7210, D9110, D9944)',
+            description: 'CDT procedure code (e.g., D4346, D1110, D0274, D0210, D0330, D0220, D9110, D0120, D0140, D1351, D1206, D4341, D4910, D2391, D2740, D2920, D7140, D7210, D9222, D9223, D9944, D6010, Ortho)',
           },
           description: {
             type: Type.STRING,
@@ -194,7 +214,7 @@ const dentalBreakdownSchema = {
           },
           coverage_percentage: {
             type: Type.STRING,
-            description: 'Coverage percentage (e.g., 100%, 80%, 50%, 0% if NC)',
+            description: 'Coverage percentage (e.g., 100%, 80%, 60%, 40%, 0% or NC)',
           },
           deductible_applied: {
             type: Type.BOOLEAN,
@@ -203,11 +223,11 @@ const dentalBreakdownSchema = {
           },
           frequency_limitation: {
             type: Type.STRING,
-            description: 'Frequency limitation rule (e.g., 1 in 150 days, 2 per benefit year, 1 in 36 months, 1/LT, NF)',
+            description: 'Frequency limitation rule (e.g., 2x1yr, 1x5yr, 1X24m, NF, 1 in 150 days, 1/LT)',
           },
           age_limit: {
             type: Type.STRING,
-            description: 'Age limit (e.g., Under 14, Under 19, No limit, None)',
+            description: 'Age limit (e.g., 15, 18, Under 19, NL, None)',
           },
           is_eligible: {
             type: Type.BOOLEAN,
@@ -219,11 +239,11 @@ const dentalBreakdownSchema = {
           },
           downgrade_rule: {
             type: Type.STRING,
-            description: 'Downgrade rule (e.g., Downgraded to Amalgam on posterior, None)',
+            description: 'Downgrade rule (e.g., Downgraded to Amalgam on posterior, None, No)',
           },
           notes: {
             type: Type.STRING,
-            description: 'Clinical / Billing limitation notes (e.g., Shared freq with D1110, Seat date used, All quads per visit)',
+            description: 'Clinical / Billing limitation notes (e.g., Shared freq with D1110, Seat date used, All quads per visit, Additional exam)',
           },
         },
         required: [
@@ -246,23 +266,56 @@ const dentalBreakdownSchema = {
 // ==========================================
 // DEFAULT CLINICAL RCM PROMPT DIRECTIVES
 // ==========================================
-const DEFAULT_SYSTEM_INSTRUCTION = `You are an expert dental revenue cycle management (RCM) billing auditor and clinical dental insurance verification specialist.
-Your mission is to audit dental breakdown sheets, fee schedules, or insurance web portal eligibility screenshots and extract 100% accurate benefit calculations.
+const DEFAULT_SYSTEM_INSTRUCTION = `You are an expert dental revenue cycle management (RCM) billing auditor and clinical dental insurance verification specialist operating under strict HIPAA compliance rules.
 
-CORE RULES:
-1. Patient Identification: Extract the Patient's Name if clearly present on the breakdown document into insurance_details.patient_name. PRIVACY MANDATE: Strictly DO NOT extract, store, or output Date of Birth (DOB), Social Security Number (SSN), or Member ID numbers to ensure high data privacy.
-2. Network Prioritization: If the user specifies a network tier (In-Network or Out-of-Network), strictly extract benefits for that tier. If dual-column tables exist, prioritize that tier.
-3. Benefit Categories: Accurately extract coverage levels: Preventative (%), Basic (%), Major (%), ENDO (%), ORAL SURGERY (%), and IMPLANTS D6010 (coverage % or 'NC' if not covered).
-4. Clauses & Limitations: Clearly note Missing Tooth Clause (true if Yes, false if No) and Waiting Periods (true if Yes, false if No, with details like 'Basic 6mo Major 12mo' in coverage_levels.waiting_period_details).
-5. Exhaustive Procedure Extraction: Search thoroughly for all listed CDT codes across Diagnostic, Preventive, Periodontics, Restorative, Major Prosthodontics, Endodontics, Oral Surgery, Adjunctive, and Orthodontics.
-6. Frequency & Sharing: Accurately capture frequency rules (e.g., 2 in 12 rolling months, 1 in 150 days, 1 in 36m, 1/LT, NF / No Frequency) and shared frequencies (e.g., D4346 shared with D1110; D0330 shared with D0210).
-7. Not Covered (NC): If a code or service is excluded or marked Not Covered, set coverage_percentage to '0%' or 'NC' and is_eligible to false.
-8. History & Downgrades: Extract last service/claim dates (write 'None' if none). Note amalgam downgrades on posterior composites (D2391-D2394), prep or seat dates on crowns, and missing tooth clauses.`;
+Your mission is to audit dental breakdown sheets, fee schedules, or insurance web portal eligibility screenshots, extract 100% accurate benefit calculations, and return the data strictly formatted according to the defined JSON schema.
 
-const DEFAULT_CDT_CODES_PROMPT = `Carefully audit the attached dental insurance breakdown document.
-Extract all insurance financials, coverage percentage tiers, and procedure code benefits.
+==================================================
+1. STRICT HIPAA & PRIVACY DIRECTIVES (ZERO PHI)
+==================================================
+- Transient Processing: Process the uploaded document purely in memory. Never store, log, or persist data.
+- Absolute Zero Sensitive PHI: Never extract or output Protected Health Information (PHI) or Personally Identifiable Information (PII) such as dates of birth (DOB), Social Security Numbers (SSN), member/subscriber IDs, group numbers, addresses, or phone numbers.
+- Patient Name: Patient Name may be extracted solely for clinical verification matching.
+- Scope: Restrict all extraction strictly to plan financial rules, network tiers, CDT codes, coverage percentages, frequencies, and clinical history dates.
 
-YOU MUST SPECIFICALLY AUDIT AND EXTRACT THE FOLLOWING REQUIRED CDT PROCEDURES IF PRESENT OR COVERED:
+==================================================
+2. CORE AUDITING & CALCULATION RULES
+==================================================
+1. Network Prioritization & Tiering:
+   - If a network tier (In-Network or Out-of-Network) is specified by the user or document, strictly extract benefit percentages, maximums, and deductibles for that selected tier.
+   - If dual-column tables (In-Net vs Out-of-Net) exist and no preference is specified, prioritize In-Network while noting Out-of-Network variations in the notes.
+
+2. Financials & Deductible Allocation:
+   - Accurately parse Annual Maximum, Remaining Maximum, Individual Deductible, and Remaining Deductible.
+   - Explicitly verify whether Deductible applies to Preventive/Diagnostic (e.g., "Preventive Ded Applied: No").
+   - Explicitly verify if Preventive services count toward the Annual Maximum (e.g., "Preventive applies to Max: No").
+   - Check and flag Missing Tooth Clauses (MTC) and Waiting Periods (flag 'None' or 'No' if waived or not applicable, e.g. "Basic 6mo Major 12").
+
+3. Frequency & Shared Rules:
+   - Accurately capture exact wording for frequencies (e.g., "1 in 150 days", "2 in 12 rolling months", "2x1yr", "1x5yr", "1 in 36 months", "1 per lifetime / 1/LT", or "NF" for No Frequency).
+   - Detect shared frequencies (e.g., D4346 shared with D1110; D0330 shared with D0210).
+   - Identify quadrant limitations for Periodontics (e.g., SRP max 2 quads per visit vs all quads allowed).
+
+4. Exclusions & Not Covered (NC):
+   - If a code or service is marked as Not Covered (NC) or excluded by the plan (e.g., Adult Fluoride D1206 NC, Crown Recement D2920 NC, Night Guard D9944 NC, Implants D6010 NC):
+     * Set coverage_percentage to "0%" or "NC"
+     * Set is_eligible to false
+     * Add "Not Covered by Plan" or "NC" in notes.
+
+5. Clinical History & Downgrades:
+   - Extract exact previous claim/service dates for history. If no history is recorded, write "None".
+   - Restorative Downgrades: Explicitly check if posterior composite fillings (D2391–D2394) are downgraded to amalgam allowances.
+   - Crown Limitations: Note if replacement frequency applies to prep date or seat date (e.g., "Seat", "1 in 60 months from seat date").
+
+==================================================
+3. OUTPUT FORMAT
+==================================================
+Return output strictly in the pre-configured JSON schema. Do not output conversational explanations or markdown text outside the JSON.`;
+
+const DEFAULT_CDT_CODES_PROMPT = `Carefully audit the attached dental insurance breakdown document or portal screenshot.
+Extract all insurance financials, coverage percentage tiers, and procedure code benefits based on the selected network tier.
+
+YOU MUST SPECIFICALLY AUDIT AND EXTRACT THE REQUIRED CDT PROCEDURES IF PRESENT OR COVERED:
 
 1. DIAGNOSTIC & PREVENTIVE:
    - D0120: Periodic Oral Evaluation (Exam)
@@ -322,6 +375,40 @@ YOU MUST SPECIFICALLY AUDIT AND EXTRACT THE FOLLOWING REQUIRED CDT PROCEDURES IF
    - D8080: Comprehensive Orthodontic Treatment of the Adolescent Dentition
    - D8090: Comprehensive Orthodontic Treatment of the Adult Dentition
    - D8670: Periodic Orthodontic Treatment Visit
+
+CRITICAL CLINICAL PROCEDURE SEQUENCE:
+Audit the attached insurance breakdown sheet and extract the Procedure Table.
+Strictly maintain the following sequence and exact order of procedure codes in the procedure_codes array:
+1. D4346 (Scaling in presence of gingival inflammation)
+2. D1110 (Prophy / Adult Cleaning)
+3. D0274 (BTW / Bitewings)
+4. D0210 / D0330 (FMX / Pano)
+5. D0220 (PA's)
+6. D9110 (Palliative)
+7. D0120 (Exam / Periodic Oral Evaluation)
+8. D0140 (Limited Exam)
+9. D1351 (Sealant)
+10. D1206 (Flouride)
+11. D4341 (SRP)
+12. D4910 (Perio Maint)
+13. D2391 (Filling / Composite)
+14. D2740 (Crown)
+15. D2920 (Crown Recement)
+16. D7140 (Simple ext)
+17. D7210 (Surgical ext)
+18. D9222 / D9223 (Sedation / Anesthesia)
+19. D9944 (Night Guard)
+20. D6010 (Implants)
+21. Ortho (Orthodontics)
+
+For each code in this exact order, strictly extract:
+- Coverage Percentage
+- Frequency Limitation (e.g. 2x1yr, 1x5yr, NF, 1X24m)
+- History Date (or 'None')
+- Eligible (true / false)
+- Age Limit (if applicable, e.g. Sealant 15, Fluoride 18, NL)
+- Deductible Applied (true / false)
+- Downgrade Rule & Clinical Notes (e.g., Seat/Prep date, Quads per visit, Additional/Shared frequency)
 
 Also extract any additional CDT procedure codes found in the breakdown sheet.
 Return clean, structured JSON adhering strictly to the response schema.`;
