@@ -296,9 +296,15 @@ Your mission is to audit dental breakdown sheets, fee schedules, or insurance we
    - Explicitly verify if Preventive services count toward the Annual Maximum (e.g., "Preventive applies to Max: No").
    - Check and flag Missing Tooth Clauses (MTC) and Waiting Periods (flag 'None' or 'No' if waived or not applicable, e.g. "Basic 6mo Major 12").
 
-3. Frequency & Shared Rules:
+3. Frequency & Shared Rules (CRITICAL FOR D0210 & D0330):
    - Accurately capture exact wording for frequencies (e.g., "1 in 150 days", "2 in 12 rolling months", "2x1yr", "1x5yr", "1 in 36 months", "1 per lifetime / 1/LT", or "NF" for No Frequency).
-   - Detect shared frequencies (e.g., D4346 shared with D1110; D0330 shared with D0210).
+   - MANDATORY D0210 & D0330 SHARED FREQUENCY & ELIGIBILITY:
+     * D0210 (Full Mouth Series / FMX) and D0330 (Panoramic Image / Pano) ALWAYS share frequency limitations (typically 1 in 36 or 60 months / 5 years).
+     * Cross-Code History: If a history date exists on EITHER D0210 OR D0330, apply that history date to BOTH codes mutually.
+     * Eligibility Validation: Compare the service date against the frequency period to determine eligibility (is_eligible: true/false).
+     * If frequency period has NOT elapsed from the history date, BOTH D0210 and D0330 must be marked is_eligible: false, with the next eligible date stated in notes.
+     * If frequency period has elapsed or history is "None", mark is_eligible: true.
+   - Detect other shared frequencies (e.g., D4346 shared with D1110).
    - Identify quadrant limitations for Periodontics (e.g., SRP max 2 quads per visit vs all quads allowed).
 
 4. Exclusions & Not Covered (NC):
@@ -390,7 +396,7 @@ CATEGORY 1: PREVENTATIVE
 1. D4346 (Scaling in presence of gingival inflammation)
 2. D1110 (Prophy / Adult Cleaning)
 3. D0274 (BTW / Bitewings)
-4. D0210 / D0330 (FMX / Pano)
+4. D0210 / D0330 (FMX / Pano) - MANDATORY: D0210 and D0330 ALWAYS share frequency (e.g., 1x5yr, 1 in 36m, or 1 in 60m). If either code has a previous service date, apply it to BOTH and calculate if the frequency period has elapsed. If not elapsed, mark is_eligible: false and state the next eligible date in notes.
 5. D0220 (PA's)
 6. D9110 (Palliative)
 7. D0120 (Exam / Periodic Oral Evaluation)
@@ -443,6 +449,238 @@ app.get('/api/health', (req, res) => {
     model: process.env.GEMINI_MODEL || 'gemini-3.8-flash',
   });
 });
+
+// ==========================================
+// D0210 & D0330 SHARED FREQUENCY & ELIGIBILITY VALIDATOR
+// ==========================================
+/**
+ * Dental RCM Policy Rule:
+ * CDT codes D0210 (Full Mouth Series / FMX) and D0330 (Panoramic Image / Pano)
+ * ALWAYS share the same frequency limitation (typically 1 in 36 or 60 months / 5 years).
+ * If a previous service history date exists on EITHER code, that history applies
+ * to BOTH codes mutually. Validates against the frequency limitation to determine
+ * whether patient is currently eligible or ineligible, computing the next eligible date.
+ */
+function enforceSharedFmxPanoRules(procedureCodes) {
+  if (!Array.isArray(procedureCodes) || procedureCodes.length === 0) {
+    return procedureCodes;
+  }
+
+  // 1. Identify all items matching D0210 or D0330
+  const fmxPanoItems = procedureCodes.filter(item => {
+    if (!item) return false;
+    const code = String(item.code || '').toUpperCase();
+    const desc = String(item.description || '').toLowerCase();
+    return (
+      code.includes('D0210') ||
+      code.includes('D0330') ||
+      desc.includes('fmx') ||
+      desc.includes('pano') ||
+      desc.includes('panoramic') ||
+      desc.includes('complete series') ||
+      desc.includes('intraoral - comprehensive series')
+    );
+  });
+
+  if (fmxPanoItems.length === 0) {
+    return procedureCodes;
+  }
+
+  // Helper: parse date from various string formats (MM/DD/YYYY, YYYY-MM-DD, MM/YYYY, etc.)
+  function parseDate(str) {
+    if (!str) return null;
+    const s = String(str).trim();
+    if (/^(none|no|n\/a|na|history|null|undefined|-)$/i.test(s)) return null;
+
+    // MM/DD/YYYY or M/D/YYYY
+    const mdy = s.match(/^(\d{1,2})[\/\-\.](\d{1,2})[\/\-\.](\d{2,4})$/);
+    if (mdy) {
+      const m = parseInt(mdy[1], 10) - 1;
+      const d = parseInt(mdy[2], 10);
+      let y = parseInt(mdy[3], 10);
+      if (y < 100) y += 2000;
+      const dt = new Date(y, m, d);
+      return isNaN(dt.getTime()) ? null : dt;
+    }
+
+    // YYYY-MM-DD
+    const ymd = s.match(/^(\d{4})[\/\-\.](\d{1,2})[\/\-\.](\d{1,2})$/);
+    if (ymd) {
+      const y = parseInt(ymd[1], 10);
+      const m = parseInt(ymd[2], 10) - 1;
+      const d = parseInt(ymd[3], 10);
+      const dt = new Date(y, m, d);
+      return isNaN(dt.getTime()) ? null : dt;
+    }
+
+    // MM/YYYY or M/YYYY
+    const my = s.match(/^(\d{1,2})[\/\-\.](\d{2,4})$/);
+    if (my) {
+      const m = parseInt(my[1], 10) - 1;
+      let y = parseInt(my[2], 10);
+      if (y < 100) y += 2000;
+      const dt = new Date(y, m, 1);
+      return isNaN(dt.getTime()) ? null : dt;
+    }
+
+    const parsed = Date.parse(s);
+    if (!isNaN(parsed)) {
+      return new Date(parsed);
+    }
+    return null;
+  }
+
+  // Helper: parse frequency months (default 60 months / 5 years)
+  function parseFrequencyMonths(freqStr) {
+    if (!freqStr) return 60;
+    const str = String(freqStr).toLowerCase();
+
+    // Months: "60 months", "1 in 36m", "36mo", "24m"
+    const mMatch = str.match(/(\d+)\s*(?:m|mo|mos|month|months)\b/);
+    if (mMatch) {
+      const m = parseInt(mMatch[1], 10);
+      if (m > 0) return m;
+    }
+
+    // Years: "1x5yr", "1 in 5 years", "3 years", "1/5yr", "5y"
+    const yMatch = str.match(/(\d+)\s*(?:y|yr|yrs|year|years)\b/);
+    if (yMatch) {
+      const y = parseInt(yMatch[1], 10);
+      if (y > 0) return y * 12;
+    }
+
+    // Generic "1 in 60" or "1/36"
+    const numMatch = str.match(/1\s*(?:in|\/|x)\s*(\d+)/);
+    if (numMatch) {
+      const n = parseInt(numMatch[1], 10);
+      if (n >= 12) return n;
+      if (n > 0 && n <= 10) return n * 12;
+    }
+
+    return 60;
+  }
+
+  function formatDate(d) {
+    const mm = String(d.getMonth() + 1).padStart(2, '0');
+    const dd = String(d.getDate()).padStart(2, '0');
+    const yyyy = d.getFullYear();
+    return `${mm}/${dd}/${yyyy}`;
+  }
+
+  // 2. Extract shared frequency text
+  let sharedFreqText = '';
+  let foundFreqMonths = null;
+
+  for (const item of fmxPanoItems) {
+    const freq = String(item.frequency_limitation || '').trim();
+    if (freq && !/^(nf|none|no|n\/a|-)$/i.test(freq)) {
+      sharedFreqText = freq;
+      foundFreqMonths = parseFrequencyMonths(freq);
+      break;
+    }
+  }
+
+  if (!sharedFreqText) {
+    sharedFreqText = '1x5yr';
+    foundFreqMonths = 60;
+  }
+  const frequencyMonths = foundFreqMonths || 60;
+
+  // 3. Find latest history date among all FMX/Pano items
+  let latestHistoryDate = null;
+  let rawHistoryStr = 'None';
+
+  for (const item of fmxPanoItems) {
+    const histStr = String(item.history_dates || '').trim();
+    const parsed = parseDate(histStr);
+    if (parsed) {
+      if (!latestHistoryDate || parsed > latestHistoryDate) {
+        latestHistoryDate = parsed;
+        rawHistoryStr = histStr;
+      }
+    }
+  }
+
+  const today = new Date();
+  let isEligible = true;
+  let nextEligibleDate = null;
+  let formattedNextDate = '';
+  let formattedHistDate = '';
+
+  if (latestHistoryDate) {
+    formattedHistDate = formatDate(latestHistoryDate);
+    nextEligibleDate = new Date(latestHistoryDate.getTime());
+    nextEligibleDate.setMonth(nextEligibleDate.getMonth() + frequencyMonths);
+    formattedNextDate = formatDate(nextEligibleDate);
+
+    // If today is before next eligible date, patient is strictly NOT eligible
+    if (today < nextEligibleDate) {
+      isEligible = false;
+    } else {
+      isEligible = true;
+    }
+  }
+
+  // 4. Synchronize each matching item with validated shared values
+  fmxPanoItems.forEach(item => {
+    const codeUpper = String(item.code || '').toUpperCase();
+    const isCombo = codeUpper.includes('D0210') && codeUpper.includes('D0330');
+    const isFmxOnly = codeUpper.includes('D0210') && !codeUpper.includes('D0330');
+    const isPanoOnly = codeUpper.includes('D0330') && !codeUpper.includes('D0210');
+
+    // Build shared frequency label
+    let sharedFreqLabel = sharedFreqText;
+    if (!sharedFreqLabel.toLowerCase().includes('shared')) {
+      if (isCombo) {
+        sharedFreqLabel = `${sharedFreqLabel} (Shared D0210/D0330)`;
+      } else if (isFmxOnly) {
+        sharedFreqLabel = `${sharedFreqLabel} (Shared w/ D0330)`;
+      } else if (isPanoOnly) {
+        sharedFreqLabel = `${sharedFreqLabel} (Shared w/ D0210)`;
+      } else {
+        sharedFreqLabel = `${sharedFreqLabel} (Shared)`;
+      }
+    }
+    item.frequency_limitation = sharedFreqLabel;
+
+    // Check if not covered
+    const covStr = String(item.coverage_percentage || '').trim().toUpperCase();
+    const isCoveredBenefit = covStr !== '0%' && covStr !== 'NC' && !covStr.includes('NOT COVERED');
+
+    if (!isCoveredBenefit) {
+      item.is_eligible = false;
+      item.notes = item.notes ? `${item.notes} • Not Covered` : 'Not Covered by Plan';
+      return;
+    }
+
+    if (latestHistoryDate) {
+      item.history_dates = formattedHistDate;
+      item.is_eligible = isEligible;
+
+      const partnerNote = isCombo
+        ? 'Shared freq D0210 & D0330'
+        : (isFmxOnly ? 'Shared freq with D0330 Pano' : 'Shared freq with D0210 FMX');
+
+      if (!isEligible) {
+        item.notes = `${partnerNote} • Ineligible until ${formattedNextDate} (Last: ${formattedHistDate}, Freq: ${sharedFreqText})`;
+      } else {
+        item.notes = `${partnerNote} • Eligible (Frequency satisfied: Last service ${formattedHistDate})`;
+      }
+    } else {
+      item.history_dates = 'None';
+      item.is_eligible = true;
+      const partnerNote = isCombo
+        ? 'Shared freq D0210 & D0330'
+        : (isFmxOnly ? 'Shared freq with D0330' : 'Shared freq with D0210');
+
+      if (!item.notes || !item.notes.toLowerCase().includes('shared')) {
+        item.notes = item.notes ? `${partnerNote} • ${item.notes}` : partnerNote;
+      }
+    }
+  });
+
+  return procedureCodes;
+}
 
 // Verification Endpoint (Supports single or multiple files)
 app.post('/api/verify', upload.array('files', 10), async (req, res) => {
@@ -580,6 +818,11 @@ app.post('/api/verify', upload.array('files', 10), async (req, res) => {
       throw new Error('Failed to parse structured JSON from Gemini response.');
     }
 
+    // Deterministic validation: CDT D0210 & D0330 shared frequency & history eligibility
+    if (parsedResult && Array.isArray(parsedResult.procedure_codes)) {
+      parsedResult.procedure_codes = enforceSharedFmxPanoRules(parsedResult.procedure_codes);
+    }
+
     res.json({
       success: true,
       meta: {
@@ -647,7 +890,7 @@ app.listen(PORT, () => {
   console.log(`====================================================`);
   console.log(`Dental Insurance Verification Web App running!`);
   console.log(`Local URL: http://localhost:${PORT}`);
-  console.log(`Domain:    https://iv.eonx.cz`);
+  console.log(`Domain:    https://dentverify.com`);
   const activeModel = process.env.GEMINI_MODEL || 'gemini-3.8-flash';
   console.log(`Model:     ${activeModel} (Google Gen AI SDK)`);
   console.log(`====================================================`);

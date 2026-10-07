@@ -45,7 +45,7 @@
         // 3. D0274
         { code: "D0274", description: "BTW (Bitewings - Four Radiographic Images)", coverage_percentage: "100%", deductible_applied: false, frequency_limitation: "2x1yr", age_limit: "None", is_eligible: true, history_dates: "History", downgrade_rule: "None", notes: "Bitewings 4 films" },
         // 4. D0210 / D0330
-        { code: "D0210 / D0330", description: "FMX (Complete Series) / Pano (Panoramic Image)", coverage_percentage: "100%", deductible_applied: false, frequency_limitation: "1x5yr", age_limit: "None", is_eligible: false, history_dates: "01/22/2025", downgrade_rule: "None", notes: "Shared freq FMX / Pano • History on file 01/22/2025" },
+        { code: "D0210 / D0330", description: "FMX (Complete Series) / Pano (Panoramic Image)", coverage_percentage: "100%", deductible_applied: false, frequency_limitation: "1x5yr (Shared D0210/D0330)", age_limit: "None", is_eligible: false, history_dates: "01/22/2025", downgrade_rule: "None", notes: "Shared freq D0210 & D0330 • Ineligible until 01/22/2030 (Last: 01/22/2025, Freq: 1x5yr)" },
         // 5. D0220
         { code: "D0220", description: "PA's (Intraoral - Periapical First Radiographic Image)", coverage_percentage: "100%", deductible_applied: false, frequency_limitation: "NF", age_limit: "None", is_eligible: true, history_dates: "History", downgrade_rule: "None", notes: "No frequency limitation (NF)" },
         // 6. D9110
@@ -88,6 +88,223 @@
         .replace(/>/g, '&gt;')
         .replace(/"/g, '&quot;')
         .replace(/'/g, '&#039;');
+    }
+
+    // ==========================================
+    // D0210 & D0330 SHARED FREQUENCY & ELIGIBILITY VALIDATOR
+    // ==========================================
+    /**
+     * Dental RCM Policy Rule:
+     * CDT codes D0210 (Full Mouth Series / FMX) and D0330 (Panoramic Image / Pano)
+     * ALWAYS share the same frequency limitation (typically 1 in 36 or 60 months / 5 years).
+     * If a previous service history date exists on EITHER code, that history applies
+     * to BOTH codes mutually. Validates against the frequency limitation to determine
+     * whether patient is currently eligible or ineligible, computing the next eligible date.
+     */
+    function enforceSharedFmxPanoRules(procedureCodes) {
+      if (!Array.isArray(procedureCodes) || procedureCodes.length === 0) {
+        return procedureCodes;
+      }
+
+      const fmxPanoItems = procedureCodes.filter(item => {
+        if (!item) return false;
+        const code = String(item.code || '').toUpperCase();
+        const desc = String(item.description || '').toLowerCase();
+        return (
+          code.includes('D0210') ||
+          code.includes('D0330') ||
+          desc.includes('fmx') ||
+          desc.includes('pano') ||
+          desc.includes('panoramic') ||
+          desc.includes('complete series') ||
+          desc.includes('intraoral - comprehensive series')
+        );
+      });
+
+      if (fmxPanoItems.length === 0) {
+        return procedureCodes;
+      }
+
+      function parseDate(str) {
+        if (!str) return null;
+        const s = String(str).trim();
+        if (/^(none|no|n\/a|na|history|null|undefined|-)$/i.test(s)) return null;
+
+        const mdy = s.match(/^(\d{1,2})[\/\-\.](\d{1,2})[\/\-\.](\d{2,4})$/);
+        if (mdy) {
+          let m = parseInt(mdy[1], 10) - 1;
+          let d = parseInt(mdy[2], 10);
+          let y = parseInt(mdy[3], 10);
+          if (y < 100) y += 2000;
+          const dt = new Date(y, m, d);
+          return isNaN(dt.getTime()) ? null : dt;
+        }
+
+        const ymd = s.match(/^(\d{4})[\/\-\.](\d{1,2})[\/\-\.](\d{1,2})$/);
+        if (ymd) {
+          let y = parseInt(ymd[1], 10);
+          const m = parseInt(ymd[2], 10) - 1;
+          const d = parseInt(ymd[3], 10);
+          const dt = new Date(y, m, d);
+          return isNaN(dt.getTime()) ? null : dt;
+        }
+
+        const my = s.match(/^(\d{1,2})[\/\-\.](\d{2,4})$/);
+        if (my) {
+          let m = parseInt(my[1], 10) - 1;
+          let y = parseInt(my[2], 10);
+          if (y < 100) y += 2000;
+          const dt = new Date(y, m, 1);
+          return isNaN(dt.getTime()) ? null : dt;
+        }
+
+        const parsed = Date.parse(s);
+        if (!isNaN(parsed)) {
+          return new Date(parsed);
+        }
+        return null;
+      }
+
+      function parseFrequencyMonths(freqStr) {
+        if (!freqStr) return 60;
+        const str = String(freqStr).toLowerCase();
+
+        const mMatch = str.match(/(\d+)\s*(?:m|mo|mos|month|months)\b/);
+        if (mMatch) {
+          const m = parseInt(mMatch[1], 10);
+          if (m > 0) return m;
+        }
+
+        const yMatch = str.match(/(\d+)\s*(?:y|yr|yrs|year|years)\b/);
+        if (yMatch) {
+          const y = parseInt(yMatch[1], 10);
+          if (y > 0) return y * 12;
+        }
+
+        const numMatch = str.match(/1\s*(?:in|\/|x)\s*(\d+)/);
+        if (numMatch) {
+          const n = parseInt(numMatch[1], 10);
+          if (n >= 12) return n;
+          if (n > 0 && n <= 10) return n * 12;
+        }
+
+        return 60;
+      }
+
+      function formatDate(d) {
+        const mm = String(d.getMonth() + 1).padStart(2, '0');
+        const dd = String(d.getDate()).padStart(2, '0');
+        const yyyy = d.getFullYear();
+        return `${mm}/${dd}/${yyyy}`;
+      }
+
+      let sharedFreqText = '';
+      let foundFreqMonths = null;
+
+      for (const item of fmxPanoItems) {
+        const freq = String(item.frequency_limitation || '').trim();
+        if (freq && !/^(nf|none|no|n\/a|-)$/i.test(freq)) {
+          sharedFreqText = freq;
+          foundFreqMonths = parseFrequencyMonths(freq);
+          break;
+        }
+      }
+
+      if (!sharedFreqText) {
+        sharedFreqText = '1x5yr';
+        foundFreqMonths = 60;
+      }
+      const frequencyMonths = foundFreqMonths || 60;
+
+      let latestHistoryDate = null;
+      let rawHistoryStr = 'None';
+
+      for (const item of fmxPanoItems) {
+        const histStr = String(item.history_dates || '').trim();
+        const parsed = parseDate(histStr);
+        if (parsed) {
+          if (!latestHistoryDate || parsed > latestHistoryDate) {
+            latestHistoryDate = parsed;
+            rawHistoryStr = histStr;
+          }
+        }
+      }
+
+      const today = new Date();
+      let isEligible = true;
+      let nextEligibleDate = null;
+      let formattedNextDate = '';
+      let formattedHistDate = '';
+
+      if (latestHistoryDate) {
+        formattedHistDate = formatDate(latestHistoryDate);
+        nextEligibleDate = new Date(latestHistoryDate.getTime());
+        nextEligibleDate.setMonth(nextEligibleDate.getMonth() + frequencyMonths);
+        formattedNextDate = formatDate(nextEligibleDate);
+
+        if (today < nextEligibleDate) {
+          isEligible = false;
+        } else {
+          isEligible = true;
+        }
+      }
+
+      fmxPanoItems.forEach(item => {
+        const codeUpper = String(item.code || '').toUpperCase();
+        const isCombo = codeUpper.includes('D0210') && codeUpper.includes('D0330');
+        const isFmxOnly = codeUpper.includes('D0210') && !codeUpper.includes('D0330');
+        const isPanoOnly = codeUpper.includes('D0330') && !codeUpper.includes('D0210');
+
+        let sharedFreqLabel = sharedFreqText;
+        if (!sharedFreqLabel.toLowerCase().includes('shared')) {
+          if (isCombo) {
+            sharedFreqLabel = `${sharedFreqLabel} (Shared D0210/D0330)`;
+          } else if (isFmxOnly) {
+            sharedFreqLabel = `${sharedFreqLabel} (Shared w/ D0330)`;
+          } else if (isPanoOnly) {
+            sharedFreqLabel = `${sharedFreqLabel} (Shared w/ D0210)`;
+          } else {
+            sharedFreqLabel = `${sharedFreqLabel} (Shared)`;
+          }
+        }
+        item.frequency_limitation = sharedFreqLabel;
+
+        const covStr = String(item.coverage_percentage || '').trim().toUpperCase();
+        const isCoveredBenefit = covStr !== '0%' && covStr !== 'NC' && !covStr.includes('NOT COVERED');
+
+        if (!isCoveredBenefit) {
+          item.is_eligible = false;
+          item.notes = item.notes ? `${item.notes} • Not Covered` : 'Not Covered by Plan';
+          return;
+        }
+
+        if (latestHistoryDate) {
+          item.history_dates = formattedHistDate;
+          item.is_eligible = isEligible;
+
+          const partnerNote = isCombo
+            ? 'Shared freq D0210 & D0330'
+            : (isFmxOnly ? 'Shared freq with D0330 Pano' : 'Shared freq with D0210 FMX');
+
+          if (!isEligible) {
+            item.notes = `${partnerNote} • Ineligible until ${formattedNextDate} (Last: ${formattedHistDate}, Freq: ${sharedFreqText})`;
+          } else {
+            item.notes = `${partnerNote} • Eligible (Frequency satisfied: Last service ${formattedHistDate})`;
+          }
+        } else {
+          item.history_dates = 'None';
+          item.is_eligible = true;
+          const partnerNote = isCombo
+            ? 'Shared freq D0210 & D0330'
+            : (isFmxOnly ? 'Shared freq with D0330' : 'Shared freq with D0210');
+
+          if (!item.notes || !item.notes.toLowerCase().includes('shared')) {
+            item.notes = item.notes ? `${partnerNote} • ${item.notes}` : partnerNote;
+          }
+        }
+      });
+
+      return procedureCodes;
     }
 
     // Exact Procedure Clinical Sequence Mapping (Strict order 1-19 from plan.txt)
@@ -594,6 +811,9 @@
 
     // Render verification report
     function renderReportDashboard(data) {
+      if (data && Array.isArray(data.procedure_codes)) {
+        data.procedure_codes = enforceSharedFmxPanoRules(data.procedure_codes);
+      }
       const details = data.insurance_details || {};
       const levels = data.coverage_levels || {};
 
@@ -1043,7 +1263,7 @@
       });
 
       txt += `\n==========================================================\n`;
-      txt += `Verified via DentVerify AI (iv.eonx.cz)\n`;
+      txt += `Verified via DentVerify AI (dentverify.com)\n`;
 
       pmsNoteContent.value = txt;
       return txt;
@@ -1516,7 +1736,7 @@
           </table>
 
           <div style="font-size: 9.5px; color: #64748b; text-align: right; margin-top: 6px;">
-            Generated by DentVerify AI (iv.eonx.cz) • Verification audit grounded in uploaded carrier breakdown
+            Generated by DentVerify AI (dentverify.com) • Verification audit grounded in uploaded carrier breakdown
           </div>
         </div>
       `;
