@@ -886,7 +886,7 @@ app.use((err, req, res, next) => {
 });
 
 // Start Express server
-app.listen(PORT, () => {
+app.listen(PORT, process.env.HOST || '127.0.0.1', () => {
   console.log(`====================================================`);
   console.log(`Dental Insurance Verification Web App running!`);
   console.log(`Local URL: http://localhost:${PORT}`);
