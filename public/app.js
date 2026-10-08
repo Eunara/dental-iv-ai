@@ -6,6 +6,7 @@
 
     // Sample Delta Dental Data for Demo Testing
     const SAMPLE_BREAKDOWN_DATA = {
+      is_sample: true,
       insurance_details: {
         patient_name: "Katherine Birdwell",
         carrier: "Delta Dental PPO",
@@ -654,7 +655,7 @@
         currentAuditData.insurance_details.patient_name = enteredName;
       }
       renderReportDashboard(currentAuditData);
-      saveAuditToHistory(currentAuditData);
+      // Sample breakdown is intentionally NOT saved to history
       displayToast('Loaded sample Delta Dental breakdown.');
     });
 
@@ -1924,7 +1925,9 @@
     function getAuditHistory() {
       try {
         const raw = localStorage.getItem(HISTORY_STORAGE_KEY);
-        return raw ? JSON.parse(raw) : [];
+        const list = raw ? JSON.parse(raw) : [];
+        // Filter out any mock/sample test breakdowns from the history list
+        return list.filter(item => !item.is_sample && !item.data?.is_sample && item.patientName !== 'Katherine Birdwell');
       } catch (e) {
         console.warn('Could not read audit history:', e);
         return [];
@@ -1932,11 +1935,12 @@
     }
 
     function saveAuditToHistory(auditData) {
-      if (!auditData) return;
+      if (!auditData || auditData.is_sample) return;
       try {
         const list = getAuditHistory();
         const d = auditData.insurance_details || {};
         const pName = (d.patient_name && d.patient_name.trim() !== '') ? d.patient_name.trim() : 'Patient (Unspecified)';
+        if (pName === 'Katherine Birdwell' || auditData.is_sample) return;
         const carrier = d.carrier || 'Dental Insurance';
         
         const historyRecord = {
