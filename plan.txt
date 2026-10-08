@@ -1,6 +1,6 @@
 ================================================================================
-DENTVERIFY.COM - WEEKEND UPGRADE PLAN
-OBJECTIVE: USER AUTHENTICATION + PERSISTENT HISTORY + STRICT HIPAA COMPLIANCE
+DENTVERIFY.COM - COMPREHENSIVE ROADMAP & UPGRADE PLAN
+OBJECTIVE: HIPAA AUTH + PERSISTENT HISTORY + UNIFIED AUTO-VERIFY PORTAL ACCESS
 ================================================================================
 
 1. HIPAA TECHNICAL SAFEGUARDS COMPLIANCE (45 CFR Part 164)
@@ -18,12 +18,13 @@ OBJECTIVE: USER AUTHENTICATION + PERSISTENT HISTORY + STRICT HIPAA COMPLIANCE
 
 * § 164.312(a)(2)(iv) Data Encryption at Rest:
   - Field-level encryption using AES-256-GCM for all patient identifiers (Patient Name, DOB, Subscriber ID).
+  - AES-256-GCM encryption for stored payer portal credentials (usernames, passwords, PINs).
   - Encryption keys stored securely in environment variables, never committed to git.
 
 * § 164.312(b) Audit Controls & Audit Trail:
   - Tamper-evident logging of all ePHI access events:
     [TIMESTAMP] [USER_ID] [OFFICE_ID] [ACTION] [RECORD_ID] [IP_ADDRESS] [USER_AGENT]
-  - Actions logged: LOGIN, LOGOUT, ANALYZE_FILE, VIEW_HISTORY_ITEM, EXPORT_EXCEL, DELETE_RECORD.
+  - Actions logged: LOGIN, LOGOUT, AUTO_VERIFY_TRIGGER, ANALYZE_FILE, VIEW_HISTORY_ITEM, EXPORT_EXCEL, DELETE_RECORD.
   - Audit logs are append-only; standard users cannot modify or delete audit trails.
 
 * § 164.312(e)(1) Transmission Security:
@@ -51,21 +52,35 @@ B. users (Clinic Accounts)
    - last_login_at: TIMESTAMP WITH TIME ZONE
    - created_at: TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 
-C. verifications (Persistent Insurance History)
+C. payer_credentials (Encrypted Portal Vault)
+   - id: UUID (Primary Key)
+   - practice_id: UUID (Foreign Key -> practices.id)
+   - payer_key: VARCHAR(50) NOT NULL         -- 'delta_dental', 'metlife', 'cigna', 'guardian'
+   - username_enc: TEXT NOT NULL             -- AES-256-GCM encrypted
+   - password_enc: TEXT NOT NULL             -- AES-256-GCM encrypted
+   - tax_id_or_npi: VARCHAR(50)              -- Office NPI/TIN if required by portal
+   - extra_data_enc: TEXT                    -- Security questions / PINs encrypted
+   - status: VARCHAR(50) DEFAULT 'active'    -- 'active', 'invalid_credentials', 'otp_required'
+   - last_used_at: TIMESTAMP WITH TIME ZONE
+   - updated_at: TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+
+D. verifications (Persistent Insurance History)
    - id: UUID (Primary Key)
    - practice_id: UUID (Foreign Key -> practices.id)
    - user_id: UUID (Foreign Key -> users.id)
+   - source: VARCHAR(50) DEFAULT 'manual_upload' -- 'auto_portal', 'manual_upload'
+   - insurance_payer: VARCHAR(255)
    - patient_name_enc: TEXT NOT NULL         -- AES-256-GCM encrypted
    - member_id_enc: TEXT                     -- AES-256-GCM encrypted
-   - insurance_payer: VARCHAR(255)
+   - dob_enc: TEXT                           -- AES-256-GCM encrypted
    - network_status: VARCHAR(100)
    - full_breakdown_json: JSONB NOT NULL     -- Complete structured breakdown data
    - created_at: TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 
-D. audit_logs (Immutable HIPAA Access Logs)
+E. audit_logs (Immutable HIPAA Access Logs)
    - id: UUID (Primary Key)
    - user_id: UUID (Foreign Key -> users.id)
-   - action: VARCHAR(100) NOT NULL           -- 'LOGIN', 'VIEW_RECORD', etc.
+   - action: VARCHAR(100) NOT NULL           -- 'LOGIN', 'AUTO_VERIFY', 'VIEW_RECORD', etc.
    - target_id: UUID                         -- verification ID accessed
    - ip_address: VARCHAR(45)
    - user_agent: TEXT
@@ -73,15 +88,14 @@ D. audit_logs (Immutable HIPAA Access Logs)
    - created_at: TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 
 ================================================================================
-3. STEP-BY-STEP WEEKEND EXECUTION ROADMAP
+3. STEP-BY-STEP IMPLEMENTATION ROADMAP
 ================================================================================
 
 PHASE 1: DATABASE PROVISIONING & SECURITY CONFIGURATION
 --------------------------------------------------------------------------------
-[ ] 1. Install PostgreSQL on VPS:
-       sudo apt-get update && sudo apt-get install -y postgresql postgresql-contrib
+[ ] 1. Install PostgreSQL on VPS (already running on host or configure dedicated DB).
 [ ] 2. Create dedicated database `dentverify_db` and restricted database user.
-[ ] 3. Run initial schema migrations (tables, foreign keys, indexes).
+[ ] 3. Run initial schema migrations (practices, users, verifications, audit_logs, payer_credentials).
 [ ] 4. Generate master encryption secret (32-byte hex for AES-256-GCM) and update `.env`.
 
 PHASE 2: USER AUTHENTICATION & SESSION MANAGEMENT
@@ -94,7 +108,7 @@ PHASE 2: USER AUTHENTICATION & SESSION MANAGEMENT
        - GET  /api/auth/me           (Validate session and return user profile)
 [ ] 3. Build Login / Registration UI in `public/`:
        - Clean modal / auth view.
-       - Protect uploader so unauthorized users cannot submit files.
+       - Protect uploader & auto-verifier so unauthorized users cannot submit requests.
 
 PHASE 3: PERSISTENT HISTORY & HISTORY DASHBOARD
 --------------------------------------------------------------------------------
@@ -119,9 +133,68 @@ PHASE 4: HIPAA HARDENING & VERIFICATION
        - Every query to `/api/verifications` logs an entry in `audit_logs`.
 [ ] 3. Verify Zero-Leakage:
        - Ensure logs (PM2 / Nginx) never write unencrypted patient identifiers.
-[ ] 4. Commit and push to GitHub repository:
-       git add . && git commit -m "feat: implement HIPAA auth and persistent history" && git push
 
 ================================================================================
-END OF PLAN - READY FOR WEEKEND IMPLEMENTATION
+PHASE 5: UNIFIED AUTO-VERIFY & PORTAL AUTOMATION (TOP INSURANCE PILOT)
+================================================================================
+OBJECTIVE: Staff enters Member ID + DOB + Payer -> System logs into the portal,
+retrieves the live benefits document/HTML, parses it via Gemini, and renders
+the full breakdown instantly without manual portal navigation.
+
+A. TARGET TOP PAYERS (PILOT PHASE):
+   1. Delta Dental (National / Regional Portal)
+   2. MetLife Dental Portal
+   3. Cigna Dental Provider Portal
+   4. Guardian Dental Portal
+
+B. ARCHITECTURE & COMPONENTS:
+   1. Portal Credential Vault (`/settings/portals`):
+      - Clinic Admin inputs login username and password per insurance.
+      - Passwords encrypted with AES-256-GCM at rest.
+      - Status badge: Connected, Credentials Missing, or Login Failed.
+
+   2. Playwright Headless Automation Runner:
+      - Modular scrapers under `automation/payers/`:
+        * `delta_dental.js`
+        * `metlife.js`
+        * `cigna.js`
+        * `guardian.js`
+      - Features: Stealth plugin enabled, rotating browser fingerprints, randomized delays.
+      - Flow:
+        Step 1: Launch headless browser & navigate to portal login URL.
+        Step 2: Enter encrypted credentials & solve captcha if present.
+        Step 3: Handle 2FA / OTP relay if requested (see below).
+        Step 4: Navigate to "Patient / Member Search".
+        Step 5: Fill Subscriber ID, Patient First/Last Name, and DOB.
+        Step 6: Capture complete Benefits Summary (PDF download or full DOM snapshot).
+        Step 7: Return document buffer to DentVerify AI analysis pipeline.
+
+   3. Real-Time 2FA / OTP Relay (Human-in-the-Loop):
+      - When a portal requests SMS or Email OTP during login:
+        * Runner sends event via Server-Sent Events (SSE) or WebSocket to client.
+        * DentVerify UI displays live modal:
+          "2FA Required: Enter the code sent to [clinic phone/email]: [ _____ ] [Submit]"
+        * User inputs the code within 120s -> Bot submits OTP and completes session.
+      - Optional: Dedicated clinic email auto-reader for 100% automated OTP capture.
+
+   4. Unified Frontend Search Bar (`public/index.html`):
+      - Toggle between:
+        [⚡ Unified Auto-Verify]  and  [📄 Manual Document Upload]
+      - Input fields:
+        * Insurance Dropdown: [Delta Dental | MetLife | Cigna | Guardian]
+        * Subscriber / Member ID: [____________________]
+        * Patient DOB: [MM/DD/YYYY]
+        * Patient Name: [Last, First]
+      - Button: [⚡ Verify Patient & Generate Breakdown]
+      - Live Progress Bar:
+        "Connecting to Delta Dental..." -> "Searching subscriber..." -> "Parsing benefits with AI..." -> "Done!"
+
+   5. Seamless Pipeline Handoff:
+      - Raw scraped document/text is piped directly into `/api/analyze`.
+      - Gemini formats benefits matrix, shared frequencies (D0210/D0330), and coinsurances.
+      - Automatically saves to persistent PostgreSQL history under practice.
+      - Automatically generates instant Excel export.
+
+================================================================================
+END OF PLAN - READY FOR EXECUTION
 ================================================================================
