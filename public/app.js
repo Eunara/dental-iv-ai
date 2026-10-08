@@ -950,10 +950,58 @@
       categoryCardsGrid.innerHTML = '';
 
       const hasMTC = Boolean(details.missing_tooth_clause);
-      const implantsVal = levels.implants || 'NC';
-      const isImplantCovered = implantsVal && !implantsVal.toLowerCase().includes('nc') && !implantsVal.includes('0%');
-      const nightGuardVal = levels.night_guard || 'NC';
-      const isNightGuardCovered = nightGuardVal && !nightGuardVal.toLowerCase().includes('nc') && !nightGuardVal.includes('0%');
+
+      // Helper function to robustly determine coverage percentage and status
+      function checkBenefitCoverage(rawVal, cdtObj) {
+        let val = rawVal;
+        if (cdtObj) {
+          const cdtPct = (cdtObj.coverage_percentage || '').trim();
+          if (cdtObj.is_eligible === false && (/^0%$/i.test(cdtPct) || /^nc$/i.test(cdtPct) || /not covered/i.test(cdtObj.notes || ''))) {
+            return { isCovered: false, val: cdtPct || 'NC' };
+          }
+          if (cdtPct && !/^0%$/i.test(cdtPct) && !/^nc$/i.test(cdtPct) && !/not covered/i.test(cdtPct)) {
+            val = cdtPct;
+          }
+        }
+
+        if (!val || typeof val !== 'string') {
+          return { isCovered: false, val: 'NC' };
+        }
+
+        const trimmed = val.trim();
+        const lower = trimmed.toLowerCase();
+
+        // Explicit non-covered patterns
+        if (lower === 'nc' || lower === '0%' || lower === 'no' || lower === 'none' || lower === 'not covered' || lower === 'excluded') {
+          return { isCovered: false, val: trimmed };
+        }
+
+        // Percentage check (e.g. 60%, 80%, 100%, 0%)
+        const pctMatch = lower.match(/(\d+)%/);
+        if (pctMatch) {
+          const pctNum = parseInt(pctMatch[1], 10);
+          return { isCovered: pctNum > 0, val: trimmed };
+        }
+
+        // Explicit NC or not covered phrase
+        if (/\b(nc|not covered|excluded)\b/i.test(lower)) {
+          return { isCovered: false, val: trimmed };
+        }
+
+        return { isCovered: true, val: trimmed };
+      }
+
+      const d6010Code = (data.procedure_codes || []).find(p => p.code && p.code.includes('D6010'));
+      const d9944Code = (data.procedure_codes || []).find(p => p.code && (p.code.includes('D9944') || p.code.includes('D9940') || p.code.includes('D9951')));
+
+      const implantBenefit = checkBenefitCoverage(levels.implants, d6010Code);
+      const nightGuardBenefit = checkBenefitCoverage(levels.night_guard, d9944Code);
+      const oralSurgeryBenefit = checkBenefitCoverage(levels.oral_surgery || levels.basic || '80%');
+      const endoBenefit = checkBenefitCoverage(levels.endo || levels.basic || '80%');
+
+      // Keep levels in sync for export & sheet views
+      if (implantBenefit.val && implantBenefit.val !== 'NC') levels.implants = implantBenefit.val;
+      if (nightGuardBenefit.val && nightGuardBenefit.val !== 'NC') levels.night_guard = nightGuardBenefit.val;
 
       const catMatrix = [
         {
@@ -980,30 +1028,30 @@
         {
           code: 'ENDO',
           name: 'Endodontics',
-          val: levels.endo || levels.basic || '80%',
-          sub: 'Root Canals',
-          color: 'cyan'
+          val: endoBenefit.val,
+          sub: endoBenefit.isCovered ? 'Root Canals' : 'Not Covered (NC)',
+          color: endoBenefit.isCovered ? 'cyan' : 'rose'
         },
         {
           code: 'ORAL SURGERY',
           name: 'Oral Surgery',
-          val: levels.oral_surgery || levels.basic || '80%',
-          sub: 'Extractions',
-          color: 'cyan'
+          val: oralSurgeryBenefit.val,
+          sub: oralSurgeryBenefit.isCovered ? 'Extractions' : 'Not Covered (NC)',
+          color: oralSurgeryBenefit.isCovered ? 'cyan' : 'rose'
         },
         {
           code: 'IMPLANTS D6010',
           name: 'Implant Placement',
-          val: implantsVal,
-          sub: isImplantCovered ? 'Covered Benefit' : 'Not Covered (NC)',
-          color: isImplantCovered ? 'cyan' : 'rose'
+          val: implantBenefit.val,
+          sub: implantBenefit.isCovered ? 'Covered Benefit' : 'Not Covered (NC)',
+          color: implantBenefit.isCovered ? 'cyan' : 'rose'
         },
         {
           code: 'NIGHT GUARD',
           name: 'D9944 Guard',
-          val: nightGuardVal,
-          sub: isNightGuardCovered ? 'Covered Benefit' : 'Not Covered (NC)',
-          color: isNightGuardCovered ? 'cyan' : 'rose'
+          val: nightGuardBenefit.val,
+          sub: nightGuardBenefit.isCovered ? 'Covered Benefit' : 'Not Covered (NC)',
+          color: nightGuardBenefit.isCovered ? 'cyan' : 'rose'
         },
         {
           code: 'MISSING TOOTH',
