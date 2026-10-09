@@ -9,8 +9,13 @@
       is_sample: true,
       insurance_details: {
         patient_name: "Katherine Birdwell",
+        dob: "04/12/1988",
+        group_name: "Acme Industrial Group",
+        group_number: "DD-948201",
         carrier: "Delta Dental PPO",
         effective_date: "01/01/2026",
+        termed_date: "Active (None)",
+        policy_status: "Active",
         network_status: "In Network",
         plan_benefits: "Calendar Year",
         fee_schedule: "Delta Dental PPO",
@@ -52,13 +57,13 @@
         // 6. D9110
         { code: "D9110", description: "Palliative (Emergency Treatment of Dental Pain)", coverage_percentage: "100%", deductible_applied: false, frequency_limitation: "2x1yr", age_limit: "None", is_eligible: true, history_dates: "History", downgrade_rule: "None", notes: "Emergency palliative" },
         // 7. D0120
-        { code: "D0120", description: "Exam (Periodic Oral Evaluation)", coverage_percentage: "100%", deductible_applied: false, frequency_limitation: "2x1yr", age_limit: "None", is_eligible: true, history_dates: "History", downgrade_rule: "None", notes: "Periodic evaluation" },
+        { code: "D0120", description: "Exam (Periodic Oral Evaluation)", coverage_percentage: "100%", deductible_applied: false, frequency_limitation: "2x1yr", age_limit: "None", is_eligible: true, history_dates: "10/25/2025", downgrade_rule: "None", notes: "Eligible (Benefit reset for Calendar Year 2026; Last service: 10/25/2025)" },
         // 8. D0140
         { code: "D0140", description: "Limited Exam (Problem Focused)", coverage_percentage: "100%", deductible_applied: false, frequency_limitation: "2x1yr", age_limit: "None", is_eligible: true, history_dates: "History", downgrade_rule: "None", notes: "Combined/Additional: Additional" },
         // 9. D1351
-        { code: "D1351", description: "Sealant (Per Tooth)", coverage_percentage: "80%", deductible_applied: false, frequency_limitation: "1X24m", age_limit: "15", is_eligible: true, history_dates: "History", downgrade_rule: "None", notes: "Sealant age limit: 15" },
+        { code: "D1351", description: "Sealant (Per Tooth)", coverage_percentage: "80%", deductible_applied: false, frequency_limitation: "1X24m", age_limit: "15", is_eligible: false, history_dates: "History", downgrade_rule: "None", notes: "Ineligible: Patient age (37) exceeds plan age limit (15)" },
         // 10. D1206
-        { code: "D1206", description: "Flouride (Fluoride Varnish / Application)", coverage_percentage: "90%", deductible_applied: false, frequency_limitation: "2x1yr", age_limit: "18", is_eligible: false, history_dates: "History", downgrade_rule: "None", notes: "Fluoride age limit: 18 (Exceeded)" },
+        { code: "D1206", description: "Flouride (Fluoride Varnish / Application)", coverage_percentage: "90%", deductible_applied: false, frequency_limitation: "2x1yr", age_limit: "18", is_eligible: false, history_dates: "History", downgrade_rule: "None", notes: "Ineligible: Patient age (37) exceeds plan age limit (18)" },
         // 11. D4341
         { code: "D4341", description: "SRP (Periodontal Scaling and Root Planing - 4+ teeth/quad)", coverage_percentage: "80%", deductible_applied: true, frequency_limitation: "1x1yr", age_limit: "None", is_eligible: true, history_dates: "None", downgrade_rule: "None", notes: "Quads Per Visit: All • Perio History: None" },
         // 12. D4910
@@ -92,16 +97,209 @@
     }
 
     // ==========================================
-    // D0210 & D0330 SHARED FREQUENCY & ELIGIBILITY VALIDATOR
+    // DATE & ELIGIBILITY UTILITY FUNCTIONS
     // ==========================================
-    /**
-     * Dental RCM Policy Rule:
-     * CDT codes D0210 (Full Mouth Series / FMX) and D0330 (Panoramic Image / Pano)
-     * ALWAYS share the same frequency limitation (typically 1 in 36 or 60 months / 5 years).
-     * If a previous service history date exists on EITHER code, that history applies
-     * to BOTH codes mutually. Validates against the frequency limitation to determine
-     * whether patient is currently eligible or ineligible, computing the next eligible date.
-     */
+
+    function parseDate(str) {
+      if (!str) return null;
+      const s = String(str).trim();
+      if (/^(none|no|n\/a|na|history|null|undefined|-)$/i.test(s)) return null;
+
+      // MM/DD/YYYY or M/D/YYYY
+      const mdy = s.match(/^(\d{1,2})[\/\-\.](\d{1,2})[\/\-\.](\d{2,4})$/);
+      if (mdy) {
+        let m = parseInt(mdy[1], 10) - 1;
+        let d = parseInt(mdy[2], 10);
+        let y = parseInt(mdy[3], 10);
+        if (y < 100) y += 2000;
+        const dt = new Date(y, m, d);
+        return isNaN(dt.getTime()) ? null : dt;
+      }
+
+      // YYYY-MM-DD
+      const ymd = s.match(/^(\d{4})[\/\-\.](\d{1,2})[\/\-\.](\d{1,2})$/);
+      if (ymd) {
+        let y = parseInt(ymd[1], 10);
+        const m = parseInt(ymd[2], 10) - 1;
+        const d = parseInt(ymd[3], 10);
+        const dt = new Date(y, m, d);
+        return isNaN(dt.getTime()) ? null : dt;
+      }
+
+      // MM/YYYY or M/YYYY
+      const my = s.match(/^(\d{1,2})[\/\-\.](\d{2,4})$/);
+      if (my) {
+        let m = parseInt(my[1], 10) - 1;
+        let y = parseInt(my[2], 10);
+        if (y < 100) y += 2000;
+        const dt = new Date(y, m, 1);
+        return isNaN(dt.getTime()) ? null : dt;
+      }
+
+      const parsed = Date.parse(s);
+      if (!isNaN(parsed)) {
+        return new Date(parsed);
+      }
+      return null;
+    }
+
+    function parseFrequencyMonths(freqStr) {
+      if (!freqStr) return 60;
+      const str = String(freqStr).toLowerCase();
+
+      // Months: "60 months", "1 in 36m", "36mo", "24m"
+      const mMatch = str.match(/(\d+)\s*(?:m|mo|mos|month|months)\b/);
+      if (mMatch) {
+        const m = parseInt(mMatch[1], 10);
+        if (m > 0) return m;
+      }
+
+      // Years: "1x5yr", "1 in 5 years", "3 years", "1/5yr", "5y"
+      const yMatch = str.match(/(\d+)\s*(?:y|yr|yrs|year|years)\b/);
+      if (yMatch) {
+        const y = parseInt(yMatch[1], 10);
+        if (y > 0) return y * 12;
+      }
+
+      // Generic "1 in 60" or "1/36"
+      const numMatch = str.match(/1\s*(?:in|\/|x)\s*(\d+)/);
+      if (numMatch) {
+        const n = parseInt(numMatch[1], 10);
+        if (n >= 12) return n;
+        if (n > 0 && n <= 10) return n * 12;
+      }
+
+      return 60;
+    }
+
+    function formatDate(d) {
+      const mm = String(d.getMonth() + 1).padStart(2, '0');
+      const dd = String(d.getDate()).padStart(2, '0');
+      const yyyy = d.getFullYear();
+      return `${mm}/${dd}/${yyyy}`;
+    }
+
+    function calculateAge(dobStr, asOfDate = new Date()) {
+      const birthDate = parseDate(dobStr);
+      if (!birthDate) return null;
+      let age = asOfDate.getFullYear() - birthDate.getFullYear();
+      const m = asOfDate.getMonth() - birthDate.getMonth();
+      if (m < 0 || (m === 0 && asOfDate.getDate() < birthDate.getDate())) {
+        age--;
+      }
+      return age >= 0 ? age : null;
+    }
+
+    // ==========================================
+    // 1. POLICY TERMED DATE & STATUS VALIDATOR
+    // ==========================================
+    function enforcePolicyTermedRules(insuranceDetails) {
+      if (!insuranceDetails) return insuranceDetails;
+      const termedStr = String(insuranceDetails.termed_date || '').trim();
+      const today = new Date();
+
+      if (!termedStr || /^(none|active|n\/a|na|-)$/i.test(termedStr)) {
+        insuranceDetails.policy_status = 'Active';
+        insuranceDetails.termed_date = insuranceDetails.termed_date || 'Active (None)';
+        return insuranceDetails;
+      }
+
+      const termedDt = parseDate(termedStr);
+      if (termedDt) {
+        const endOfTermedDay = new Date(termedDt.getFullYear(), termedDt.getMonth(), termedDt.getDate(), 23, 59, 59);
+        if (today > endOfTermedDay) {
+          insuranceDetails.policy_status = 'Termed / Inactive';
+        } else {
+          insuranceDetails.policy_status = 'Active';
+        }
+      } else if (/term/i.test(termedStr) || /inact/i.test(termedStr)) {
+        insuranceDetails.policy_status = 'Termed / Inactive';
+      } else {
+        insuranceDetails.policy_status = 'Active';
+      }
+      return insuranceDetails;
+    }
+
+    // ==========================================
+    // 2. AGE LIMIT & CALENDAR YEAR FREQUENCY VALIDATOR
+    // ==========================================
+    function enforceAgeLimitAndFrequencyRules(procedureCodes, insuranceDetails = {}) {
+      if (!Array.isArray(procedureCodes) || procedureCodes.length === 0) {
+        return procedureCodes;
+      }
+
+      const patientDob = insuranceDetails.dob || '';
+      const patientAge = calculateAge(patientDob);
+      const planBenefits = String(insuranceDetails.plan_benefits || '').toLowerCase();
+      const isCalendarYearPlan = planBenefits.includes('calendar') || !planBenefits.includes('contract');
+      const today = new Date();
+      const currentYear = today.getFullYear();
+
+      procedureCodes.forEach(item => {
+        if (!item) return;
+        const code = String(item.code || '').toUpperCase();
+        const ageLimStr = String(item.age_limit || '').trim();
+        const freqStr = String(item.frequency_limitation || '').trim().toLowerCase();
+        const histStr = String(item.history_dates || '').trim();
+
+        // 1. AGE LIMITATION CHECK (D1206 Fluoride, D1351 Sealants, Ortho, etc.)
+        if (patientAge !== null && ageLimStr && !/^(none|nl|no limit|n\/a|-)$/i.test(ageLimStr)) {
+          const match = ageLimStr.match(/(\d+)/);
+          if (match) {
+            const maxAge = parseInt(match[1], 10);
+            if (patientAge > maxAge) {
+              item.is_eligible = false;
+              const ageNote = `Ineligible: Patient age (${patientAge}) exceeds plan age limit (${maxAge})`;
+              if (!item.notes || !item.notes.includes('exceeds plan age limit')) {
+                item.notes = item.notes ? `${item.notes} • ${ageNote}` : ageNote;
+              }
+            }
+          }
+        }
+
+        // Skip D0210/D0330 as it has its own shared handler
+        if (code.includes('D0210') || code.includes('D0330')) {
+          return;
+        }
+
+        // 2. CALENDAR YEAR VS ROLLING MONTHS FREQUENCY LOGIC
+        const histDate = parseDate(histStr);
+        if (histDate) {
+          const isYearlyFreq = /2x1yr|1x1yr|2xyr|1xyr|2\s*in\s*1\s*year|1\s*in\s*1\s*year|calendar/i.test(freqStr);
+          const isRollingFreq = /2x12m|1x12m|12\s*m|12\s*mo|rolling/i.test(freqStr);
+
+          if (isCalendarYearPlan && isYearlyFreq) {
+            // Calendar Year basis: resets on January 1st!
+            if (histDate.getFullYear() < currentYear) {
+              item.is_eligible = true;
+              const resetNote = `Eligible (Benefit reset for Calendar Year ${currentYear}; Last service: ${formatDate(histDate)})`;
+              if (!item.notes || !item.notes.includes('Calendar Year')) {
+                item.notes = item.notes ? `${item.notes} • ${resetNote}` : resetNote;
+              }
+            }
+          } else if (isRollingFreq) {
+            const twelveMonthsAgo = new Date(today);
+            twelveMonthsAgo.setMonth(twelveMonthsAgo.getMonth() - 12);
+
+            if (histDate >= twelveMonthsAgo) {
+              if (/2x12m|2\s*in\s*12/i.test(freqStr)) {
+                item.is_eligible = true;
+                const rollNote = `Eligible: 1 of 2 procedures remaining in rolling 12m (Last service: ${formatDate(histDate)})`;
+                if (!item.notes || !item.notes.includes('rolling 12m')) {
+                  item.notes = item.notes ? `${item.notes} • ${rollNote}` : rollNote;
+                }
+              }
+            }
+          }
+        }
+      });
+
+      return procedureCodes;
+    }
+
+    // ==========================================
+    // 3. D0210 & D0330 SHARED FREQUENCY & ELIGIBILITY VALIDATOR
+    // ==========================================
     function enforceSharedFmxPanoRules(procedureCodes) {
       if (!Array.isArray(procedureCodes) || procedureCodes.length === 0) {
         return procedureCodes;
@@ -124,79 +322,6 @@
 
       if (fmxPanoItems.length === 0) {
         return procedureCodes;
-      }
-
-      function parseDate(str) {
-        if (!str) return null;
-        const s = String(str).trim();
-        if (/^(none|no|n\/a|na|history|null|undefined|-)$/i.test(s)) return null;
-
-        const mdy = s.match(/^(\d{1,2})[\/\-\.](\d{1,2})[\/\-\.](\d{2,4})$/);
-        if (mdy) {
-          let m = parseInt(mdy[1], 10) - 1;
-          let d = parseInt(mdy[2], 10);
-          let y = parseInt(mdy[3], 10);
-          if (y < 100) y += 2000;
-          const dt = new Date(y, m, d);
-          return isNaN(dt.getTime()) ? null : dt;
-        }
-
-        const ymd = s.match(/^(\d{4})[\/\-\.](\d{1,2})[\/\-\.](\d{1,2})$/);
-        if (ymd) {
-          let y = parseInt(ymd[1], 10);
-          const m = parseInt(ymd[2], 10) - 1;
-          const d = parseInt(ymd[3], 10);
-          const dt = new Date(y, m, d);
-          return isNaN(dt.getTime()) ? null : dt;
-        }
-
-        const my = s.match(/^(\d{1,2})[\/\-\.](\d{2,4})$/);
-        if (my) {
-          let m = parseInt(my[1], 10) - 1;
-          let y = parseInt(my[2], 10);
-          if (y < 100) y += 2000;
-          const dt = new Date(y, m, 1);
-          return isNaN(dt.getTime()) ? null : dt;
-        }
-
-        const parsed = Date.parse(s);
-        if (!isNaN(parsed)) {
-          return new Date(parsed);
-        }
-        return null;
-      }
-
-      function parseFrequencyMonths(freqStr) {
-        if (!freqStr) return 60;
-        const str = String(freqStr).toLowerCase();
-
-        const mMatch = str.match(/(\d+)\s*(?:m|mo|mos|month|months)\b/);
-        if (mMatch) {
-          const m = parseInt(mMatch[1], 10);
-          if (m > 0) return m;
-        }
-
-        const yMatch = str.match(/(\d+)\s*(?:y|yr|yrs|year|years)\b/);
-        if (yMatch) {
-          const y = parseInt(yMatch[1], 10);
-          if (y > 0) return y * 12;
-        }
-
-        const numMatch = str.match(/1\s*(?:in|\/|x)\s*(\d+)/);
-        if (numMatch) {
-          const n = parseInt(numMatch[1], 10);
-          if (n >= 12) return n;
-          if (n > 0 && n <= 10) return n * 12;
-        }
-
-        return 60;
-      }
-
-      function formatDate(d) {
-        const mm = String(d.getMonth() + 1).padStart(2, '0');
-        const dd = String(d.getDate()).padStart(2, '0');
-        const yyyy = d.getFullYear();
-        return `${mm}/${dd}/${yyyy}`;
       }
 
       let sharedFreqText = '';
@@ -428,6 +553,7 @@
     const filesCountText = document.getElementById('filesCountText');
     const addMoreFilesBtn = document.getElementById('addMoreFilesBtn');
     const patientNameInput = document.getElementById('patientNameInput');
+    const patientDobInput = document.getElementById('patientDobInput');
     const patientHeroBadge = document.getElementById('patientHeroBadge');
     const patientHeroName = document.getElementById('patientHeroName');
     const analyzeBtn = document.getElementById('analyzeBtn');
@@ -665,6 +791,7 @@
       currentAuditData = null;
       if (fileInput) fileInput.value = '';
       if (patientNameInput) patientNameInput.value = '';
+      if (patientDobInput) patientDobInput.value = '';
       if (filesListContainer) filesListContainer.classList.remove('active');
       if (dropzoneField) dropzoneField.style.display = 'block';
 
@@ -697,6 +824,7 @@
 
       const pref = document.querySelector('input[name="network_preference"]:checked')?.value || 'auto';
       const patientNameVal = patientNameInput ? patientNameInput.value.trim() : '';
+      const patientDobVal = patientDobInput ? patientDobInput.value.trim() : '';
 
       const formData = new FormData();
       
@@ -706,6 +834,9 @@
       formData.append('network_preference', pref);
       if (patientNameVal) {
         formData.append('patient_name', patientNameVal);
+      }
+      if (patientDobVal) {
+        formData.append('dob', patientDobVal);
       }
 
       // Append customized AI role or CDT prompt from settings if configured
@@ -781,9 +912,12 @@
 
         currentAuditData = resData.data;
 
-        // If user explicitly entered a patient name on the form, keep it
+        // If user explicitly entered a patient name or DOB on the form, keep it
         if (patientNameVal && (!currentAuditData.insurance_details.patient_name || currentAuditData.insurance_details.patient_name === 'N/A')) {
           currentAuditData.insurance_details.patient_name = patientNameVal;
+        }
+        if (patientDobVal && (!currentAuditData.insurance_details.dob || currentAuditData.insurance_details.dob === 'N/A')) {
+          currentAuditData.insurance_details.dob = patientDobVal;
         }
 
         renderReportDashboard(currentAuditData);
@@ -812,13 +946,32 @@
 
     // Render verification report
     function renderReportDashboard(data) {
-      if (data && Array.isArray(data.procedure_codes)) {
-        data.procedure_codes = enforceSharedFmxPanoRules(data.procedure_codes);
+      if (data) {
+        if (data.insurance_details) {
+          data.insurance_details = enforcePolicyTermedRules(data.insurance_details);
+        }
+        if (Array.isArray(data.procedure_codes)) {
+          data.procedure_codes = enforceSharedFmxPanoRules(data.procedure_codes);
+          data.procedure_codes = enforceAgeLimitAndFrequencyRules(data.procedure_codes, data.insurance_details || {});
+        }
       }
       const details = data.insurance_details || {};
       const levels = data.coverage_levels || {};
 
-      // Patient Name Display
+      // Patient Name & DOB Display
+      const pDob = details.dob && details.dob !== 'N/A' && details.dob !== 'None' ? details.dob : '';
+      const pAge = pDob ? calculateAge(pDob) : null;
+
+      const heroPatientNameDisplay = document.getElementById('heroPatientNameDisplay');
+      if (heroPatientNameDisplay) {
+        heroPatientNameDisplay.textContent = (details.patient_name && details.patient_name !== 'N/A') ? details.patient_name.trim() : 'Katherine Birdwell';
+      }
+
+      const heroPatientDobDisplay = document.getElementById('heroPatientDobDisplay');
+      if (heroPatientDobDisplay) {
+        heroPatientDobDisplay.textContent = pDob ? `DOB: ${pDob}${pAge !== null ? ` (Age: ${pAge})` : ''}` : 'DOB: Not Specified';
+      }
+
       if (details.patient_name && details.patient_name.trim() !== '' && details.patient_name.toLowerCase() !== 'n/a') {
         patientHeroName.textContent = details.patient_name.trim();
         patientHeroBadge.style.display = 'inline-flex';
@@ -826,32 +979,94 @@
         patientHeroBadge.style.display = 'none';
       }
 
+      // Group Name & Group #
+      const heroGroupNameDisplay = document.getElementById('heroGroupNameDisplay');
+      if (heroGroupNameDisplay) {
+        heroGroupNameDisplay.textContent = (details.group_name && details.group_name !== 'N/A') ? details.group_name : 'Acme Industrial Group';
+      }
+
+      const heroGroupNumberDisplay = document.getElementById('heroGroupNumberDisplay');
+      if (heroGroupNumberDisplay) {
+        heroGroupNumberDisplay.textContent = `Group #: ${(details.group_number && details.group_number !== 'N/A') ? details.group_number : 'None / N/A'}`;
+      }
+
       // Carrier & Network
       document.getElementById('carrierNameDisplay').textContent = details.carrier || 'Delta Dental PPO';
       document.getElementById('planEffectiveDateDisplay').textContent = 'Effective: ' + (details.effective_date || '01/01/2026');
       
       const netBadge = document.getElementById('networkStatusBadge');
+      const heroNetBadge = document.getElementById('heroNetworkBadge');
       const netStatus = details.network_status || 'In Network';
-      netBadge.textContent = netStatus;
-      if (netStatus.toLowerCase().includes('out')) {
-        netBadge.className = 'network-indicator-pill out-network';
-      } else {
-        netBadge.className = 'network-indicator-pill in-network';
+      
+      if (netBadge) {
+        netBadge.textContent = netStatus;
+        netBadge.className = netStatus.toLowerCase().includes('out') ? 'network-indicator-pill out-network' : 'network-indicator-pill in-network';
+      }
+      if (heroNetBadge) {
+        heroNetBadge.textContent = netStatus;
+        heroNetBadge.className = netStatus.toLowerCase().includes('out') ? 'network-indicator-pill out-network' : 'network-indicator-pill in-network';
       }
 
+      const heroCarrierSubDisplay = document.getElementById('heroCarrierSubDisplay');
+      if (heroCarrierSubDisplay) {
+        heroCarrierSubDisplay.textContent = details.carrier || 'Delta Dental PPO';
+      }
+
+      // Effective & Termed Dates with Status Validation
+      const heroEffectiveDateDisplay = document.getElementById('heroEffectiveDateDisplay');
+      if (heroEffectiveDateDisplay) {
+        heroEffectiveDateDisplay.textContent = details.effective_date || '01/01/2026';
+      }
+
+      const heroTermedDateDisplay = document.getElementById('heroTermedDateDisplay');
+      if (heroTermedDateDisplay) {
+        heroTermedDateDisplay.textContent = `Termed: ${details.termed_date || 'Active (None)'}`;
+      }
+
+      const heroPolicyStatusBadge = document.getElementById('heroPolicyStatusBadge');
+      if (heroPolicyStatusBadge) {
+        const isTermed = (details.policy_status || '').toLowerCase().includes('term');
+        heroPolicyStatusBadge.className = isTermed ? 'policy-status-pill termed' : 'policy-status-pill active';
+        heroPolicyStatusBadge.textContent = isTermed ? 'Termed' : 'Active';
+      }
+
+      // Plan Benefits Type & Reset Schedule
       const planBenefitsDisplay = document.getElementById('planBenefitsDisplay');
       if (planBenefitsDisplay) {
         planBenefitsDisplay.textContent = 'Plan: ' + (details.plan_benefits || 'Calendar Year');
       }
 
-      const feeScheduleDisplay = document.getElementById('feeScheduleDisplay');
-      if (feeScheduleDisplay) {
-        feeScheduleDisplay.textContent = 'Fee: ' + (details.fee_schedule || (details.carrier ? details.carrier + ' PPO' : 'Delta Dental PPO'));
+      const heroPlanBenefitsDisplay = document.getElementById('heroPlanBenefitsDisplay');
+      if (heroPlanBenefitsDisplay) {
+        heroPlanBenefitsDisplay.textContent = details.plan_benefits || 'Calendar Year';
       }
 
+      const isCalendarYearPlan = String(details.plan_benefits || '').toLowerCase().includes('calendar') || !String(details.plan_benefits || '').toLowerCase().includes('contract');
+      const heroPlanResetSub = document.getElementById('heroPlanResetSub');
+      if (heroPlanResetSub) {
+        heroPlanResetSub.textContent = isCalendarYearPlan ? 'Resets Jan 1st' : 'Contract Basis';
+      }
+
+      // Fee Schedule
+      const feeSchedStr = details.fee_schedule || (details.carrier ? details.carrier + ' PPO' : 'Delta Dental PPO');
+      const feeScheduleDisplay = document.getElementById('feeScheduleDisplay');
+      if (feeScheduleDisplay) {
+        feeScheduleDisplay.textContent = 'Fee: ' + feeSchedStr;
+      }
+      const heroFeeScheduleDisplay = document.getElementById('heroFeeScheduleDisplay');
+      if (heroFeeScheduleDisplay) {
+        heroFeeScheduleDisplay.textContent = feeSchedStr;
+      }
+
+      // Payment Recipient
+      const payToStr = details.payment_recipient || 'Patient or Office';
       const paymentToDisplay = document.getElementById('paymentToDisplay');
       if (paymentToDisplay) {
-        paymentToDisplay.textContent = 'Pay To: ' + (details.payment_recipient || 'Patient or Office');
+        paymentToDisplay.textContent = 'Pay To: ' + payToStr;
+      }
+      const heroPaymentToDisplay = document.getElementById('heroPaymentToDisplay');
+      if (heroPaymentToDisplay) {
+        heroPaymentToDisplay.textContent = payToStr;
       }
 
       // Annual Max Card
@@ -1258,12 +1473,20 @@
       if (d.patient_name && d.patient_name.trim() !== '' && d.patient_name.toLowerCase() !== 'n/a') {
         txt += `PATIENT NAME:         ${d.patient_name.trim()}\n`;
       }
+      if (d.dob && d.dob.trim() !== '' && d.dob.toLowerCase() !== 'n/a') {
+        const age = calculateAge(d.dob);
+        txt += `PATIENT DOB:          ${d.dob.trim()}${age !== null ? ` (Age: ${age})` : ''}\n`;
+      }
+      txt += `GROUP / PLAN NAME:    ${d.group_name || 'N/A'}\n`;
+      txt += `GROUP NUMBER:         ${d.group_number || 'N/A'}\n`;
       txt += `CARRIER:              ${d.carrier || 'Delta Dental PPO'}\n`;
       txt += `NETWORK STATUS:       ${d.network_status || 'In Network'}\n`;
+      txt += `POLICY STATUS:        ${d.policy_status || 'Active'}\n`;
+      txt += `EFFECTIVE DATE:       ${d.effective_date || '01/01/2026'}\n`;
+      txt += `TERMED DATE:          ${d.termed_date || 'Active (None)'}\n`;
       txt += `PLAN BENEFITS:        ${d.plan_benefits || 'Calendar Year'}\n`;
       txt += `FEE SCHEDULE:         ${d.fee_schedule || 'Delta Dental PPO'}\n`;
       txt += `PAYMENT GOES TO:      ${d.payment_recipient || 'Patient or Office'}\n`;
-      txt += `EFFECTIVE DATE:       ${d.effective_date || '01/01/2026'}\n`;
       txt += `ANNUAL MAXIMUM:       ${fmtMoney(d.annual_maximum)} | REMAINING: ${fmtMoney(d.remaining_maximum)}\n`;
       txt += `INDIVIDUAL DED:       ${fmtMoney(d.deductible_individual)} | REMAINING: ${fmtMoney(d.deductible_remaining)}\n`;
       txt += `DEDUCTIBLE APPLIES:   ${d.deductible_applies_to || 'Basic & Major only, Waived on Preventive'}\n`;
@@ -1410,9 +1633,16 @@
       const d = data.insurance_details || {};
       const c = data.coverage_levels || {};
       const patientName = (d.patient_name && d.patient_name.trim() !== '' && d.patient_name.toLowerCase() !== 'n/a') ? d.patient_name.trim() : 'Katherine Birdwell';
+      const patientDob = (d.dob && d.dob.trim() !== '' && d.dob.toLowerCase() !== 'n/a') ? d.dob.trim() : '';
+      const pAge = patientDob ? calculateAge(patientDob) : null;
+      const dobDisplay = patientDob ? `${patientDob}${pAge !== null ? ` (Age: ${pAge})` : ''}` : 'N/A';
+      const groupName = d.group_name || 'Acme Industrial Group';
+      const groupNumber = d.group_number || 'DD-948201';
       const carrier = d.carrier || 'Delta Dental PPO';
       const network = d.network_status || 'In Network';
+      const policyStatus = d.policy_status || 'Active';
       const effective = d.effective_date || '01/01/2026';
+      const termedDate = d.termed_date || 'Active (None)';
       const planBenefits = d.plan_benefits || 'Calendar Year';
       const feeSchedule = d.fee_schedule || (carrier + ' PPO');
       const paymentTo = d.payment_recipient || 'Office';
@@ -1437,7 +1667,10 @@
       let lines = [];
       lines.push([csvCell('DENTAL INSURANCE BENEFIT BREAKDOWN FORM')].join(','));
       lines.push('');
-      lines.push([csvCell('Patient Name:'), csvCell(patientName), csvCell('Network Participation:'), csvCell(network)].join(','));
+      lines.push([csvCell('Patient Name:'), csvCell(patientName), csvCell('Date of Birth (DOB):'), csvCell(dobDisplay)].join(','));
+      lines.push([csvCell('Group / Plan Name:'), csvCell(groupName), csvCell('Group #:'), csvCell(groupNumber)].join(','));
+      lines.push([csvCell('Carrier:'), csvCell(carrier), csvCell('Network Participation:'), csvCell(network)].join(','));
+      lines.push([csvCell('Policy Status:'), csvCell(policyStatus), csvCell('Termed Date:'), csvCell(termedDate)].join(','));
       lines.push([csvCell('Effective Date:'), csvCell(effective), csvCell('Plan Benefits:'), csvCell(planBenefits)].join(','));
       lines.push([csvCell('Insurance Payment goes to:'), csvCell(paymentTo), csvCell('Fee Schedule / Tier:'), csvCell(feeSchedule)].join(','));
       lines.push([csvCell('Yearly Maximum:'), csvCell(annualMax), csvCell('Remaining Benefits:'), csvCell(remainingMax)].join(','));
@@ -1534,9 +1767,16 @@
       const allCodes = (data.procedure_codes || []).slice();
 
       const patientName = (d.patient_name && d.patient_name.trim() !== '' && d.patient_name.toLowerCase() !== 'n/a') ? d.patient_name.trim() : 'Katherine Birdwell';
+      const patientDob = (d.dob && d.dob.trim() !== '' && d.dob.toLowerCase() !== 'n/a') ? d.dob.trim() : '';
+      const pAge = patientDob ? calculateAge(patientDob) : null;
+      const dobDisplay = patientDob ? `${patientDob}${pAge !== null ? ` (Age: ${pAge})` : ''}` : 'N/A';
+      const groupName = d.group_name || 'Acme Industrial Group';
+      const groupNumber = d.group_number || 'DD-948201';
       const carrier = d.carrier || 'Delta Dental PPO';
       const network = d.network_status || 'In Network';
+      const policyStatus = d.policy_status || 'Active';
       const effective = d.effective_date || '01/01/2026';
+      const termedDate = d.termed_date || 'Active (None)';
       const planBenefits = d.plan_benefits || 'Calendar Year';
       const feeSchedule = d.fee_schedule || (carrier + ' PPO');
       const paymentTo = d.payment_recipient || 'Patient or Office';
@@ -1585,18 +1825,30 @@
             <tr>
               <td class="excel-label-cell" style="width: 20%; font-weight: 700;">Patient Name:</td>
               <td class="excel-val-cell" style="width: 30%; font-weight: 700; color: #0284c7;">${escapeHtml(patientName)}</td>
-              <td class="excel-label-cell" style="width: 22%; font-weight: 700;">Network Participation:</td>
-              <td class="excel-val-cell" style="width: 28%; font-weight: 700;">${escapeHtml(network)}</td>
+              <td class="excel-label-cell" style="width: 22%; font-weight: 700;">Date of Birth (DOB):</td>
+              <td class="excel-val-cell" style="width: 28%; font-weight: 700;">${escapeHtml(dobDisplay)}</td>
+            </tr>
+            <tr>
+              <td class="excel-label-cell">Group / Plan Name:</td>
+              <td class="excel-val-cell" style="font-weight: 600;">${escapeHtml(groupName)}</td>
+              <td class="excel-label-cell">Group Policy #:</td>
+              <td class="excel-val-cell">${escapeHtml(groupNumber)}</td>
+            </tr>
+            <tr>
+              <td class="excel-label-cell">Network Participation:</td>
+              <td class="excel-val-cell" style="font-weight: 700;">${escapeHtml(network)}</td>
+              <td class="excel-label-cell">Policy Status:</td>
+              <td class="excel-val-cell" style="font-weight: 700; color: ${policyStatus.includes('Term') ? '#e11d48' : '#059669'};">${escapeHtml(policyStatus)}</td>
             </tr>
             <tr>
               <td class="excel-label-cell">Effective Date:</td>
               <td class="excel-val-cell">${escapeHtml(effective)}</td>
-              <td class="excel-label-cell">Plan Benefits:</td>
-              <td class="excel-val-cell">${escapeHtml(planBenefits)}</td>
+              <td class="excel-label-cell">Termed Date:</td>
+              <td class="excel-val-cell">${escapeHtml(termedDate)}</td>
             </tr>
             <tr>
-              <td class="excel-label-cell">Insurance Payment goes to:</td>
-              <td class="excel-val-cell">${escapeHtml(paymentTo)}</td>
+              <td class="excel-label-cell">Plan Benefits:</td>
+              <td class="excel-val-cell">${escapeHtml(planBenefits)}</td>
               <td class="excel-label-cell">Fee Schedule / Tier:</td>
               <td class="excel-val-cell" style="font-weight: 700;">${escapeHtml(feeSchedule)}</td>
             </tr>
@@ -1607,16 +1859,20 @@
               <td class="excel-val-cell" style="font-weight: 700; color: #047857;">${escapeHtml(remainingMax)}</td>
             </tr>
             <tr>
+              <td class="excel-label-cell">Insurance Payment goes to:</td>
+              <td class="excel-val-cell">${escapeHtml(paymentTo)}</td>
               <td class="excel-label-cell">Annual Max applies to preventative?:</td>
               <td class="excel-val-cell">${escapeHtml(prevToMax)}</td>
-              <td class="excel-label-cell">Individual Deductible:</td>
-              <td class="excel-val-cell">${escapeHtml(ded)}</td>
             </tr>
             <tr>
+              <td class="excel-label-cell">Individual Deductible:</td>
+              <td class="excel-val-cell">${escapeHtml(ded)}</td>
               <td class="excel-label-cell">Deductible Remaining:</td>
               <td class="excel-val-cell">${escapeHtml(dedRemaining)}</td>
+            </tr>
+            <tr>
               <td class="excel-label-cell">Deductible Scope:</td>
-              <td class="excel-val-cell">${escapeHtml(dedScope)}</td>
+              <td class="excel-val-cell" colspan="3">${escapeHtml(dedScope)}</td>
             </tr>
             <tr style="background: #f0fdf4;">
               <td class="excel-label-cell" style="font-weight: 700; color: #065f46;">Ortho Max:</td>

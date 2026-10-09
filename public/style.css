@@ -549,9 +549,64 @@
       color: white;
     }
 
+    /* Patient Matching Inputs (Optional) */
+    .patient-optional-inputs-box {
+      margin-top: 1rem;
+      padding: 0.85rem 1rem;
+      background: rgba(18, 28, 51, 0.5);
+      border: 1px dashed var(--border-medium);
+      border-radius: var(--radius-md);
+    }
+
+    .patient-inputs-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 0.85rem;
+    }
+
+    @media (max-width: 640px) {
+      .patient-inputs-row {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .patient-input-field label {
+      display: flex;
+      align-items: center;
+      gap: 0.4rem;
+      font-size: 0.73rem;
+      font-weight: 700;
+      color: var(--teal-primary);
+      margin-bottom: 0.35rem;
+    }
+
+    .patient-input-field .input-opt-tag {
+      font-size: 0.68rem;
+      color: var(--text-muted);
+      font-weight: 500;
+    }
+
+    .patient-input-field input {
+      width: 100%;
+      background: rgba(13, 21, 38, 0.85);
+      border: 1px solid var(--border-medium);
+      border-radius: var(--radius-sm);
+      padding: 0.45rem 0.75rem;
+      font-size: 0.82rem;
+      color: #fff;
+      font-family: var(--font-sans);
+      transition: all 0.2s;
+    }
+
+    .patient-input-field input:focus {
+      outline: none;
+      border-color: var(--teal-primary);
+      box-shadow: 0 0 0 2px rgba(14, 165, 233, 0.2);
+    }
+
     /* Network Preference Options */
     .network-tier-block {
-      margin-top: 2rem;
+      margin-top: 1.25rem;
     }
 
     .tier-cards-row {
@@ -929,6 +984,111 @@
     .btn-action-ghost:hover {
       background: var(--bg-card-hover);
       border-color: var(--teal-primary);
+    }
+
+    /* Compact Policy Details Grid in Hero Card */
+    .policy-details-compact-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 0.55rem;
+      margin-top: 0.75rem;
+      padding-top: 0.75rem;
+      border-top: 1px solid var(--border-subtle);
+    }
+
+    @media (max-width: 1100px) {
+      .policy-details-compact-grid {
+        grid-template-columns: repeat(2, 1fr);
+      }
+    }
+
+    @media (max-width: 600px) {
+      .policy-details-compact-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .policy-detail-cell {
+      background: rgba(15, 23, 42, 0.65);
+      border: 1px solid rgba(56, 189, 248, 0.12);
+      border-radius: var(--radius-md);
+      padding: 0.5rem 0.7rem;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      gap: 0.2rem;
+      min-width: 0;
+      transition: all 0.2s;
+    }
+
+    .policy-detail-cell:hover {
+      border-color: rgba(56, 189, 248, 0.3);
+      background: rgba(15, 23, 42, 0.85);
+    }
+
+    .policy-cell-label {
+      font-size: 0.65rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: #94a3b8;
+    }
+
+    .policy-cell-value-group {
+      display: flex;
+      flex-direction: column;
+      gap: 0.15rem;
+      min-width: 0;
+    }
+
+    .policy-cell-value {
+      font-size: 0.84rem;
+      font-weight: 600;
+      color: #f1f5f9;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .policy-cell-value.bold {
+      font-weight: 700;
+    }
+
+    .policy-cell-value.text-highlight {
+      color: #38bdf8;
+    }
+
+    .policy-cell-sub {
+      font-size: 0.7rem;
+      color: #94a3b8;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    /* Policy Status Pill (Active / Termed) */
+    .policy-status-pill {
+      font-size: 0.64rem;
+      font-weight: 800;
+      padding: 1px 7px;
+      border-radius: 4px;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      display: inline-flex;
+      align-items: center;
+      gap: 0.25rem;
+    }
+
+    .policy-status-pill.active {
+      background: rgba(16, 185, 129, 0.15);
+      border: 1px solid rgba(16, 185, 129, 0.4);
+      color: #34d399;
+    }
+
+    .policy-status-pill.termed {
+      background: rgba(244, 63, 94, 0.18);
+      border: 1px solid rgba(244, 63, 94, 0.45);
+      color: #fda4af;
     }
 
     /* Financial Meters Grid - 3 Top Columns with Full-Width Scope Below */

@@ -138,6 +138,26 @@
           </div>
         </div>
 
+        <!-- OPTIONAL PATIENT MATCHING & DOB FOR AGE LIMIT AUDIT -->
+        <div class="patient-optional-inputs-box">
+          <div class="patient-inputs-row">
+            <div class="patient-input-field">
+              <label for="patientNameInput">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
+                Patient Name <span class="input-opt-tag">(Optional)</span>
+              </label>
+              <input type="text" id="patientNameInput" placeholder="e.g. Katherine Birdwell" autocomplete="off">
+            </div>
+            <div class="patient-input-field">
+              <label for="patientDobInput">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
+                Date of Birth (DOB) <span class="input-opt-tag">(Optional, for Age Limits)</span>
+              </label>
+              <input type="text" id="patientDobInput" placeholder="MM/DD/YYYY" autocomplete="off">
+            </div>
+          </div>
+        </div>
+
         <!-- STEP 2: NETWORK TIER SELECTION -->
         <div class="network-tier-block">
           <div class="step-header">
@@ -297,6 +317,75 @@
                 </svg>
                 New Breakdown
               </button>
+            </div>
+          </div>
+
+          <!-- COMPACT POLICY & PATIENT DETAILS GRID -->
+          <div class="policy-details-compact-grid" id="policyCompactGrid">
+            <!-- 1. Patient Name & DOB -->
+            <div class="policy-detail-cell">
+              <span class="policy-cell-label">Patient & DOB</span>
+              <div class="policy-cell-value-group">
+                <span class="policy-cell-value bold text-highlight" id="heroPatientNameDisplay">Katherine Birdwell</span>
+                <span class="policy-cell-sub" id="heroPatientDobDisplay">DOB: 04/12/1988 (Age: 37)</span>
+              </div>
+            </div>
+
+            <!-- 2. Group Name / Plan Name & Group # -->
+            <div class="policy-detail-cell">
+              <span class="policy-cell-label">Group / Plan Name & #</span>
+              <div class="policy-cell-value-group">
+                <span class="policy-cell-value bold" id="heroGroupNameDisplay">Acme Industrial Group</span>
+                <span class="policy-cell-sub" id="heroGroupNumberDisplay">Group #: DD-948201</span>
+              </div>
+            </div>
+
+            <!-- 3. Network Status -->
+            <div class="policy-detail-cell">
+              <span class="policy-cell-label">Network Status</span>
+              <div class="policy-cell-value-group">
+                <span id="heroNetworkBadge" class="network-indicator-pill in-network">In-Network</span>
+                <span class="policy-cell-sub" id="heroCarrierSubDisplay">Carrier Verified</span>
+              </div>
+            </div>
+
+            <!-- 4. Effective & Termed Dates with Policy Status Badge -->
+            <div class="policy-detail-cell">
+              <span class="policy-cell-label">Effective / Termed Date</span>
+              <div class="policy-cell-value-group">
+                <div style="display: flex; align-items: center; gap: 0.4rem; flex-wrap: wrap;">
+                  <span class="policy-cell-value" id="heroEffectiveDateDisplay">01/01/2026</span>
+                  <span id="heroPolicyStatusBadge" class="policy-status-pill active">Active</span>
+                </div>
+                <span class="policy-cell-sub" id="heroTermedDateDisplay">Termed: None (Active)</span>
+              </div>
+            </div>
+
+            <!-- 5. Plan Benefits Type -->
+            <div class="policy-detail-cell">
+              <span class="policy-cell-label">Plan Benefits</span>
+              <div class="policy-cell-value-group">
+                <span class="policy-cell-value bold" id="heroPlanBenefitsDisplay">Calendar Year</span>
+                <span class="policy-cell-sub" id="heroPlanResetSub">Resets Jan 1st</span>
+              </div>
+            </div>
+
+            <!-- 6. Fee Schedule -->
+            <div class="policy-detail-cell">
+              <span class="policy-cell-label">Fee Schedule</span>
+              <div class="policy-cell-value-group">
+                <span class="policy-cell-value bold" id="heroFeeScheduleDisplay">Delta Dental PPO</span>
+                <span class="policy-cell-sub">Contracted Tier</span>
+              </div>
+            </div>
+
+            <!-- 7. Pay To Recipient -->
+            <div class="policy-detail-cell">
+              <span class="policy-cell-label">Pay To</span>
+              <div class="policy-cell-value-group">
+                <span class="policy-cell-value bold" id="heroPaymentToDisplay">Patient or Office</span>
+                <span class="policy-cell-sub">Assignment of Benefits</span>
+              </div>
             </div>
           </div>
 

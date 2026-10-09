@@ -61,7 +61,22 @@ const dentalBreakdownSchema = {
       properties: {
         patient_name: {
           type: Type.STRING,
-          description: 'Patient Full Name if found on the document (e.g. Katherine Birdwell). Omit SSN, DOB, or other sensitive IDs.',
+          description: 'Patient Full Name if found on the document (e.g. Katherine Birdwell). Omit SSN or subscriber ID.',
+          nullable: true,
+        },
+        dob: {
+          type: Type.STRING,
+          description: 'Patient Date of Birth if found on the document (e.g. 05/14/1990, None, N/A)',
+          nullable: true,
+        },
+        group_name: {
+          type: Type.STRING,
+          description: 'Employer Group Name or Plan Name (e.g. Acme Corp, State of California, PPO Enterprise, N/A)',
+          nullable: true,
+        },
+        group_number: {
+          type: Type.STRING,
+          description: 'Group Policy Number if found on the document (e.g. 12345-001, N/A)',
           nullable: true,
         },
         carrier: {
@@ -72,18 +87,28 @@ const dentalBreakdownSchema = {
           type: Type.STRING,
           description: 'Policy effective date or coverage benefit period (e.g. 01/01/2026)',
         },
+        termed_date: {
+          type: Type.STRING,
+          description: 'Termination or termed date if policy is terminated, or "None" / "Active" if coverage is currently active',
+          nullable: true,
+        },
+        policy_status: {
+          type: Type.STRING,
+          description: 'Active or Termed status (e.g. Active, Termed / Inactive)',
+          nullable: true,
+        },
         network_status: {
           type: Type.STRING,
           description: 'Network status detected (e.g., In-Network, Out-of-Network, PPO, Premier)',
         },
         plan_benefits: {
           type: Type.STRING,
-          description: 'Plan benefits period or type (e.g. Calendar Year, Fiscal Year)',
+          description: 'Plan benefits period or type (e.g. Calendar Year, Contract Year, Fiscal Year)',
           nullable: true,
         },
         fee_schedule: {
           type: Type.STRING,
-          description: 'Fee Schedule or network tier (e.g. Delta Dental PPO, Standard Fee)',
+          description: 'Fee Schedule or network tier (e.g. Delta Dental PPO, Standard Fee, UCR)',
           nullable: true,
         },
         payment_recipient: {
@@ -276,12 +301,12 @@ const DEFAULT_SYSTEM_INSTRUCTION = `You are an expert dental revenue cycle manag
 Your mission is to audit dental breakdown sheets, fee schedules, or insurance web portal eligibility screenshots, extract 100% accurate benefit calculations, and return the data strictly formatted according to the defined JSON schema.
 
 ==================================================
-1. STRICT HIPAA & PRIVACY DIRECTIVES (ZERO PHI)
+1. STRICT HIPAA & PRIVACY DIRECTIVES
 ==================================================
 - Transient Processing: Process the uploaded document purely in memory. Never store, log, or persist data.
-- Absolute Zero Sensitive PHI: Never extract or output Protected Health Information (PHI) or Personally Identifiable Information (PII) such as dates of birth (DOB), Social Security Numbers (SSN), member/subscriber IDs, group numbers, addresses, or phone numbers.
-- Patient Name: Patient Name may be extracted solely for clinical verification matching.
-- Scope: Restrict all extraction strictly to plan financial rules, network tiers, CDT codes, coverage percentages, frequencies, and clinical history dates.
+- Necessary Policy Identifiers: Extract Patient Name, DOB, Group Name / Plan Name, Group Number, Effective Date, and Termed Date solely for clinical policy verification and eligibility matching.
+- Strict PII Exclusions: Strictly omit SSN, member/subscriber ID numbers, full street addresses, or payment card numbers.
+- Scope: Restrict all extraction strictly to policy details, financial rules, network tiers, CDT codes, coverage percentages, frequencies, and clinical history dates.
 
 ==================================================
 2. CORE AUDITING & CALCULATION RULES
@@ -290,30 +315,40 @@ Your mission is to audit dental breakdown sheets, fee schedules, or insurance we
    - If a network tier (In-Network or Out-of-Network) is specified by the user or document, strictly extract benefit percentages, maximums, and deductibles for that selected tier.
    - If dual-column tables (In-Net vs Out-of-Net) exist and no preference is specified, prioritize In-Network while noting Out-of-Network variations in the notes.
 
-2. Financials & Deductible Allocation:
+2. Policy & Termed Date Validation:
+   - Extract Group Name / Plan Name, Group #, Effective Date, and Termed Date (Termination Date).
+   - If a Termed Date exists and is on or before the current date, set policy_status to "Termed / Inactive".
+   - If no termed date exists or it is in the future, set policy_status to "Active".
+
+3. Financials & Deductible Allocation:
    - Accurately parse Annual Maximum, Remaining Maximum, Individual Deductible, and Remaining Deductible.
    - Explicitly verify whether Deductible applies to Preventive/Diagnostic (e.g., "Preventive Ded Applied: No").
    - Explicitly verify if Preventive services count toward the Annual Maximum (e.g., "Preventive applies to Max: No").
    - Check and flag Missing Tooth Clauses (MTC) and Waiting Periods (flag 'None' or 'No' if waived or not applicable, e.g. "Basic 6mo Major 12").
 
-3. Frequency & Shared Rules (CRITICAL FOR D0210 & D0330):
-   - Accurately capture exact wording for frequencies (e.g., "1 in 150 days", "2 in 12 rolling months", "2x1yr", "1x5yr", "1 in 36 months", "1 per lifetime / 1/LT", or "NF" for No Frequency).
+4. Frequency, Calendar Year Resets, & Shared Rules:
+   - Calendar Year vs Rolling Months:
+     * When plan is "Calendar Year" (or frequency is 2x1yr, 1x1yr): Benefits and procedure counts reset on January 1 of each calendar year. If a patient's last service date was in a prior calendar year (e.g., last exam was 10/25/2025 and current year is 2026), the patient IS ELIGIBLE (is_eligible: true).
+     * When frequency is rolling months (e.g., 2x12m): A rolling 12-month window applies from the previous service date. If only 1 procedure was used within the last 12 months, 1 procedure remains available.
    - MANDATORY D0210 & D0330 SHARED FREQUENCY & ELIGIBILITY:
      * D0210 (Full Mouth Series / FMX) and D0330 (Panoramic Image / Pano) ALWAYS share frequency limitations (typically 1 in 36 or 60 months / 5 years).
      * Cross-Code History: If a history date exists on EITHER D0210 OR D0330, apply that history date to BOTH codes mutually.
-     * Eligibility Validation: Compare the service date against the frequency period to determine eligibility (is_eligible: true/false).
      * If frequency period has NOT elapsed from the history date, BOTH D0210 and D0330 must be marked is_eligible: false, with the next eligible date stated in notes.
      * If frequency period has elapsed or history is "None", mark is_eligible: true.
    - Detect other shared frequencies (e.g., D4346 shared with D1110).
    - Identify quadrant limitations for Periodontics (e.g., SRP max 2 quads per visit vs all quads allowed).
 
-4. Exclusions & Not Covered (NC):
+5. Age Limitations (D1206 Fluoride, D1351 Sealants, Orthodontics):
+   - For D1206 (Fluoride) and D1351 (Sealants), check if the patient's age (derived from DOB) exceeds the plan's maximum age limitation (e.g. Sealant up to 14 or 15, Fluoride up to 18 or 19).
+   - If patient age exceeds the plan limit, strictly mark is_eligible: false and state in notes: "Ineligible: Patient age exceeds plan age limit".
+
+6. Exclusions & Not Covered (NC):
    - If a code or service is marked as Not Covered (NC) or excluded by the plan (e.g., Adult Fluoride D1206 NC, Crown Recement D2920 NC, Night Guard D9944 NC, Implants D6010 NC):
      * Set coverage_percentage to "0%" or "NC"
      * Set is_eligible to false
      * Add "Not Covered by Plan" or "NC" in notes.
 
-5. Clinical History & Downgrades:
+7. Clinical History & Downgrades:
    - Extract exact previous claim/service dates for history. If no history is recorded, write "None".
    - Restorative Downgrades: Explicitly check if posterior composite fillings (D2391–D2394) are downgraded to amalgam allowances.
    - Crown Limitations: Note if replacement frequency applies to prep date or seat date (e.g., "Seat", "1 in 60 months from seat date").
@@ -324,7 +359,7 @@ Your mission is to audit dental breakdown sheets, fee schedules, or insurance we
 Return output strictly in the pre-configured JSON schema. Do not output conversational explanations or markdown text outside the JSON.`;
 
 const DEFAULT_CDT_CODES_PROMPT = `Carefully audit the attached dental insurance breakdown document or portal screenshot.
-Extract all insurance financials, coverage percentage tiers, and procedure code benefits based on the selected network tier.
+Extract all insurance financials, coverage percentage tiers, patient/policy details, and procedure code benefits based on the selected network tier.
 
 YOU MUST SPECIFICALLY AUDIT AND EXTRACT THE REQUIRED CDT PROCEDURES IF PRESENT OR COVERED:
 
@@ -342,9 +377,9 @@ YOU MUST SPECIFICALLY AUDIT AND EXTRACT THE REQUIRED CDT PROCEDURES IF PRESENT O
    - D0274: Bitewings - Four Radiographic Images
    - D0220: Intraoral - Periapical First Radiographic Image (PA)
    - D0230: Intraoral - Periapical Each Additional Radiographic Image
-   - D1206: Topical Application of Fluoride Varnish
+   - D1206: Topical Application of Fluoride Varnish (Check age limit, e.g. age 18)
    - D1208: Topical Application of Fluoride - Excluding Varnish
-   - D1351: Sealant - Per Tooth
+   - D1351: Sealant - Per Tooth (Check age limit, e.g. age 14 or 15)
 
 2. PERIODONTICS:
    - D4341: Periodontal Scaling and Root Planing (SRP) - Four or more teeth per quadrant
@@ -399,10 +434,10 @@ CATEGORY 1: PREVENTATIVE
 4. D0210 / D0330 (FMX / Pano) - MANDATORY: D0210 and D0330 ALWAYS share frequency (e.g., 1x5yr, 1 in 36m, or 1 in 60m). If either code has a previous service date, apply it to BOTH and calculate if the frequency period has elapsed. If not elapsed, mark is_eligible: false and state the next eligible date in notes.
 5. D0220 (PA's)
 6. D9110 (Palliative)
-7. D0120 (Exam / Periodic Oral Evaluation)
+7. D0120 (Exam / Periodic Oral Evaluation) - Check Calendar Year reset (e.g. 2x1yr resets on Jan 1)
 8. D0140 (Limited Exam)
-9. D1351 (Sealant)
-10. D1206 (Flouride)
+9. D1351 (Sealant) - Ineligible if patient age exceeds plan age limit (e.g., 14 or 15)
+10. D1206 (Flouride) - Ineligible if patient age exceeds plan age limit (e.g., 18 or 19)
 
 CATEGORY 2: PERIODONTAL
 11. D4341 (SRP)
@@ -422,7 +457,7 @@ CATEGORY 4: MAJOR
 
 For each code in this exact order, strictly extract:
 - Coverage Percentage
-- Frequency Limitation (e.g. 2x1yr, 1x5yr, NF, 1X24m)
+- Frequency Limitation (e.g. 2x1yr, 1x5yr, NF, 1X24m, 2x12m)
 - History Date (or 'None')
 - Eligible (true / false)
 - Age Limit (if applicable, e.g. Sealant 15, Fluoride 18, NL)
@@ -451,7 +486,223 @@ app.get('/api/health', (req, res) => {
 });
 
 // ==========================================
-// D0210 & D0330 SHARED FREQUENCY & ELIGIBILITY VALIDATOR
+// DATE & ELIGIBILITY UTILITY FUNCTIONS
+// ==========================================
+
+// Helper: parse date from various string formats (MM/DD/YYYY, YYYY-MM-DD, MM/YYYY, etc.)
+function parseDate(str) {
+  if (!str) return null;
+  const s = String(str).trim();
+  if (/^(none|no|n\/a|na|history|null|undefined|-)$/i.test(s)) return null;
+
+  // MM/DD/YYYY or M/D/YYYY
+  const mdy = s.match(/^(\d{1,2})[\/\-\.](\d{1,2})[\/\-\.](\d{2,4})$/);
+  if (mdy) {
+    const m = parseInt(mdy[1], 10) - 1;
+    const d = parseInt(mdy[2], 10);
+    let y = parseInt(mdy[3], 10);
+    if (y < 100) y += 2000;
+    const dt = new Date(y, m, d);
+    return isNaN(dt.getTime()) ? null : dt;
+  }
+
+  // YYYY-MM-DD
+  const ymd = s.match(/^(\d{4})[\/\-\.](\d{1,2})[\/\-\.](\d{1,2})$/);
+  if (ymd) {
+    const y = parseInt(ymd[1], 10);
+    const m = parseInt(ymd[2], 10) - 1;
+    const d = parseInt(ymd[3], 10);
+    const dt = new Date(y, m, d);
+    return isNaN(dt.getTime()) ? null : dt;
+  }
+
+  // MM/YYYY or M/YYYY
+  const my = s.match(/^(\d{1,2})[\/\-\.](\d{2,4})$/);
+  if (my) {
+    const m = parseInt(my[1], 10) - 1;
+    let y = parseInt(my[2], 10);
+    if (y < 100) y += 2000;
+    const dt = new Date(y, m, 1);
+    return isNaN(dt.getTime()) ? null : dt;
+  }
+
+  const parsed = Date.parse(s);
+  if (!isNaN(parsed)) {
+    return new Date(parsed);
+  }
+  return null;
+}
+
+function formatDate(d) {
+  const mm = String(d.getMonth() + 1).padStart(2, '0');
+  const dd = String(d.getDate()).padStart(2, '0');
+  const yyyy = d.getFullYear();
+  return `${mm}/${dd}/${yyyy}`;
+}
+
+// Helper: parse frequency months (default 60 months / 5 years)
+function parseFrequencyMonths(freqStr) {
+  if (!freqStr) return 60;
+  const str = String(freqStr).toLowerCase();
+
+  // Months: "60 months", "1 in 36m", "36mo", "24m"
+  const mMatch = str.match(/(\d+)\s*(?:m|mo|mos|month|months)\b/);
+  if (mMatch) {
+    const m = parseInt(mMatch[1], 10);
+    if (m > 0) return m;
+  }
+
+  // Years: "1x5yr", "1 in 5 years", "3 years", "1/5yr", "5y"
+  const yMatch = str.match(/(\d+)\s*(?:y|yr|yrs|year|years)\b/);
+  if (yMatch) {
+    const y = parseInt(yMatch[1], 10);
+    if (y > 0) return y * 12;
+  }
+
+  // Generic "1 in 60" or "1/36"
+  const numMatch = str.match(/1\s*(?:in|\/|x)\s*(\d+)/);
+  if (numMatch) {
+    const n = parseInt(numMatch[1], 10);
+    if (n >= 12) return n;
+    if (n > 0 && n <= 10) return n * 12;
+  }
+
+  return 60;
+}
+
+// Helper: calculate patient age in years as of a specific date
+function calculateAge(dobStr, asOfDate = new Date()) {
+  const birthDate = parseDate(dobStr);
+  if (!birthDate) return null;
+  let age = asOfDate.getFullYear() - birthDate.getFullYear();
+  const m = asOfDate.getMonth() - birthDate.getMonth();
+  if (m < 0 || (m === 0 && asOfDate.getDate() < birthDate.getDate())) {
+    age--;
+  }
+  return age >= 0 ? age : null;
+}
+
+// ==========================================
+// 1. POLICY TERMED DATE & STATUS VALIDATOR
+// ==========================================
+/**
+ * Evaluates policy termed_date against the current verification date.
+ * If termed_date is in the past, marks policy_status = "Termed / Inactive".
+ * Otherwise marks policy_status = "Active".
+ */
+function enforcePolicyTermedRules(insuranceDetails) {
+  if (!insuranceDetails) return insuranceDetails;
+  const termedStr = String(insuranceDetails.termed_date || '').trim();
+  const today = new Date();
+
+  if (!termedStr || /^(none|active|n\/a|na|-)$/i.test(termedStr)) {
+    insuranceDetails.policy_status = 'Active';
+    insuranceDetails.termed_date = insuranceDetails.termed_date || 'Active (None)';
+    return insuranceDetails;
+  }
+
+  const termedDt = parseDate(termedStr);
+  if (termedDt) {
+    const endOfTermedDay = new Date(termedDt.getFullYear(), termedDt.getMonth(), termedDt.getDate(), 23, 59, 59);
+    if (today > endOfTermedDay) {
+      insuranceDetails.policy_status = 'Termed / Inactive';
+    } else {
+      insuranceDetails.policy_status = 'Active';
+    }
+  } else if (/term/i.test(termedStr) || /inact/i.test(termedStr)) {
+    insuranceDetails.policy_status = 'Termed / Inactive';
+  } else {
+    insuranceDetails.policy_status = 'Active';
+  }
+  return insuranceDetails;
+}
+
+// ==========================================
+// 2. AGE LIMIT & CALENDAR YEAR FREQUENCY VALIDATOR
+// ==========================================
+/**
+ * Dental RCM Policy Rules:
+ * - Age Limits (D1206 Fluoride, D1351 Sealants, Ortho):
+ *   If patient's age > plan's maximum age limit, patient is marked is_eligible: false.
+ * - Calendar Year vs Rolling Months:
+ *   If plan is Calendar Year (or freq is 2x1yr, 1x1yr), benefits reset on Jan 1.
+ *   Prior-year history dates (e.g. 10/25/2025 vs current 2026) are ELIGIBLE.
+ *   If frequency is rolling (2x12m), 12-month rolling window applies.
+ */
+function enforceAgeLimitAndFrequencyRules(procedureCodes, insuranceDetails = {}) {
+  if (!Array.isArray(procedureCodes) || procedureCodes.length === 0) {
+    return procedureCodes;
+  }
+
+  const patientDob = insuranceDetails.dob || '';
+  const patientAge = calculateAge(patientDob);
+  const planBenefits = String(insuranceDetails.plan_benefits || '').toLowerCase();
+  const isCalendarYearPlan = planBenefits.includes('calendar') || !planBenefits.includes('contract');
+  const today = new Date();
+  const currentYear = today.getFullYear();
+
+  procedureCodes.forEach(item => {
+    if (!item) return;
+    const code = String(item.code || '').toUpperCase();
+    const ageLimStr = String(item.age_limit || '').trim();
+    const freqStr = String(item.frequency_limitation || '').trim().toLowerCase();
+    const histStr = String(item.history_dates || '').trim();
+
+    // 1. AGE LIMITATION CHECK (D1206 Fluoride, D1351 Sealants, Ortho, etc.)
+    if (patientAge !== null && ageLimStr && !/^(none|nl|no limit|n\/a|-)$/i.test(ageLimStr)) {
+      const match = ageLimStr.match(/(\d+)/);
+      if (match) {
+        const maxAge = parseInt(match[1], 10);
+        if (patientAge > maxAge) {
+          item.is_eligible = false;
+          const ageNote = `Ineligible: Patient age (${patientAge}) exceeds plan age limit (${maxAge})`;
+          item.notes = item.notes ? `${item.notes} • ${ageNote}` : ageNote;
+        }
+      }
+    }
+
+    // Skip D0210/D0330 as it has its own shared handler
+    if (code.includes('D0210') || code.includes('D0330')) {
+      return;
+    }
+
+    // 2. CALENDAR YEAR VS ROLLING MONTHS FREQUENCY LOGIC
+    const histDate = parseDate(histStr);
+    if (histDate) {
+      const isYearlyFreq = /2x1yr|1x1yr|2xyr|1xyr|2\s*in\s*1\s*year|1\s*in\s*1\s*year|calendar/i.test(freqStr);
+      const isRollingFreq = /2x12m|1x12m|12\s*m|12\s*mo|rolling/i.test(freqStr);
+
+      if (isCalendarYearPlan && isYearlyFreq) {
+        // Calendar Year basis: resets on January 1st!
+        if (histDate.getFullYear() < currentYear) {
+          item.is_eligible = true;
+          const resetNote = `Eligible (Benefit reset for Calendar Year ${currentYear}; Last service: ${formatDate(histDate)})`;
+          if (!item.notes || !item.notes.includes('Calendar Year')) {
+            item.notes = item.notes ? `${item.notes} • ${resetNote}` : resetNote;
+          }
+        }
+      } else if (isRollingFreq) {
+        const twelveMonthsAgo = new Date(today);
+        twelveMonthsAgo.setMonth(twelveMonthsAgo.getMonth() - 12);
+
+        if (histDate >= twelveMonthsAgo) {
+          if (/2x12m|2\s*in\s*12/i.test(freqStr)) {
+            item.is_eligible = true;
+            const rollNote = `Eligible: 1 of 2 procedures remaining in rolling 12m (Last service: ${formatDate(histDate)})`;
+            if (!item.notes || !item.notes.includes('rolling 12m')) {
+              item.notes = item.notes ? `${item.notes} • ${rollNote}` : rollNote;
+            }
+          }
+        }
+      }
+    }
+  });
+
+  return procedureCodes;
+}
+
+// ==========================================
+// 3. D0210 & D0330 SHARED FREQUENCY & ELIGIBILITY VALIDATOR
 // ==========================================
 /**
  * Dental RCM Policy Rule:
@@ -484,87 +735,6 @@ function enforceSharedFmxPanoRules(procedureCodes) {
 
   if (fmxPanoItems.length === 0) {
     return procedureCodes;
-  }
-
-  // Helper: parse date from various string formats (MM/DD/YYYY, YYYY-MM-DD, MM/YYYY, etc.)
-  function parseDate(str) {
-    if (!str) return null;
-    const s = String(str).trim();
-    if (/^(none|no|n\/a|na|history|null|undefined|-)$/i.test(s)) return null;
-
-    // MM/DD/YYYY or M/D/YYYY
-    const mdy = s.match(/^(\d{1,2})[\/\-\.](\d{1,2})[\/\-\.](\d{2,4})$/);
-    if (mdy) {
-      const m = parseInt(mdy[1], 10) - 1;
-      const d = parseInt(mdy[2], 10);
-      let y = parseInt(mdy[3], 10);
-      if (y < 100) y += 2000;
-      const dt = new Date(y, m, d);
-      return isNaN(dt.getTime()) ? null : dt;
-    }
-
-    // YYYY-MM-DD
-    const ymd = s.match(/^(\d{4})[\/\-\.](\d{1,2})[\/\-\.](\d{1,2})$/);
-    if (ymd) {
-      const y = parseInt(ymd[1], 10);
-      const m = parseInt(ymd[2], 10) - 1;
-      const d = parseInt(ymd[3], 10);
-      const dt = new Date(y, m, d);
-      return isNaN(dt.getTime()) ? null : dt;
-    }
-
-    // MM/YYYY or M/YYYY
-    const my = s.match(/^(\d{1,2})[\/\-\.](\d{2,4})$/);
-    if (my) {
-      const m = parseInt(my[1], 10) - 1;
-      let y = parseInt(my[2], 10);
-      if (y < 100) y += 2000;
-      const dt = new Date(y, m, 1);
-      return isNaN(dt.getTime()) ? null : dt;
-    }
-
-    const parsed = Date.parse(s);
-    if (!isNaN(parsed)) {
-      return new Date(parsed);
-    }
-    return null;
-  }
-
-  // Helper: parse frequency months (default 60 months / 5 years)
-  function parseFrequencyMonths(freqStr) {
-    if (!freqStr) return 60;
-    const str = String(freqStr).toLowerCase();
-
-    // Months: "60 months", "1 in 36m", "36mo", "24m"
-    const mMatch = str.match(/(\d+)\s*(?:m|mo|mos|month|months)\b/);
-    if (mMatch) {
-      const m = parseInt(mMatch[1], 10);
-      if (m > 0) return m;
-    }
-
-    // Years: "1x5yr", "1 in 5 years", "3 years", "1/5yr", "5y"
-    const yMatch = str.match(/(\d+)\s*(?:y|yr|yrs|year|years)\b/);
-    if (yMatch) {
-      const y = parseInt(yMatch[1], 10);
-      if (y > 0) return y * 12;
-    }
-
-    // Generic "1 in 60" or "1/36"
-    const numMatch = str.match(/1\s*(?:in|\/|x)\s*(\d+)/);
-    if (numMatch) {
-      const n = parseInt(numMatch[1], 10);
-      if (n >= 12) return n;
-      if (n > 0 && n <= 10) return n * 12;
-    }
-
-    return 60;
-  }
-
-  function formatDate(d) {
-    const mm = String(d.getMonth() + 1).padStart(2, '0');
-    const dd = String(d.getDate()).padStart(2, '0');
-    const yyyy = d.getFullYear();
-    return `${mm}/${dd}/${yyyy}`;
   }
 
   // 2. Extract shared frequency text
@@ -818,9 +988,25 @@ app.post('/api/verify', upload.array('files', 10), async (req, res) => {
       throw new Error('Failed to parse structured JSON from Gemini response.');
     }
 
-    // Deterministic validation: CDT D0210 & D0330 shared frequency & history eligibility
+    // Deterministic validation 1: Policy Termed Date & Active Status
+    if (parsedResult && parsedResult.insurance_details) {
+      if (req.body.patient_name && req.body.patient_name.trim()) {
+        if (!parsedResult.insurance_details.patient_name || parsedResult.insurance_details.patient_name === 'N/A') {
+          parsedResult.insurance_details.patient_name = req.body.patient_name.trim();
+        }
+      }
+      if (req.body.dob && req.body.dob.trim()) {
+        if (!parsedResult.insurance_details.dob || parsedResult.insurance_details.dob === 'N/A') {
+          parsedResult.insurance_details.dob = req.body.dob.trim();
+        }
+      }
+      parsedResult.insurance_details = enforcePolicyTermedRules(parsedResult.insurance_details);
+    }
+
+    // Deterministic validation 2: CDT D0210 & D0330 shared frequency & history eligibility
     if (parsedResult && Array.isArray(parsedResult.procedure_codes)) {
       parsedResult.procedure_codes = enforceSharedFmxPanoRules(parsedResult.procedure_codes);
+      parsedResult.procedure_codes = enforceAgeLimitAndFrequencyRules(parsedResult.procedure_codes, parsedResult.insurance_details || {});
     }
 
     res.json({
