@@ -1407,35 +1407,67 @@
       border-color: var(--teal-primary);
     }
 
-    /* Table Component - Compact Desktop Fit (14" to 16" Laptops & Up) */
+    /* Table Component - Natural Vertical Scrolling (Responsive Pababa) */
     .table-responsive-box {
       overflow-x: auto;
+      overflow-y: auto;
+      max-height: 72vh;
       border-radius: var(--radius-md);
       border: 1px solid var(--border-subtle);
       background: rgba(12, 20, 39, 0.6);
       width: 100%;
+      scroll-behavior: smooth;
+    }
+
+    /* Custom sleek scrollbar for natural vertical scrolling */
+    .table-responsive-box::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+
+    .table-responsive-box::-webkit-scrollbar-track {
+      background: rgba(12, 20, 39, 0.8);
+      border-radius: 9999px;
+    }
+
+    .table-responsive-box::-webkit-scrollbar-thumb {
+      background: rgba(56, 189, 248, 0.35);
+      border-radius: 9999px;
+    }
+
+    .table-responsive-box::-webkit-scrollbar-thumb:hover {
+      background: rgba(56, 189, 248, 0.6);
     }
 
     table.cdt-data-table {
       width: 100%;
       min-width: 1000px;
-      border-collapse: collapse;
+      border-collapse: separate;
+      border-spacing: 0;
       text-align: left;
       font-size: 0.70rem;
     }
 
     table.cdt-data-table thead {
+      position: sticky;
+      top: 0;
+      z-index: 10;
       background: #090f1d;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
     }
 
     table.cdt-data-table th {
+      position: sticky;
+      top: 0;
+      z-index: 10;
+      background: #090f1d;
       padding: 0.38rem 0.45rem;
       color: var(--text-secondary);
       font-weight: 700;
       font-size: 0.62rem;
       text-transform: uppercase;
       letter-spacing: 0.04em;
-      border-bottom: 1px solid var(--border-subtle);
+      border-bottom: 2px solid var(--border-medium);
       white-space: nowrap;
     }
 
@@ -1455,6 +1487,14 @@
       font-size: 0.70rem;
       word-break: normal !important;
       overflow-wrap: normal !important;
+    }
+
+    .category-header-row td {
+      position: sticky;
+      top: 32px;
+      z-index: 8;
+      backdrop-filter: blur(8px);
+      box-shadow: 0 2px 6px rgba(0, 0, 0, 0.35);
     }
 
     /* Column Specific Compact Proportions for 14"-16" Full-Fit */
