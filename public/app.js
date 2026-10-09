@@ -573,6 +573,127 @@
       return 'major';
     }
 
+    // ── Pre-configured Payer Addresses & Payor IDs Directory ──────────
+    const PAYER_DIRECTORY_STORAGE_KEY = 'dentverify_payer_directory';
+    const DEFAULT_PAYER_DIRECTORY = [
+      {
+        id: 'payer_metlife',
+        name: 'MetLife Dental',
+        matchKeys: ['metlife', 'met life'],
+        address: 'P.O. Box 981282 El Paso, TX 79998',
+        phone: '(877) 638-3379',
+        payorId: '65978'
+      },
+      {
+        id: 'payer_delta',
+        name: 'Delta Dental',
+        matchKeys: ['delta dental', 'delta'],
+        address: 'P.O. Box 9051 Farmington Hills, MI 48333',
+        phone: '(800) 524-0149',
+        payorId: '05430'
+      },
+      {
+        id: 'payer_ameritas',
+        name: 'Ameritas Life Insurance',
+        matchKeys: ['ameritas'],
+        address: 'P.O. Box 81889 Lincoln, NE 68501',
+        phone: '(800) 487-5553',
+        payorId: '47009'
+      },
+      {
+        id: 'payer_cigna',
+        name: 'Cigna Dental',
+        matchKeys: ['cigna'],
+        address: 'P.O. Box 188037 Chattanooga, TN 37422',
+        phone: '(800) 244-6224',
+        payorId: '62308'
+      },
+      {
+        id: 'payer_guardian',
+        name: 'Guardian Dental',
+        matchKeys: ['guardian'],
+        address: 'P.O. Box 981572 El Paso, TX 79998',
+        phone: '(800) 541-7846',
+        payorId: '13463'
+      },
+      {
+        id: 'payer_aetna',
+        name: 'Aetna Dental',
+        matchKeys: ['aetna'],
+        address: 'P.O. Box 14094 Lexington, KY 40512',
+        phone: '(877) 238-6200',
+        payorId: '60054'
+      },
+      {
+        id: 'payer_uhc',
+        name: 'UnitedHealthcare Dental',
+        matchKeys: ['unitedhealthcare', 'united healthcare', 'uhc'],
+        address: 'P.O. Box 30567 Salt Lake City, UT 84130',
+        phone: '(877) 816-3596',
+        payorId: '52133'
+      },
+      {
+        id: 'payer_bcbs',
+        name: 'Blue Cross Blue Shield (BCBS)',
+        matchKeys: ['blue cross', 'bluecross', 'bcbs', 'anthem', 'regence', 'premera', 'horizon', 'carefirst'],
+        address: 'P.O. Box 660247 Dallas, TX 75266',
+        phone: '(800) 521-2227',
+        payorId: '84980'
+      },
+      {
+        id: 'payer_humana',
+        name: 'Humana Dental',
+        matchKeys: ['humana'],
+        address: 'P.O. Box 14611 Lexington, KY 40512',
+        phone: '(800) 233-4013',
+        payorId: '61101'
+      },
+      {
+        id: 'payer_principal',
+        name: 'Principal Financial Group',
+        matchKeys: ['principal'],
+        address: 'P.O. Box 10350 Des Moines, IA 50306',
+        phone: '(800) 247-4695',
+        payorId: '61271'
+      }
+    ];
+
+    function getPayerDirectory() {
+      try {
+        const raw = localStorage.getItem(PAYER_DIRECTORY_STORAGE_KEY);
+        if (raw) {
+          const parsed = JSON.parse(raw);
+          if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+        }
+      } catch (e) {
+        console.warn('Could not read payer directory:', e);
+      }
+      return DEFAULT_PAYER_DIRECTORY.slice();
+    }
+
+    function savePayerDirectory(list) {
+      try {
+        localStorage.setItem(PAYER_DIRECTORY_STORAGE_KEY, JSON.stringify(list));
+      } catch (e) {
+        console.warn('Could not save payer directory:', e);
+      }
+    }
+
+    function matchPayerDirectory(carrierName) {
+      if (!carrierName || typeof carrierName !== 'string') return null;
+      const c = carrierName.toLowerCase().trim();
+      const list = getPayerDirectory();
+      for (const p of list) {
+        if (p.name && c.includes(p.name.toLowerCase())) return p;
+        if (Array.isArray(p.matchKeys)) {
+          for (const k of p.matchKeys) {
+            if (c.includes(k.toLowerCase())) return p;
+          }
+        }
+      }
+      return null;
+    }
+
     // File State
     let selectedFiles = [];
 
@@ -991,6 +1112,20 @@
       }
       const details = data.insurance_details || {};
       const levels = data.coverage_levels || {};
+
+      // Auto-populate Claims Address & Payor ID from Directory if missing or N/A
+      if ((!details.insurance_address || /^(none|n\/a|na|-)$/i.test(details.insurance_address.trim())) && details.carrier) {
+        const matchedPayer = matchPayerDirectory(details.carrier);
+        if (matchedPayer) {
+          details.insurance_address = matchedPayer.address;
+          if (!details.insurance_phone || /^(none|n\/a|na|-)$/i.test(details.insurance_phone.trim())) {
+            details.insurance_phone = matchedPayer.phone;
+          }
+          if (!details.payor_id || /^(none|n\/a|na|-)$/i.test(details.payor_id.trim())) {
+            details.payor_id = matchedPayer.payorId;
+          }
+        }
+      }
 
       // Patient Name & DOB Display
       const pDob = details.dob && details.dob !== 'N/A' && details.dob !== 'None' ? details.dob : '';
@@ -1481,16 +1616,18 @@
           // Ded Applies
           const dedCell = p.deductible_applied ? `<span class="tag-ded-yes">Applies</span>` : `<span class="tag-ded-no">Waived</span>`;
 
+          const editIcon = `<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="opacity:0.45; margin-left:3px; flex-shrink:0;"><path d="M12 20h9"></path><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path></svg>`;
+
           tr.innerHTML = `
             <td><span class="cdt-badge">${escapeHtml(p.code || 'CDT')}</span></td>
             <td class="desc-text">${escapeHtml(p.description || '-')}</td>
-            <td><span class="pct-badge-num" style="color: #38bdf8;">${escapeHtml(p.coverage_percentage || '0%')}</span></td>
-            <td>${dedCell}</td>
-            <td>${escapeHtml(p.frequency_limitation || '-')}</td>
-            <td>${escapeHtml(p.age_limit || 'None')}</td>
-            <td>${statusBadge}</td>
-            <td class="history-text">${escapeHtml(p.history_dates || 'None')}</td>
-            <td>${downgradeCell}</td>
+            <td><span class="editable-cell" data-code="${escapeHtml(p.code)}" data-field="coverage_percentage" title="Click to edit Benefit %"><span class="pct-badge-num" style="color: #38bdf8;">${escapeHtml(p.coverage_percentage || '0%')}</span>${editIcon}</span></td>
+            <td><span class="clickable-toggle-pill" data-code="${escapeHtml(p.code)}" data-field="deductible_applied" title="Click to toggle Deductible">${dedCell}</span></td>
+            <td><span class="editable-cell" data-code="${escapeHtml(p.code)}" data-field="frequency_limitation" title="Click to edit Frequency">${escapeHtml(p.frequency_limitation || '-')}${editIcon}</span></td>
+            <td><span class="editable-cell" data-code="${escapeHtml(p.code)}" data-field="age_limit" title="Click to edit Age Limit">${escapeHtml(p.age_limit || 'None')}${editIcon}</span></td>
+            <td><span class="clickable-toggle-pill" data-code="${escapeHtml(p.code)}" data-field="is_eligible" title="Click to toggle Eligibility">${statusBadge}</span></td>
+            <td><span class="editable-cell history-text" data-code="${escapeHtml(p.code)}" data-field="history_dates" title="Click to edit History on File">${escapeHtml(p.history_dates || 'None')}${editIcon}</span></td>
+            <td><span class="editable-cell" data-code="${escapeHtml(p.code)}" data-field="downgrade_rule" title="Click to edit Downgrade Clause">${downgradeCell}${editIcon}</span></td>
             <td class="notes-snippet">${escapeHtml(p.notes || '-')}</td>
           `;
 
@@ -1498,6 +1635,88 @@
         });
       });
     }
+
+    // CDT Table Inline Editing & Toggles Event Delegation
+    cdtTableBody.addEventListener('click', (e) => {
+      // 1. Clickable toggle pills (Deductible & Eligibility Status)
+      const toggleEl = e.target.closest('.clickable-toggle-pill');
+      if (toggleEl) {
+        const code = toggleEl.dataset.code;
+        const field = toggleEl.dataset.field;
+        if (!currentAuditData || !Array.isArray(currentAuditData.procedure_codes)) return;
+        const p = currentAuditData.procedure_codes.find(item => item.code === code);
+        if (!p) return;
+
+        if (field === 'deductible_applied') {
+          p.deductible_applied = !p.deductible_applied;
+          displayToast(`${code} Deductible: ${p.deductible_applied ? 'Applies' : 'Waived'}`);
+        } else if (field === 'is_eligible') {
+          p.is_eligible = !p.is_eligible;
+          displayToast(`${code} Eligibility: ${p.is_eligible ? 'Eligible' : 'Ineligible'}`);
+        }
+        renderCdtTable();
+        renderExcelBreakdownSheet(currentAuditData);
+        if (pmsModal && pmsModal.classList.contains('active')) buildPmsNote();
+        return;
+      }
+
+      // 2. Editable text cells
+      const editCell = e.target.closest('.editable-cell');
+      if (editCell) {
+        if (editCell.querySelector('.editable-cell-input')) return; // already active
+
+        const code = editCell.dataset.code;
+        const field = editCell.dataset.field;
+        if (!currentAuditData || !Array.isArray(currentAuditData.procedure_codes)) return;
+        const p = currentAuditData.procedure_codes.find(item => item.code === code);
+        if (!p) return;
+
+        const currentVal = p[field] || '';
+        const input = document.createElement('input');
+        input.type = 'text';
+        input.className = 'editable-cell-input';
+        input.value = (currentVal === 'None' || currentVal === '-') ? '' : currentVal;
+        input.placeholder = currentVal || 'Enter value...';
+
+        let finished = false;
+        const finishEdit = (save) => {
+          if (finished) return;
+          finished = true;
+          if (save) {
+            let val = input.value.trim();
+            if (field === 'downgrade_rule' && !val) val = 'None';
+            if (field === 'age_limit' && !val) val = 'None';
+            if (field === 'history_dates' && !val) val = 'None';
+            if (field === 'frequency_limitation' && !val) val = '-';
+            if (field === 'coverage_percentage' && !val) val = '0%';
+            p[field] = val;
+            displayToast(`Updated ${code} ${field.replace('_', ' ')}`);
+          }
+          renderCdtTable();
+          renderExcelBreakdownSheet(currentAuditData);
+          if (pmsModal && pmsModal.classList.contains('active')) buildPmsNote();
+        };
+
+        input.addEventListener('keydown', (ev) => {
+          if (ev.key === 'Enter') {
+            ev.preventDefault();
+            input.blur();
+          } else if (ev.key === 'Escape') {
+            ev.preventDefault();
+            finishEdit(false);
+          }
+        });
+
+        input.addEventListener('blur', () => {
+          finishEdit(true);
+        });
+
+        editCell.innerHTML = '';
+        editCell.appendChild(input);
+        input.focus();
+        input.select();
+      }
+    });
 
     // Search and filter listeners
     cdtSearchInput.addEventListener('input', (e) => {
@@ -2261,6 +2480,7 @@
     // Open Settings Modal
     openSettingsBtn.addEventListener('click', () => {
       loadPromptSettings();
+      renderPayerDirectory(payerSearchInput?.value || '');
       settingsModal.classList.add('active');
     });
 
@@ -2304,6 +2524,199 @@
 
     // Initialize prompt values on page load
     loadPromptSettings();
+
+    // ==========================================
+    // PAYER DIRECTORY UI LOGIC
+    // ==========================================
+    const payerSearchInput = document.getElementById('payerSearchInput');
+    const toggleAddPayerFormBtn = document.getElementById('toggleAddPayerFormBtn');
+    const addPayerFormPanel = document.getElementById('addPayerFormPanel');
+    const newPayerName = document.getElementById('newPayerName');
+    const newPayerId = document.getElementById('newPayerId');
+    const newPayerAddress = document.getElementById('newPayerAddress');
+    const newPayerPhone = document.getElementById('newPayerPhone');
+    const cancelAddPayerBtn = document.getElementById('cancelAddPayerBtn');
+    const saveNewPayerBtn = document.getElementById('saveNewPayerBtn');
+    const payerDirectoryListContainer = document.getElementById('payerDirectoryListContainer');
+    const openPayerDirectoryQuickBtn = document.getElementById('openPayerDirectoryQuickBtn');
+
+    function renderPayerDirectory(filter = '') {
+      if (!payerDirectoryListContainer) return;
+      payerDirectoryListContainer.innerHTML = '';
+      const list = getPayerDirectory();
+      const q = filter.trim().toLowerCase();
+
+      const filtered = list.filter(p => {
+        if (!q) return true;
+        return (p.name || '').toLowerCase().includes(q) ||
+               (p.address || '').toLowerCase().includes(q) ||
+               (p.payorId || '').toLowerCase().includes(q) ||
+               (p.phone || '').toLowerCase().includes(q);
+      });
+
+      if (filtered.length === 0) {
+        payerDirectoryListContainer.innerHTML = `
+          <div style="text-align: center; padding: 2rem 1rem; color: var(--text-muted); font-size: 0.78rem;">
+            No insurance carriers found matching "${escapeHtml(filter)}".
+          </div>
+        `;
+        return;
+      }
+
+      filtered.forEach(p => {
+        const card = document.createElement('div');
+        card.className = 'payer-directory-card';
+        card.innerHTML = `
+          <div class="payer-card-info">
+            <div class="payer-card-name">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path></svg>
+              ${escapeHtml(p.name)}
+            </div>
+            <div class="payer-card-addr">${escapeHtml(p.address)}</div>
+            <div class="payer-card-meta">
+              <span>Ph: ${escapeHtml(p.phone || 'N/A')}</span>
+              <span>•</span>
+              <span>Payor ID: <strong>${escapeHtml(p.payorId || 'N/A')}</strong></span>
+            </div>
+          </div>
+          <div style="display: flex; gap: 0.4rem; align-items: center;">
+            <button type="button" class="btn-apply-payer" data-id="${p.id || ''}" title="Apply this address and Payor ID to the active policy card and exports">
+              Apply to Policy
+            </button>
+            ${p.isCustom ? `
+              <button type="button" class="del-payer-btn" data-id="${p.id}" title="Delete custom payer" style="background: none; border: none; color: #ef4444; cursor: pointer; padding: 4px;">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+              </button>
+            ` : ''}
+          </div>
+        `;
+
+        const applyBtn = card.querySelector('.btn-apply-payer');
+        applyBtn.addEventListener('click', () => {
+          applyPayerToCurrentAudit(p);
+        });
+
+        const delBtn = card.querySelector('.del-payer-btn');
+        if (delBtn) {
+          delBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            deleteCustomPayer(p.id);
+          });
+        }
+
+        payerDirectoryListContainer.appendChild(card);
+      });
+    }
+
+    function applyPayerToCurrentAudit(payer) {
+      if (!currentAuditData) {
+        displayToast('No active breakdown loaded. Upload a breakdown first.');
+        return;
+      }
+      if (!currentAuditData.insurance_details) currentAuditData.insurance_details = {};
+      currentAuditData.insurance_details.carrier = payer.name;
+      currentAuditData.insurance_details.insurance_address = payer.address;
+      currentAuditData.insurance_details.insurance_phone = payer.phone;
+      currentAuditData.insurance_details.payor_id = payer.payorId;
+
+      renderReportDashboard(currentAuditData);
+      renderExcelBreakdownSheet(currentAuditData);
+      if (pmsModal && pmsModal.classList.contains('active')) buildPmsNote();
+      settingsModal.classList.remove('active');
+      displayToast(`Applied ${payer.name} address & Payor ID to policy!`);
+    }
+
+    function deleteCustomPayer(id) {
+      const list = getPayerDirectory().filter(p => p.id !== id);
+      savePayerDirectory(list);
+      renderPayerDirectory(payerSearchInput?.value || '');
+      displayToast('Custom payer deleted.');
+    }
+
+    if (payerSearchInput) {
+      payerSearchInput.addEventListener('input', (e) => {
+        renderPayerDirectory(e.target.value);
+      });
+    }
+
+    if (toggleAddPayerFormBtn && addPayerFormPanel) {
+      toggleAddPayerFormBtn.addEventListener('click', () => {
+        const isHidden = addPayerFormPanel.style.display === 'none';
+        addPayerFormPanel.style.display = isHidden ? 'block' : 'none';
+        toggleAddPayerFormBtn.textContent = isHidden ? '✕ Close Form' : '+ Add Custom Payer';
+      });
+    }
+
+    if (cancelAddPayerBtn && addPayerFormPanel) {
+      cancelAddPayerBtn.addEventListener('click', () => {
+        addPayerFormPanel.style.display = 'none';
+        if (toggleAddPayerFormBtn) toggleAddPayerFormBtn.textContent = '+ Add Custom Payer';
+        if (newPayerName) newPayerName.value = '';
+        if (newPayerId) newPayerId.value = '';
+        if (newPayerAddress) newPayerAddress.value = '';
+        if (newPayerPhone) newPayerPhone.value = '';
+      });
+    }
+
+    if (saveNewPayerBtn) {
+      saveNewPayerBtn.addEventListener('click', () => {
+        const name = newPayerName?.value.trim();
+        const address = newPayerAddress?.value.trim();
+        const phone = newPayerPhone?.value.trim() || 'N/A';
+        const payorId = newPayerId?.value.trim() || 'N/A';
+
+        if (!name || !address) {
+          alert('Please enter both the Carrier Name and Claims Address.');
+          return;
+        }
+
+        const list = getPayerDirectory();
+        const newRecord = {
+          id: 'payer_custom_' + Date.now(),
+          name,
+          matchKeys: [name.toLowerCase()],
+          address,
+          phone,
+          payorId,
+          isCustom: true
+        };
+
+        list.unshift(newRecord);
+        savePayerDirectory(list);
+
+        if (addPayerFormPanel) addPayerFormPanel.style.display = 'none';
+        if (toggleAddPayerFormBtn) toggleAddPayerFormBtn.textContent = '+ Add Custom Payer';
+        if (newPayerName) newPayerName.value = '';
+        if (newPayerId) newPayerId.value = '';
+        if (newPayerAddress) newPayerAddress.value = '';
+        if (newPayerPhone) newPayerPhone.value = '';
+
+        renderPayerDirectory();
+        displayToast(`Saved ${name} to Insurance Directory!`);
+      });
+    }
+
+    if (openPayerDirectoryQuickBtn) {
+      openPayerDirectoryQuickBtn.addEventListener('click', () => {
+        loadPromptSettings();
+        settingsModal.classList.add('active');
+        // Activate Tab 3
+        settingsTabBtns.forEach(b => b.classList.remove('active'));
+        settingsTabPanes.forEach(p => p.classList.remove('active'));
+        const payerTabBtn = document.querySelector('.settings-tab-btn[data-tab="tabPayers"]');
+        if (payerTabBtn) payerTabBtn.classList.add('active');
+        document.getElementById('tabPayers')?.classList.add('active');
+        renderPayerDirectory(payerSearchInput?.value || '');
+      });
+    }
+
+    // Tab button click handler for tabPayers
+    const tabPayersBtn = document.querySelector('.settings-tab-btn[data-tab="tabPayers"]');
+    if (tabPayersBtn) {
+      tabPayersBtn.addEventListener('click', () => {
+        renderPayerDirectory(payerSearchInput?.value || '');
+      });
+    }
 
     // ==========================================
     // PATIENT VERIFICATION HISTORY LOGIC

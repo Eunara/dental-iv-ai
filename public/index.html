@@ -297,6 +297,13 @@
                 </svg>
                 Copy PMS Note
               </button>
+              <button type="button" class="btn-action-ghost" id="openPayerDirectoryQuickBtn" title="Pre-configured Insurance Claims Addresses & Payor IDs">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path>
+                  <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path>
+                </svg>
+                Payer Directory
+              </button>
               <button type="button" class="btn-action-ghost" id="newVerificationBtn">
                 <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                   <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
@@ -672,6 +679,13 @@
           </svg>
           Required CDT Codes & Directives
         </button>
+        <button type="button" class="settings-tab-btn" data-tab="tabPayers">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path>
+            <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path>
+          </svg>
+          Insurance Directory & Addresses
+        </button>
       </div>
 
       <div class="pms-modal-body" style="padding-top: 1.25rem;">
@@ -691,6 +705,44 @@
             <span>Add or customize CDT codes (D0120, D1110, D4341, D2740, etc.) and category extraction instructions.</span>
           </div>
           <textarea id="settingCustomPrompt" class="prompt-editor-textarea" spellcheck="false" placeholder="Enter CDT Codes Directives..."></textarea>
+        </div>
+
+        <!-- Tab 3: Insurance Directory & Addresses -->
+        <div class="settings-tab-pane" id="tabPayers">
+          <div class="settings-info-badge" style="margin-bottom: 0.85rem;">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#38bdf8" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg>
+            <span>Pre-configured Claims Addresses, Phone Numbers, and Electronic Payor IDs for major dental carriers. Click "Apply to Policy" to populate active headers instantly.</span>
+          </div>
+
+          <!-- Search and Add row -->
+          <div style="display: flex; gap: 0.6rem; margin-bottom: 0.85rem; flex-wrap: wrap;">
+            <input type="text" id="payerSearchInput" class="table-search-input" style="flex: 1; min-width: 180px;" placeholder="Search carriers (e.g. Delta, MetLife, Cigna, Guardian, Aetna)...">
+            <button type="button" class="btn-action-ghost" id="toggleAddPayerFormBtn" style="padding: 0.35rem 0.75rem; font-size: 0.72rem;">
+              + Add Custom Payer
+            </button>
+          </div>
+
+          <!-- Add Payer Inline Form (hidden by default) -->
+          <div id="addPayerFormPanel" style="display: none; background: rgba(15, 23, 42, 0.75); border: 1px dashed rgba(56, 189, 248, 0.4); border-radius: 6px; padding: 0.75rem; margin-bottom: 0.85rem;">
+            <h5 style="color: #38bdf8; font-size: 0.76rem; font-weight: 700; margin-bottom: 0.5rem;">Add New Insurance Carrier</h5>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem; margin-bottom: 0.5rem;">
+              <input type="text" id="newPayerName" class="table-search-input" placeholder="Carrier Name (e.g. Humana Dental)">
+              <input type="text" id="newPayerId" class="table-search-input" placeholder="Payor ID (e.g. 61101)">
+            </div>
+            <div style="display: grid; grid-template-columns: 2fr 1fr; gap: 0.5rem; margin-bottom: 0.6rem;">
+              <input type="text" id="newPayerAddress" class="table-search-input" placeholder="Claims Address (e.g. P.O. Box 14611 Lexington, KY 40512)">
+              <input type="text" id="newPayerPhone" class="table-search-input" placeholder="Phone # (e.g. 800-233-4013)">
+            </div>
+            <div style="display: flex; gap: 0.5rem; justify-content: flex-end;">
+              <button type="button" class="btn-restore-defaults" id="cancelAddPayerBtn" style="padding: 0.25rem 0.6rem; font-size: 0.7rem;">Cancel</button>
+              <button type="button" class="btn-verify-primary" id="saveNewPayerBtn" style="padding: 0.25rem 0.75rem; font-size: 0.7rem;">Save Payer</button>
+            </div>
+          </div>
+
+          <!-- Directory Cards List -->
+          <div id="payerDirectoryListContainer" style="display: flex; flex-direction: column; gap: 0.5rem; max-height: 380px; overflow-y: auto; padding-right: 4px;">
+            <!-- Rendered by JS -->
+          </div>
         </div>
       </div>
 

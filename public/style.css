@@ -2227,3 +2227,115 @@
       background: var(--rose-danger);
       color: white;
     }
+
+    /* ── Inline Editable CDT Cells ───────────────────────────────── */
+    .editable-cell {
+      cursor: pointer;
+      border-radius: 4px;
+      padding: 0.15rem 0.35rem;
+      transition: background 0.15s ease, outline 0.15s ease;
+      display: inline-flex;
+      align-items: center;
+      gap: 0.3rem;
+    }
+
+    .editable-cell:hover {
+      background: rgba(56, 189, 248, 0.15);
+      outline: 1px dashed rgba(56, 189, 248, 0.5);
+    }
+
+    .editable-cell-input {
+      background: #0f172a !important;
+      color: #f8fafc !important;
+      border: 1px solid var(--cyan-bright) !important;
+      border-radius: 4px !important;
+      font-family: inherit !important;
+      font-size: 0.74rem !important;
+      padding: 0.15rem 0.4rem !important;
+      outline: none !important;
+      width: 100% !important;
+      max-width: 140px !important;
+      box-shadow: 0 0 8px rgba(56, 189, 248, 0.3) !important;
+    }
+
+    .clickable-toggle-pill {
+      cursor: pointer;
+      user-select: none;
+      display: inline-flex;
+      transition: transform 0.15s ease, filter 0.15s ease;
+    }
+
+    .clickable-toggle-pill:hover {
+      transform: scale(1.06);
+      filter: brightness(1.2);
+    }
+
+    .clickable-toggle-pill:active {
+      transform: scale(0.95);
+    }
+
+    /* ── Payer Directory Modal List ──────────────────────────────── */
+    .payer-directory-card {
+      background: rgba(15, 23, 42, 0.6);
+      border: 1px solid rgba(56, 189, 248, 0.2);
+      border-radius: 6px;
+      padding: 0.6rem 0.85rem;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 0.75rem;
+      transition: all 0.15s ease;
+    }
+
+    .payer-directory-card:hover {
+      border-color: rgba(56, 189, 248, 0.45);
+      background: rgba(15, 23, 42, 0.85);
+    }
+
+    .payer-card-info {
+      flex: 1;
+      min-width: 0;
+    }
+
+    .payer-card-name {
+      font-weight: 800;
+      font-size: 0.78rem;
+      color: #38bdf8;
+      display: flex;
+      align-items: center;
+      gap: 0.45rem;
+    }
+
+    .payer-card-addr {
+      font-size: 0.7rem;
+      color: var(--text-secondary);
+      margin-top: 0.15rem;
+      line-height: 1.3;
+    }
+
+    .payer-card-meta {
+      font-size: 0.68rem;
+      color: #94a3b8;
+      margin-top: 0.1rem;
+      display: flex;
+      gap: 0.75rem;
+    }
+
+    .btn-apply-payer {
+      background: rgba(16, 185, 129, 0.15);
+      border: 1px solid rgba(16, 185, 129, 0.35);
+      color: #34d399;
+      font-size: 0.68rem;
+      font-weight: 700;
+      padding: 0.25rem 0.55rem;
+      border-radius: 4px;
+      cursor: pointer;
+      white-space: nowrap;
+      transition: all 0.15s ease;
+    }
+
+    .btn-apply-payer:hover {
+      background: #10b981;
+      color: #fff;
+    }
+
