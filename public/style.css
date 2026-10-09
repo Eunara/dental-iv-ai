@@ -1416,6 +1416,7 @@
 
     table.cdt-data-table {
       width: 100%;
+      min-width: 1180px;
       border-collapse: collapse;
       text-align: left;
       font-size: 0.74rem;
@@ -1426,10 +1427,10 @@
     }
 
     table.cdt-data-table th {
-      padding: 0.42rem 0.55rem;
+      padding: 0.48rem 0.65rem;
       color: var(--text-secondary);
       font-weight: 700;
-      font-size: 0.64rem;
+      font-size: 0.65rem;
       text-transform: uppercase;
       letter-spacing: 0.05em;
       border-bottom: 1px solid var(--border-subtle);
@@ -1446,12 +1447,74 @@
     }
 
     table.cdt-data-table td {
-      padding: 0.42rem 0.55rem;
+      padding: 0.48rem 0.65rem;
       color: var(--text-primary);
       vertical-align: middle;
-      font-size: 0.73rem;
-      word-break: break-word !important;
-      overflow-wrap: anywhere !important;
+      font-size: 0.74rem;
+      word-break: normal !important;
+      overflow-wrap: normal !important;
+    }
+
+    /* Column Specific Readability & Widths */
+    table.cdt-data-table th:nth-child(1),
+    table.cdt-data-table td:nth-child(1) {
+      white-space: nowrap;
+      min-width: 82px;
+    }
+
+    table.cdt-data-table th:nth-child(2),
+    table.cdt-data-table td:nth-child(2) {
+      min-width: 210px;
+    }
+
+    table.cdt-data-table th:nth-child(3),
+    table.cdt-data-table td:nth-child(3) {
+      white-space: nowrap;
+      min-width: 90px;
+      text-align: center;
+    }
+
+    table.cdt-data-table th:nth-child(4),
+    table.cdt-data-table td:nth-child(4) {
+      white-space: nowrap;
+      min-width: 95px;
+      text-align: center;
+    }
+
+    table.cdt-data-table th:nth-child(5),
+    table.cdt-data-table td:nth-child(5) {
+      min-width: 175px;
+    }
+
+    table.cdt-data-table th:nth-child(6),
+    table.cdt-data-table td:nth-child(6) {
+      white-space: nowrap;
+      min-width: 85px;
+      text-align: center;
+    }
+
+    table.cdt-data-table th:nth-child(7),
+    table.cdt-data-table td:nth-child(7) {
+      white-space: nowrap;
+      min-width: 105px;
+      text-align: center;
+    }
+
+    table.cdt-data-table th:nth-child(8),
+    table.cdt-data-table td:nth-child(8) {
+      white-space: nowrap;
+      min-width: 110px;
+    }
+
+    table.cdt-data-table th:nth-child(9),
+    table.cdt-data-table td:nth-child(9) {
+      min-width: 115px;
+    }
+
+    table.cdt-data-table th:nth-child(10),
+    table.cdt-data-table td:nth-child(10) {
+      min-width: 220px;
+      line-height: 1.45;
     }
 
     .cdt-badge {
@@ -1477,6 +1540,8 @@
       font-family: var(--font-mono);
       font-weight: 700;
       font-size: 0.78rem;
+      white-space: nowrap !important;
+      display: inline-block;
     }
 
     .tag-ded-yes {
@@ -1485,13 +1550,17 @@
       border: 1px solid rgba(245, 158, 11, 0.3);
       font-size: 0.68rem;
       font-weight: 600;
-      padding: 0.12rem 0.4rem;
+      padding: 0.12rem 0.45rem;
       border-radius: 4px;
+      white-space: nowrap !important;
+      display: inline-block;
     }
 
     .tag-ded-no {
       color: var(--text-muted);
       font-size: 0.74rem;
+      white-space: nowrap !important;
+      display: inline-block;
     }
 
     .badge-status-eligible {
@@ -2237,6 +2306,7 @@
       display: inline-flex;
       align-items: center;
       gap: 0.3rem;
+      white-space: nowrap !important;
     }
 
     .editable-cell:hover {
@@ -2262,6 +2332,8 @@
       cursor: pointer;
       user-select: none;
       display: inline-flex;
+      align-items: center;
+      white-space: nowrap !important;
       transition: transform 0.15s ease, filter 0.15s ease;
     }
 

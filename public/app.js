@@ -1669,11 +1669,11 @@
           tr.innerHTML = `
             <td><span class="cdt-badge">${escapeHtml(p.code || 'CDT')}</span></td>
             <td class="desc-text">${escapeHtml(p.description || '-')}</td>
-            <td><span class="editable-cell" data-code="${escapeHtml(p.code)}" data-field="coverage_percentage" title="Click to edit Benefit %"><span class="pct-badge-num" style="color: #38bdf8;">${escapeHtml(p.coverage_percentage || '0%')}</span>${editIcon}</span></td>
-            <td><span class="clickable-toggle-pill" data-code="${escapeHtml(p.code)}" data-field="deductible_applied" title="Click to toggle Deductible">${dedCell}</span></td>
+            <td style="text-align: center;"><span class="editable-cell" data-code="${escapeHtml(p.code)}" data-field="coverage_percentage" title="Click to edit Benefit %"><span class="pct-badge-num" style="color: #38bdf8;">${escapeHtml(p.coverage_percentage || '0%')}</span>${editIcon}</span></td>
+            <td style="text-align: center;"><span class="clickable-toggle-pill" data-code="${escapeHtml(p.code)}" data-field="deductible_applied" title="Click to toggle Deductible">${dedCell}</span></td>
             <td><span class="editable-cell" data-code="${escapeHtml(p.code)}" data-field="frequency_limitation" title="Click to edit Frequency">${escapeHtml(p.frequency_limitation || '-')}${editIcon}</span></td>
-            <td><span class="editable-cell" data-code="${escapeHtml(p.code)}" data-field="age_limit" title="Click to edit Age Limit">${escapeHtml(p.age_limit || 'None')}${editIcon}</span></td>
-            <td><span class="clickable-toggle-pill" data-code="${escapeHtml(p.code)}" data-field="is_eligible" title="Click to toggle Eligibility">${statusBadge}</span></td>
+            <td style="text-align: center;"><span class="editable-cell" data-code="${escapeHtml(p.code)}" data-field="age_limit" title="Click to edit Age Limit">${escapeHtml(p.age_limit || 'None')}${editIcon}</span></td>
+            <td style="text-align: center;"><span class="clickable-toggle-pill" data-code="${escapeHtml(p.code)}" data-field="is_eligible" title="Click to toggle Eligibility">${statusBadge}</span></td>
             <td><span class="editable-cell history-text" data-code="${escapeHtml(p.code)}" data-field="history_dates" title="Click to edit History on File">${escapeHtml(p.history_dates || 'None')}${editIcon}</span></td>
             <td><span class="editable-cell" data-code="${escapeHtml(p.code)}" data-field="downgrade_rule" title="Click to edit Downgrade Clause">${downgradeCell}${editIcon}</span></td>
             <td class="notes-snippet">${escapeHtml(p.notes || '-')}</td>
