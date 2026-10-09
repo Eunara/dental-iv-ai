@@ -339,7 +339,7 @@
             <div class="policy-detail-cell">
               <span class="policy-cell-label">Network Status</span>
               <div class="policy-cell-value-group">
-                <span id="heroNetworkBadge" class="network-indicator-pill in-network">In-Network</span>
+                <span id="heroNetworkBadge" class="network-indicator-pill in-network" title="Click to toggle In-Network / Out-of-Network">In-Network</span>
                 <span class="policy-cell-sub" id="heroCarrierSubDisplay">Carrier Verified</span>
               </div>
             </div>
@@ -717,16 +717,36 @@
           <!-- Search and Add row -->
           <div style="display: flex; gap: 0.6rem; margin-bottom: 0.85rem; flex-wrap: wrap;">
             <input type="text" id="payerSearchInput" class="table-search-input" style="flex: 1; min-width: 180px;" placeholder="Search carriers (e.g. Delta, MetLife, Cigna, Guardian, Aetna)...">
-            <button type="button" class="btn-action-ghost" id="toggleAddPayerFormBtn" style="padding: 0.35rem 0.75rem; font-size: 0.72rem;">
-              + Add Custom Payer
+            <button type="button" class="btn-action-ghost" id="toggleBulkImportBtn" style="padding: 0.35rem 0.75rem; font-size: 0.72rem;" title="Paste multiple insurances from Excel or CSV">
+              📋 Paste / Import List
             </button>
+            <button type="button" class="btn-action-ghost" id="toggleAddPayerFormBtn" style="padding: 0.35rem 0.75rem; font-size: 0.72rem;">
+              + Add Carrier
+            </button>
+          </div>
+
+          <!-- Bulk Import Panel (hidden by default) -->
+          <div id="bulkImportPanel" style="display: none; background: rgba(15, 23, 42, 0.85); border: 1px solid rgba(56, 189, 248, 0.4); border-radius: 6px; padding: 0.85rem; margin-bottom: 0.85rem;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.4rem; flex-wrap: wrap; gap: 0.4rem;">
+              <h5 style="color: #38bdf8; font-size: 0.78rem; font-weight: 700; margin: 0;">Bulk Import Insurances (Excel / CSV / Text)</h5>
+              <span style="font-size: 0.68rem; color: #94a3b8;">Carrier | Address | In-Network or Out-of-Network | Phone | Payor ID</span>
+            </div>
+            <textarea id="bulkImportTextarea" class="prompt-editor-textarea" style="min-height: 120px; font-size: 0.74rem; font-family: var(--font-mono); margin-bottom: 0.5rem;" placeholder="Paste your insurance list here (e.g. copy from Excel, Google Sheets, or CSV):&#10;Delta Dental | P.O. Box 9051 Farmington Hills, MI 48333 | In-Network | 800-524-0149 | 05430&#10;MetLife Dental | P.O. Box 981282 El Paso, TX 79998 | In-Network | 877-638-3379 | 65978&#10;Humana Dental | P.O. Box 14611 Lexington, KY 40512 | Out-of-Network | 800-233-4013 | 61101"></textarea>
+            <div style="display: flex; gap: 0.5rem; justify-content: flex-end;">
+              <button type="button" class="btn-restore-defaults" id="cancelBulkImportBtn" style="padding: 0.25rem 0.6rem; font-size: 0.7rem;">Cancel</button>
+              <button type="button" class="btn-verify-primary" id="processBulkImportBtn" style="padding: 0.25rem 0.75rem; font-size: 0.7rem;">Import List Now</button>
+            </div>
           </div>
 
           <!-- Add Payer Inline Form (hidden by default) -->
           <div id="addPayerFormPanel" style="display: none; background: rgba(15, 23, 42, 0.75); border: 1px dashed rgba(56, 189, 248, 0.4); border-radius: 6px; padding: 0.75rem; margin-bottom: 0.85rem;">
             <h5 style="color: #38bdf8; font-size: 0.76rem; font-weight: 700; margin-bottom: 0.5rem;">Add New Insurance Carrier</h5>
-            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem; margin-bottom: 0.5rem;">
+            <div style="display: grid; grid-template-columns: 2fr 1fr 1fr; gap: 0.5rem; margin-bottom: 0.5rem;">
               <input type="text" id="newPayerName" class="table-search-input" placeholder="Carrier Name (e.g. Humana Dental)">
+              <select id="newPayerNetwork" class="table-search-input" style="background: #0f172a; color: #f8fafc; border: 1px solid rgba(56, 189, 248, 0.3); border-radius: 6px; padding: 0.35rem 0.5rem; font-size: 0.74rem;">
+                <option value="In-Network">In-Network</option>
+                <option value="Out-of-Network">Out-of-Network</option>
+              </select>
               <input type="text" id="newPayerId" class="table-search-input" placeholder="Payor ID (e.g. 61101)">
             </div>
             <div style="display: grid; grid-template-columns: 2fr 1fr; gap: 0.5rem; margin-bottom: 0.6rem;">

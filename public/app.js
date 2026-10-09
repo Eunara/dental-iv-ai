@@ -579,6 +579,7 @@
       {
         id: 'payer_metlife',
         name: 'MetLife Dental',
+        network: 'In-Network',
         matchKeys: ['metlife', 'met life'],
         address: 'P.O. Box 981282 El Paso, TX 79998',
         phone: '(877) 638-3379',
@@ -587,6 +588,7 @@
       {
         id: 'payer_delta',
         name: 'Delta Dental',
+        network: 'In-Network',
         matchKeys: ['delta dental', 'delta'],
         address: 'P.O. Box 9051 Farmington Hills, MI 48333',
         phone: '(800) 524-0149',
@@ -595,6 +597,7 @@
       {
         id: 'payer_ameritas',
         name: 'Ameritas Life Insurance',
+        network: 'In-Network',
         matchKeys: ['ameritas'],
         address: 'P.O. Box 81889 Lincoln, NE 68501',
         phone: '(800) 487-5553',
@@ -603,6 +606,7 @@
       {
         id: 'payer_cigna',
         name: 'Cigna Dental',
+        network: 'In-Network',
         matchKeys: ['cigna'],
         address: 'P.O. Box 188037 Chattanooga, TN 37422',
         phone: '(800) 244-6224',
@@ -611,6 +615,7 @@
       {
         id: 'payer_guardian',
         name: 'Guardian Dental',
+        network: 'In-Network',
         matchKeys: ['guardian'],
         address: 'P.O. Box 981572 El Paso, TX 79998',
         phone: '(800) 541-7846',
@@ -619,6 +624,7 @@
       {
         id: 'payer_aetna',
         name: 'Aetna Dental',
+        network: 'In-Network',
         matchKeys: ['aetna'],
         address: 'P.O. Box 14094 Lexington, KY 40512',
         phone: '(877) 238-6200',
@@ -627,6 +633,7 @@
       {
         id: 'payer_uhc',
         name: 'UnitedHealthcare Dental',
+        network: 'In-Network',
         matchKeys: ['unitedhealthcare', 'united healthcare', 'uhc'],
         address: 'P.O. Box 30567 Salt Lake City, UT 84130',
         phone: '(877) 816-3596',
@@ -635,6 +642,7 @@
       {
         id: 'payer_bcbs',
         name: 'Blue Cross Blue Shield (BCBS)',
+        network: 'In-Network',
         matchKeys: ['blue cross', 'bluecross', 'bcbs', 'anthem', 'regence', 'premera', 'horizon', 'carefirst'],
         address: 'P.O. Box 660247 Dallas, TX 75266',
         phone: '(800) 521-2227',
@@ -643,6 +651,7 @@
       {
         id: 'payer_humana',
         name: 'Humana Dental',
+        network: 'Out-of-Network',
         matchKeys: ['humana'],
         address: 'P.O. Box 14611 Lexington, KY 40512',
         phone: '(800) 233-4013',
@@ -651,6 +660,7 @@
       {
         id: 'payer_principal',
         name: 'Principal Financial Group',
+        network: 'In-Network',
         matchKeys: ['principal'],
         address: 'P.O. Box 10350 Des Moines, IA 50306',
         phone: '(800) 247-4695',
@@ -663,7 +673,12 @@
         const raw = localStorage.getItem(PAYER_DIRECTORY_STORAGE_KEY);
         if (raw) {
           const parsed = JSON.parse(raw);
-          if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+          if (Array.isArray(parsed) && parsed.length > 0) {
+            return parsed.map(item => ({
+              ...item,
+              network: item.network || 'In-Network'
+            }));
+          }
         }
       } catch (e) {
         console.warn('Could not read payer directory:', e);
@@ -1113,16 +1128,22 @@
       const details = data.insurance_details || {};
       const levels = data.coverage_levels || {};
 
-      // Auto-populate Claims Address & Payor ID from Directory if missing or N/A
-      if ((!details.insurance_address || /^(none|n\/a|na|-)$/i.test(details.insurance_address.trim())) && details.carrier) {
+      // Auto-populate Claims Address, Payor ID, and pre-configured Network Status from Directory
+      if (details.carrier) {
         const matchedPayer = matchPayerDirectory(details.carrier);
         if (matchedPayer) {
-          details.insurance_address = matchedPayer.address;
+          if (!details.insurance_address || /^(none|n\/a|na|-)$/i.test(details.insurance_address.trim())) {
+            details.insurance_address = matchedPayer.address;
+          }
           if (!details.insurance_phone || /^(none|n\/a|na|-)$/i.test(details.insurance_phone.trim())) {
             details.insurance_phone = matchedPayer.phone;
           }
           if (!details.payor_id || /^(none|n\/a|na|-)$/i.test(details.payor_id.trim())) {
             details.payor_id = matchedPayer.payorId;
+          }
+          // Pre-configured clinic network participation
+          if (matchedPayer.network) {
+            details.network_status = matchedPayer.network;
           }
         }
       }
@@ -1206,6 +1227,33 @@
       if (heroNetBadge) {
         heroNetBadge.textContent = netStatus;
         heroNetBadge.className = netStatus.toLowerCase().includes('out') ? 'network-indicator-pill out-network' : 'network-indicator-pill in-network';
+        heroNetBadge.title = `Click to toggle In-Network / Out-of-Network`;
+
+        if (!heroNetBadge.dataset.listenerAttached) {
+          heroNetBadge.dataset.listenerAttached = 'true';
+          heroNetBadge.addEventListener('click', () => {
+            if (!currentAuditData || !currentAuditData.insurance_details) return;
+            const curNet = currentAuditData.insurance_details.network_status || 'In-Network';
+            const newNet = curNet.toLowerCase().includes('out') ? 'In-Network' : 'Out-of-Network';
+            currentAuditData.insurance_details.network_status = newNet;
+
+            // Also remember this preference in Payer Directory
+            const carrier = currentAuditData.insurance_details.carrier;
+            if (carrier) {
+              const list = getPayerDirectory();
+              const matched = list.find(p => p.name && (carrier.toLowerCase().includes(p.name.toLowerCase()) || p.name.toLowerCase().includes(carrier.toLowerCase())));
+              if (matched) {
+                matched.network = newNet;
+                savePayerDirectory(list);
+              }
+            }
+
+            renderReportDashboard(currentAuditData);
+            renderExcelBreakdownSheet(currentAuditData);
+            if (pmsModal && pmsModal.classList.contains('active')) buildPmsNote();
+            displayToast(`Network status toggled to: ${newNet} (Saved to Directory)`);
+          });
+        }
       }
 
       const heroCarrierSubDisplay = document.getElementById('heroCarrierSubDisplay');
@@ -2551,7 +2599,8 @@
         return (p.name || '').toLowerCase().includes(q) ||
                (p.address || '').toLowerCase().includes(q) ||
                (p.payorId || '').toLowerCase().includes(q) ||
-               (p.phone || '').toLowerCase().includes(q);
+               (p.phone || '').toLowerCase().includes(q) ||
+               (p.network || '').toLowerCase().includes(q);
       });
 
       if (filtered.length === 0) {
@@ -2566,11 +2615,17 @@
       filtered.forEach(p => {
         const card = document.createElement('div');
         card.className = 'payer-directory-card';
+        const isOut = (p.network || 'In-Network').toLowerCase().includes('out');
+        const netLabel = isOut ? 'Out-of-Network' : 'In-Network';
+
         card.innerHTML = `
           <div class="payer-card-info">
             <div class="payer-card-name">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path></svg>
-              ${escapeHtml(p.name)}
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 6.5 2z"></path></svg>
+              <span>${escapeHtml(p.name)}</span>
+              <button type="button" class="payer-network-toggle-badge ${isOut ? 'out' : 'in'}" data-id="${p.id}" title="Click to toggle In-Network / Out-of-Network for this carrier">
+                ${netLabel}
+              </button>
             </div>
             <div class="payer-card-addr">${escapeHtml(p.address)}</div>
             <div class="payer-card-meta">
@@ -2580,7 +2635,7 @@
             </div>
           </div>
           <div style="display: flex; gap: 0.4rem; align-items: center;">
-            <button type="button" class="btn-apply-payer" data-id="${p.id || ''}" title="Apply this address and Payor ID to the active policy card and exports">
+            <button type="button" class="btn-apply-payer" data-id="${p.id || ''}" title="Apply this address, network status, and Payor ID to the active policy card and exports">
               Apply to Policy
             </button>
             ${p.isCustom ? `
@@ -2590,6 +2645,35 @@
             ` : ''}
           </div>
         `;
+
+        // Network toggle badge click
+        const netBtn = card.querySelector('.payer-network-toggle-badge');
+        if (netBtn) {
+          netBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            const allPayers = getPayerDirectory();
+            const targetPayer = allPayers.find(item => item.id === p.id);
+            if (targetPayer) {
+              const curNet = targetPayer.network || 'In-Network';
+              targetPayer.network = curNet.toLowerCase().includes('out') ? 'In-Network' : 'Out-of-Network';
+              savePayerDirectory(allPayers);
+              renderPayerDirectory(payerSearchInput?.value || '');
+
+              // If active breakdown matches, sync immediately
+              if (currentAuditData && currentAuditData.insurance_details && currentAuditData.insurance_details.carrier) {
+                const c = currentAuditData.insurance_details.carrier.toLowerCase();
+                if (c.includes(targetPayer.name.toLowerCase()) || targetPayer.name.toLowerCase().includes(c)) {
+                  currentAuditData.insurance_details.network_status = targetPayer.network;
+                  renderReportDashboard(currentAuditData);
+                  renderExcelBreakdownSheet(currentAuditData);
+                  if (pmsModal && pmsModal.classList.contains('active')) buildPmsNote();
+                }
+              }
+
+              displayToast(`${targetPayer.name} is now set as ${targetPayer.network}!`);
+            }
+          });
+        }
 
         const applyBtn = card.querySelector('.btn-apply-payer');
         applyBtn.addEventListener('click', () => {
@@ -2618,12 +2702,15 @@
       currentAuditData.insurance_details.insurance_address = payer.address;
       currentAuditData.insurance_details.insurance_phone = payer.phone;
       currentAuditData.insurance_details.payor_id = payer.payorId;
+      if (payer.network) {
+        currentAuditData.insurance_details.network_status = payer.network;
+      }
 
       renderReportDashboard(currentAuditData);
       renderExcelBreakdownSheet(currentAuditData);
       if (pmsModal && pmsModal.classList.contains('active')) buildPmsNote();
       settingsModal.classList.remove('active');
-      displayToast(`Applied ${payer.name} address & Payor ID to policy!`);
+      displayToast(`Applied ${payer.name} (${payer.network || 'In-Network'}) to policy!`);
     }
 
     function deleteCustomPayer(id) {
@@ -2639,18 +2726,118 @@
       });
     }
 
+    // Bulk Import Logic
+    const toggleBulkImportBtn = document.getElementById('toggleBulkImportBtn');
+    const bulkImportPanel = document.getElementById('bulkImportPanel');
+    const bulkImportTextarea = document.getElementById('bulkImportTextarea');
+    const cancelBulkImportBtn = document.getElementById('cancelBulkImportBtn');
+    const processBulkImportBtn = document.getElementById('processBulkImportBtn');
+
+    if (toggleBulkImportBtn && bulkImportPanel) {
+      toggleBulkImportBtn.addEventListener('click', () => {
+        const isHidden = bulkImportPanel.style.display === 'none';
+        bulkImportPanel.style.display = isHidden ? 'block' : 'none';
+        if (addPayerFormPanel) addPayerFormPanel.style.display = 'none';
+      });
+    }
+
+    if (cancelBulkImportBtn && bulkImportPanel) {
+      cancelBulkImportBtn.addEventListener('click', () => {
+        bulkImportPanel.style.display = 'none';
+        if (bulkImportTextarea) bulkImportTextarea.value = '';
+      });
+    }
+
+    if (processBulkImportBtn && bulkImportTextarea) {
+      processBulkImportBtn.addEventListener('click', () => {
+        const rawText = bulkImportTextarea.value.trim();
+        if (!rawText) {
+          alert('Please paste your insurance list text first.');
+          return;
+        }
+
+        const lines = rawText.split(/\r?\n/).map(l => l.trim()).filter(Boolean);
+        if (lines.length === 0) return;
+
+        const list = getPayerDirectory();
+        let importedCount = 0;
+
+        lines.forEach((line, idx) => {
+          let delimiter = '|';
+          if (line.includes('\t')) delimiter = '\t';
+          else if (line.includes('|')) delimiter = '|';
+          else if (line.includes(';') && !line.includes(',')) delimiter = ';';
+          else if (line.includes(',')) delimiter = ',';
+
+          const parts = line.split(delimiter).map(p => p.trim());
+          if (parts.length === 0 || !parts[0]) return;
+
+          const name = parts[0];
+          let address = parts[1] || 'N/A';
+          let network = 'In-Network';
+          let phone = 'N/A';
+          let payorId = 'N/A';
+
+          for (let i = 2; i < parts.length; i++) {
+            const val = parts[i];
+            if (/^(in|in-network|in network|inn)$/i.test(val)) {
+              network = 'In-Network';
+            } else if (/^(out|out-of-network|out of network|oon)$/i.test(val)) {
+              network = 'Out-of-Network';
+            } else if (/^[0-9A-Z]{4,8}$/i.test(val) && !val.includes('(')) {
+              payorId = val;
+            } else if (/\d{3}[-.)]\s*\d{3}/.test(val)) {
+              phone = val;
+            } else if (address === 'N/A') {
+              address = val;
+            }
+          }
+
+          if (parts[2] && /out/i.test(parts[2])) network = 'Out-of-Network';
+          else if (parts[2] && /in/i.test(parts[2])) network = 'In-Network';
+
+          const existing = list.find(item => item.name && item.name.toLowerCase() === name.toLowerCase());
+          if (existing) {
+            if (address !== 'N/A') existing.address = address;
+            if (network) existing.network = network;
+            if (phone !== 'N/A') existing.phone = phone;
+            if (payorId !== 'N/A') existing.payorId = payorId;
+          } else {
+            list.unshift({
+              id: 'payer_custom_' + Date.now() + '_' + idx,
+              name,
+              network,
+              matchKeys: [name.toLowerCase()],
+              address,
+              phone,
+              payorId,
+              isCustom: true
+            });
+          }
+          importedCount++;
+        });
+
+        savePayerDirectory(list);
+        bulkImportPanel.style.display = 'none';
+        bulkImportTextarea.value = '';
+        renderPayerDirectory();
+        displayToast(`Successfully imported ${importedCount} insurance carriers into Directory!`);
+      });
+    }
+
     if (toggleAddPayerFormBtn && addPayerFormPanel) {
       toggleAddPayerFormBtn.addEventListener('click', () => {
         const isHidden = addPayerFormPanel.style.display === 'none';
         addPayerFormPanel.style.display = isHidden ? 'block' : 'none';
-        toggleAddPayerFormBtn.textContent = isHidden ? '✕ Close Form' : '+ Add Custom Payer';
+        if (bulkImportPanel) bulkImportPanel.style.display = 'none';
+        toggleAddPayerFormBtn.textContent = isHidden ? '✕ Close Form' : '+ Add Carrier';
       });
     }
 
     if (cancelAddPayerBtn && addPayerFormPanel) {
       cancelAddPayerBtn.addEventListener('click', () => {
         addPayerFormPanel.style.display = 'none';
-        if (toggleAddPayerFormBtn) toggleAddPayerFormBtn.textContent = '+ Add Custom Payer';
+        if (toggleAddPayerFormBtn) toggleAddPayerFormBtn.textContent = '+ Add Carrier';
         if (newPayerName) newPayerName.value = '';
         if (newPayerId) newPayerId.value = '';
         if (newPayerAddress) newPayerAddress.value = '';
@@ -2664,6 +2851,8 @@
         const address = newPayerAddress?.value.trim();
         const phone = newPayerPhone?.value.trim() || 'N/A';
         const payorId = newPayerId?.value.trim() || 'N/A';
+        const newPayerNetwork = document.getElementById('newPayerNetwork');
+        const network = newPayerNetwork?.value || 'In-Network';
 
         if (!name || !address) {
           alert('Please enter both the Carrier Name and Claims Address.');
@@ -2674,6 +2863,7 @@
         const newRecord = {
           id: 'payer_custom_' + Date.now(),
           name,
+          network,
           matchKeys: [name.toLowerCase()],
           address,
           phone,
@@ -2685,14 +2875,14 @@
         savePayerDirectory(list);
 
         if (addPayerFormPanel) addPayerFormPanel.style.display = 'none';
-        if (toggleAddPayerFormBtn) toggleAddPayerFormBtn.textContent = '+ Add Custom Payer';
+        if (toggleAddPayerFormBtn) toggleAddPayerFormBtn.textContent = '+ Add Carrier';
         if (newPayerName) newPayerName.value = '';
         if (newPayerId) newPayerId.value = '';
         if (newPayerAddress) newPayerAddress.value = '';
         if (newPayerPhone) newPayerPhone.value = '';
 
         renderPayerDirectory();
-        displayToast(`Saved ${name} to Insurance Directory!`);
+        displayToast(`Saved ${name} (${network}) to Insurance Directory!`);
       });
     }
 
