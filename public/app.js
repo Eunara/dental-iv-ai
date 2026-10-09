@@ -242,16 +242,50 @@
         const freqStr = String(item.frequency_limitation || '').trim().toLowerCase();
         const histStr = String(item.history_dates || '').trim();
 
-        // 1. AGE LIMITATION CHECK (D1206 Fluoride, D1351 Sealants, Ortho, etc.)
+        // 1. AGE LIMITATION CHECK (Minimum vs Maximum Age Thresholds)
         if (patientAge !== null && ageLimStr && !/^(none|nl|no limit|n\/a|-)$/i.test(ageLimStr)) {
           const match = ageLimStr.match(/(\d+)/);
           if (match) {
-            const maxAge = parseInt(match[1], 10);
-            if (patientAge > maxAge) {
-              item.is_eligible = false;
-              const ageNote = `Ineligible: Patient age (${patientAge}) exceeds plan age limit (${maxAge})`;
-              if (!item.notes || !item.notes.includes('exceeds plan age limit')) {
-                item.notes = item.notes ? `${item.notes} • ${ageNote}` : ageNote;
+            const targetAge = parseInt(match[1], 10);
+
+            const hasMinKeywords = /(and\s*over|and\s*older|&\s*over|&\s*older|\+|and\s*up|or\s*older|or\s*over|min\b|minimum|>=|>|over)/i.test(ageLimStr);
+            const isAdultCode = code.includes('D1110') || code.includes('D4346');
+            const hasMaxKeywords = /(under|through|up\s*to|to\s*age|and\s*under|&\s*under|or\s*younger|max\b|maximum|<=|<)/i.test(ageLimStr);
+
+            const isMinAge = hasMinKeywords || (isAdultCode && !hasMaxKeywords);
+
+            if (isMinAge) {
+              // Minimum Age Requirement (e.g. D1110, D4346: 14 and over)
+              if (patientAge < targetAge) {
+                item.is_eligible = false;
+                const ageNote = `Ineligible: Patient age (${patientAge}) is below plan minimum age requirement (${targetAge})`;
+                if (!item.notes || !item.notes.includes('below plan minimum age')) {
+                  item.notes = item.notes ? `${item.notes} • ${ageNote}` : ageNote;
+                }
+              } else {
+                // Patient meets or exceeds minimum age (e.g. 27 >= 14 -> ELIGIBLE!)
+                if (item.notes && item.notes.includes('exceeds plan age limit')) {
+                  item.notes = item.notes
+                    .replace(/\s*•\s*Ineligible:\s*Patient age \(\d+\) exceeds plan age limit \(\d+\)/gi, '')
+                    .replace(/Ineligible:\s*Patient age \(\d+\) exceeds plan age limit \(\d+\)\s*•\s*/gi, '')
+                    .replace(/Ineligible:\s*Patient age \(\d+\) exceeds plan age limit \(\d+\)/gi, '')
+                    .trim();
+                }
+                if (!histStr || /^(none|n\/a|-)$/i.test(histStr)) {
+                  item.is_eligible = true;
+                }
+              }
+            } else {
+              // Maximum Age Limitation (e.g. D1206 Fluoride, D1351 Sealants, Ortho, D1120 Child Prophy)
+              const isStrictlyUnder = /under\s*\d+|<\s*\d+/i.test(ageLimStr);
+              const exceedsMax = isStrictlyUnder ? (patientAge >= targetAge) : (patientAge > targetAge);
+
+              if (exceedsMax) {
+                item.is_eligible = false;
+                const ageNote = `Ineligible: Patient age (${patientAge}) exceeds plan age limit (${targetAge})`;
+                if (!item.notes || !item.notes.includes('exceeds plan age limit')) {
+                  item.notes = item.notes ? `${item.notes} • ${ageNote}` : ageNote;
+                }
               }
             }
           }
@@ -964,7 +998,7 @@
 
       const heroPatientNameDisplay = document.getElementById('heroPatientNameDisplay');
       if (heroPatientNameDisplay) {
-        heroPatientNameDisplay.textContent = (details.patient_name && details.patient_name !== 'N/A') ? details.patient_name.trim() : 'Katherine Birdwell';
+        heroPatientNameDisplay.textContent = (details.patient_name && details.patient_name.trim() !== '' && !/^(none|n\/a|na|-)$/i.test(details.patient_name.trim())) ? details.patient_name.trim() : 'N/A';
       }
 
       const heroPatientDobDisplay = document.getElementById('heroPatientDobDisplay');
@@ -973,7 +1007,7 @@
       }
 
       if (patientHeroBadge && patientHeroName) {
-        if (details.patient_name && details.patient_name.trim() !== '' && details.patient_name.toLowerCase() !== 'n/a') {
+        if (details.patient_name && details.patient_name.trim() !== '' && !/^(none|n\/a|na|-)$/i.test(details.patient_name.trim())) {
           patientHeroName.textContent = details.patient_name.trim();
           patientHeroBadge.style.display = 'inline-flex';
         } else {
@@ -981,20 +1015,43 @@
         }
       }
 
-      // Group Name & Group #
+      // Group Name, Plan Name & Group #
+      const grp = (details.group_name && details.group_name.trim() !== '' && !/^(none|n\/a|na|-)$/i.test(details.group_name.trim())) ? details.group_name.trim() : '';
+      const pln = (details.plan_name && details.plan_name.trim() !== '' && !/^(none|n\/a|na|-)$/i.test(details.plan_name.trim())) ? details.plan_name.trim() : '';
+      const insCarrier = (details.carrier && details.carrier.trim() !== '' && !/^(none|n\/a|na|-)$/i.test(details.carrier.trim())) ? details.carrier.trim() : '';
+      const secIns = (details.secondary_insurance && details.secondary_insurance.trim() !== '' && !/^(none|n\/a|na|-)$/i.test(details.secondary_insurance.trim())) ? details.secondary_insurance.trim() : '';
+
+      let groupPlanDisplay = 'N/A';
+      if (grp && pln && grp.toLowerCase() !== pln.toLowerCase()) {
+        groupPlanDisplay = `${grp} • ${pln}`;
+      } else if (grp) {
+        groupPlanDisplay = grp;
+      } else if (pln) {
+        groupPlanDisplay = pln;
+      }
+
       const heroGroupNameDisplay = document.getElementById('heroGroupNameDisplay');
       if (heroGroupNameDisplay) {
-        heroGroupNameDisplay.textContent = (details.group_name && details.group_name !== 'N/A') ? details.group_name : 'Acme Industrial Group';
+        heroGroupNameDisplay.textContent = groupPlanDisplay;
       }
 
       const heroGroupNumberDisplay = document.getElementById('heroGroupNumberDisplay');
+      const grpNum = (details.group_number && details.group_number.trim() !== '' && !/^(none|n\/a|na|-)$/i.test(details.group_number.trim())) ? details.group_number.trim() : 'N/A';
+      
+      let subParts = [`Group #: ${grpNum}`];
+      if (insCarrier) {
+        subParts.push(`Ins: ${insCarrier}`);
+      }
+      if (secIns) {
+        subParts.push(`Sec: ${secIns}`);
+      }
       if (heroGroupNumberDisplay) {
-        heroGroupNumberDisplay.textContent = `Group #: ${(details.group_number && details.group_number !== 'N/A') ? details.group_number : 'None / N/A'}`;
+        heroGroupNumberDisplay.textContent = subParts.join(' • ');
       }
 
       // Carrier & Network
       const carrierNameDisplay = document.getElementById('carrierNameDisplay');
-      if (carrierNameDisplay) carrierNameDisplay.textContent = details.carrier || 'Delta Dental PPO';
+      if (carrierNameDisplay) carrierNameDisplay.textContent = details.carrier || 'Dental Insurance';
 
       const planEffectiveDateDisplay = document.getElementById('planEffectiveDateDisplay');
       if (planEffectiveDateDisplay) planEffectiveDateDisplay.textContent = 'Effective: ' + (details.effective_date || '01/01/2026');
@@ -1014,7 +1071,11 @@
 
       const heroCarrierSubDisplay = document.getElementById('heroCarrierSubDisplay');
       if (heroCarrierSubDisplay) {
-        heroCarrierSubDisplay.textContent = details.carrier || 'Delta Dental PPO';
+        let carrierText = details.carrier || 'Dental Insurance';
+        if (secIns) {
+          carrierText += ` (Sec: ${secIns})`;
+        }
+        heroCarrierSubDisplay.textContent = carrierText;
       }
 
       // Effective & Termed Dates with Status Validation
@@ -1482,9 +1543,23 @@
         const age = calculateAge(d.dob);
         txt += `PATIENT DOB:          ${d.dob.trim()}${age !== null ? ` (Age: ${age})` : ''}\n`;
       }
-      txt += `GROUP / PLAN NAME:    ${d.group_name || 'N/A'}\n`;
+      const grpNote = (d.group_name && d.group_name.trim() !== '' && !/^(none|n\/a|na|-)$/i.test(d.group_name.trim())) ? d.group_name.trim() : '';
+      const plnNote = (d.plan_name && d.plan_name.trim() !== '' && !/^(none|n\/a|na|-)$/i.test(d.plan_name.trim())) ? d.plan_name.trim() : '';
+      let grpPlanNote = 'N/A';
+      if (grpNote && plnNote && grpNote.toLowerCase() !== plnNote.toLowerCase()) {
+        grpPlanNote = `${grpNote} • ${plnNote}`;
+      } else if (grpNote) {
+        grpPlanNote = grpNote;
+      } else if (plnNote) {
+        grpPlanNote = plnNote;
+      }
+
+      txt += `GROUP / PLAN NAME:    ${grpPlanNote}\n`;
       txt += `GROUP NUMBER:         ${d.group_number || 'N/A'}\n`;
-      txt += `CARRIER:              ${d.carrier || 'Delta Dental PPO'}\n`;
+      txt += `CARRIER / INSURANCE:  ${d.carrier || 'Dental Insurance'}\n`;
+      if (d.secondary_insurance && d.secondary_insurance.trim() !== '' && !/^(none|n\/a|na|-)$/i.test(d.secondary_insurance.trim())) {
+        txt += `SECONDARY INSURANCE:  ${d.secondary_insurance.trim()}\n`;
+      }
       txt += `NETWORK STATUS:       ${d.network_status || 'In Network'}\n`;
       txt += `POLICY STATUS:        ${d.policy_status || 'Active'}\n`;
       txt += `EFFECTIVE DATE:       ${d.effective_date || '01/01/2026'}\n`;
@@ -1637,13 +1712,24 @@
       if (!data) return '';
       const d = data.insurance_details || {};
       const c = data.coverage_levels || {};
-      const patientName = (d.patient_name && d.patient_name.trim() !== '' && d.patient_name.toLowerCase() !== 'n/a') ? d.patient_name.trim() : 'Katherine Birdwell';
-      const patientDob = (d.dob && d.dob.trim() !== '' && d.dob.toLowerCase() !== 'n/a') ? d.dob.trim() : '';
+      const patientName = (d.patient_name && d.patient_name.trim() !== '' && !/^(none|n\/a|na|-)$/i.test(d.patient_name.trim())) ? d.patient_name.trim() : 'N/A';
+      const patientDob = (d.dob && d.dob.trim() !== '' && !/^(none|n\/a|na|-)$/i.test(d.dob.trim())) ? d.dob.trim() : '';
       const pAge = patientDob ? calculateAge(patientDob) : null;
       const dobDisplay = patientDob ? `${patientDob}${pAge !== null ? ` (Age: ${pAge})` : ''}` : 'N/A';
-      const groupName = d.group_name || 'Acme Industrial Group';
-      const groupNumber = d.group_number || 'DD-948201';
-      const carrier = d.carrier || 'Delta Dental PPO';
+      
+      const grpCsv = (d.group_name && d.group_name.trim() !== '' && !/^(none|n\/a|na|-)$/i.test(d.group_name.trim())) ? d.group_name.trim() : '';
+      const plnCsv = (d.plan_name && d.plan_name.trim() !== '' && !/^(none|n\/a|na|-)$/i.test(d.plan_name.trim())) ? d.plan_name.trim() : '';
+      let groupPlanDisplay = 'N/A';
+      if (grpCsv && plnCsv && grpCsv.toLowerCase() !== plnCsv.toLowerCase()) {
+        groupPlanDisplay = `${grpCsv} • ${plnCsv}`;
+      } else if (grpCsv) {
+        groupPlanDisplay = grpCsv;
+      } else if (plnCsv) {
+        groupPlanDisplay = plnCsv;
+      }
+      const groupNumber = (d.group_number && d.group_number.trim() !== '' && !/^(none|n\/a|na|-)$/i.test(d.group_number.trim())) ? d.group_number.trim() : 'N/A';
+      const carrier = d.carrier || 'Dental Insurance';
+      const secInsDisplay = (d.secondary_insurance && d.secondary_insurance.trim() !== '' && !/^(none|n\/a|na|-)$/i.test(d.secondary_insurance.trim())) ? d.secondary_insurance.trim() : 'None / N/A';
       const network = d.network_status || 'In Network';
       const policyStatus = d.policy_status || 'Active';
       const effective = d.effective_date || '01/01/2026';
@@ -1673,9 +1759,9 @@
       lines.push([csvCell('DENTAL INSURANCE BENEFIT BREAKDOWN FORM')].join(','));
       lines.push('');
       lines.push([csvCell('Patient Name:'), csvCell(patientName), csvCell('Date of Birth (DOB):'), csvCell(dobDisplay)].join(','));
-      lines.push([csvCell('Group / Plan Name:'), csvCell(groupName), csvCell('Group #:'), csvCell(groupNumber)].join(','));
-      lines.push([csvCell('Carrier:'), csvCell(carrier), csvCell('Network Participation:'), csvCell(network)].join(','));
-      lines.push([csvCell('Policy Status:'), csvCell(policyStatus), csvCell('Termed Date:'), csvCell(termedDate)].join(','));
+      lines.push([csvCell('Group / Plan Name:'), csvCell(groupPlanDisplay), csvCell('Group #:'), csvCell(groupNumber)].join(','));
+      lines.push([csvCell('Carrier / Insurance:'), csvCell(carrier), csvCell('Secondary Insurance:'), csvCell(secInsDisplay)].join(','));
+      lines.push([csvCell('Network Participation:'), csvCell(network), csvCell('Policy Status:'), csvCell(policyStatus)].join(','));
       lines.push([csvCell('Effective Date:'), csvCell(effective), csvCell('Plan Benefits:'), csvCell(planBenefits)].join(','));
       lines.push([csvCell('Insurance Payment goes to:'), csvCell(paymentTo), csvCell('Fee Schedule / Tier:'), csvCell(feeSchedule)].join(','));
       lines.push([csvCell('Yearly Maximum:'), csvCell(annualMax), csvCell('Remaining Benefits:'), csvCell(remainingMax)].join(','));
@@ -1771,13 +1857,24 @@
       const c = data.coverage_levels || {};
       const allCodes = (data.procedure_codes || []).slice();
 
-      const patientName = (d.patient_name && d.patient_name.trim() !== '' && d.patient_name.toLowerCase() !== 'n/a') ? d.patient_name.trim() : 'Katherine Birdwell';
-      const patientDob = (d.dob && d.dob.trim() !== '' && d.dob.toLowerCase() !== 'n/a') ? d.dob.trim() : '';
+      const patientName = (d.patient_name && d.patient_name.trim() !== '' && !/^(none|n\/a|na|-)$/i.test(d.patient_name.trim())) ? d.patient_name.trim() : 'N/A';
+      const patientDob = (d.dob && d.dob.trim() !== '' && !/^(none|n\/a|na|-)$/i.test(d.dob.trim())) ? d.dob.trim() : '';
       const pAge = patientDob ? calculateAge(patientDob) : null;
       const dobDisplay = patientDob ? `${patientDob}${pAge !== null ? ` (Age: ${pAge})` : ''}` : 'N/A';
-      const groupName = d.group_name || 'Acme Industrial Group';
-      const groupNumber = d.group_number || 'DD-948201';
-      const carrier = d.carrier || 'Delta Dental PPO';
+      
+      const grpSheet = (d.group_name && d.group_name.trim() !== '' && !/^(none|n\/a|na|-)$/i.test(d.group_name.trim())) ? d.group_name.trim() : '';
+      const plnSheet = (d.plan_name && d.plan_name.trim() !== '' && !/^(none|n\/a|na|-)$/i.test(d.plan_name.trim())) ? d.plan_name.trim() : '';
+      let groupPlanDisplay = 'N/A';
+      if (grpSheet && plnSheet && grpSheet.toLowerCase() !== plnSheet.toLowerCase()) {
+        groupPlanDisplay = `${grpSheet} • ${plnSheet}`;
+      } else if (grpSheet) {
+        groupPlanDisplay = grpSheet;
+      } else if (plnSheet) {
+        groupPlanDisplay = plnSheet;
+      }
+      const groupNumber = (d.group_number && d.group_number.trim() !== '' && !/^(none|n\/a|na|-)$/i.test(d.group_number.trim())) ? d.group_number.trim() : 'N/A';
+      const carrier = d.carrier || 'Dental Insurance';
+      const secInsDisplay = (d.secondary_insurance && d.secondary_insurance.trim() !== '' && !/^(none|n\/a|na|-)$/i.test(d.secondary_insurance.trim())) ? d.secondary_insurance.trim() : 'None / N/A';
       const network = d.network_status || 'In Network';
       const policyStatus = d.policy_status || 'Active';
       const effective = d.effective_date || '01/01/2026';
@@ -1835,9 +1932,15 @@
             </tr>
             <tr>
               <td class="excel-label-cell">Group / Plan Name:</td>
-              <td class="excel-val-cell" style="font-weight: 600;">${escapeHtml(groupName)}</td>
+              <td class="excel-val-cell" style="font-weight: 600;">${escapeHtml(groupPlanDisplay)}</td>
               <td class="excel-label-cell">Group Policy #:</td>
               <td class="excel-val-cell">${escapeHtml(groupNumber)}</td>
+            </tr>
+            <tr>
+              <td class="excel-label-cell">Insurance Carrier:</td>
+              <td class="excel-val-cell" style="font-weight: 700; color: #0f172a;">${escapeHtml(carrier)}</td>
+              <td class="excel-label-cell">Secondary Insurance:</td>
+              <td class="excel-val-cell">${escapeHtml(secInsDisplay)}</td>
             </tr>
             <tr>
               <td class="excel-label-cell">Network Participation:</td>

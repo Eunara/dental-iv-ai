@@ -69,19 +69,29 @@ const dentalBreakdownSchema = {
           description: 'Patient Date of Birth if found on the document (e.g. 05/14/1990, None, N/A)',
           nullable: true,
         },
+        carrier: {
+          type: Type.STRING,
+          description: 'Primary Dental Insurance Carrier Name / Payer (e.g. Ameritas Life Insurance Corp, Delta Dental, MetLife, Cigna, Guardian, Blue Cross Blue Shield). Must capture the actual insurance carrier.',
+        },
+        secondary_insurance: {
+          type: Type.STRING,
+          description: 'Secondary or other dental insurance coverage if detected on the document or portal (e.g. Delta Dental, MetLife, None, N/A)',
+          nullable: true,
+        },
         group_name: {
           type: Type.STRING,
-          description: 'Employer Group Name or Plan Name (e.g. Acme Corp, State of California, PPO Enterprise, N/A)',
+          description: 'Employer Group Name if found on the document (e.g. Boeing, State of California, N/A). Return N/A if not found. Do not invent names.',
+          nullable: true,
+        },
+        plan_name: {
+          type: Type.STRING,
+          description: 'Specific Dental Plan Name or Product Name (e.g. SoundCare, Classic PPO, High Option, N/A). Return N/A if not found.',
           nullable: true,
         },
         group_number: {
           type: Type.STRING,
-          description: 'Group Policy Number if found on the document (e.g. 12345-001, N/A)',
+          description: 'Group Policy Number if found on the document (e.g. 12345-001, N/A if not found)',
           nullable: true,
-        },
-        carrier: {
-          type: Type.STRING,
-          description: 'Dental Insurance Carrier Name (e.g. Delta Dental, MetLife, Cigna, Guardian)',
         },
         effective_date: {
           type: Type.STRING,
@@ -315,8 +325,12 @@ Your mission is to audit dental breakdown sheets, fee schedules, or insurance we
    - If a network tier (In-Network or Out-of-Network) is specified by the user or document, strictly extract benefit percentages, maximums, and deductibles for that selected tier.
    - If dual-column tables (In-Net vs Out-of-Net) exist and no preference is specified, prioritize In-Network while noting Out-of-Network variations in the notes.
 
-2. Policy & Termed Date Validation:
-   - Extract Group Name / Plan Name, Group #, Effective Date, and Termed Date (Termination Date).
+2. Policy, Carrier, Plan & Termed Date Validation:
+   - Extract Dental Insurance Carrier / Payer Name accurately (e.g. Ameritas Life Insurance Corp, Delta Dental, MetLife, Cigna, Guardian, Blue Cross Blue Shield). Must capture the actual insurance company.
+   - If secondary insurance or other coverage is mentioned or detected on the document/portal, extract it in secondary_insurance. If not found, return "None".
+   - Extract Employer Group Name and Dental Plan Name. If either is not present or detected on the document, strictly return "N/A". Never hallucinate or invent dummy names (e.g. Acme Corp).
+   - Extract Group Number. If not found, return "N/A".
+   - Extract Effective Date and Termed Date (Termination Date).
    - If a Termed Date exists and is on or before the current date, set policy_status to "Termed / Inactive".
    - If no termed date exists or it is in the future, set policy_status to "Active".
 
@@ -338,9 +352,14 @@ Your mission is to audit dental breakdown sheets, fee schedules, or insurance we
    - Detect other shared frequencies (e.g., D4346 shared with D1110).
    - Identify quadrant limitations for Periodontics (e.g., SRP max 2 quads per visit vs all quads allowed).
 
-5. Age Limitations (D1206 Fluoride, D1351 Sealants, Orthodontics):
-   - For D1206 (Fluoride) and D1351 (Sealants), check if the patient's age (derived from DOB) exceeds the plan's maximum age limitation (e.g. Sealant up to 14 or 15, Fluoride up to 18 or 19).
-   - If patient age exceeds the plan limit, strictly mark is_eligible: false and state in notes: "Ineligible: Patient age exceeds plan age limit".
+5. Age Limitations (Minimum vs Maximum Age Thresholds):
+   - MINIMUM AGE LIMITATIONS (Adult Procedures e.g. D1110 Adult Prophy, D4346 Gingival Scaling):
+     * When age limit is specified as "14 and over", "14+", "14 & older", or "min 14", this is a MINIMUM age threshold: The patient must be at least that age to qualify.
+     * If patient age is greater than or equal to this minimum (e.g., patient is 27 years old, which is >= 14), the patient IS FULLY ELIGIBLE (is_eligible: true). They are NOT ineligible!
+     * Only mark is_eligible: false if patient age is strictly less than the minimum age threshold (e.g. a child under 14).
+   - MAXIMUM AGE LIMITATIONS (Pediatric / Youth Procedures e.g. D1206 Fluoride, D1351 Sealants, D1120 Child Prophy, Orthodontics):
+     * When age limit is specified as "Through age 14", "Under 19", "Through age 18", or "Up to 14", this is a MAXIMUM age limit: The patient must NOT exceed this age.
+     * If patient age strictly exceeds this maximum limit (e.g. 27 > 14 for Sealants or Fluoride), mark is_eligible: false and state in notes: "Ineligible: Patient age (27) exceeds plan age limit (14)".
 
 6. Exclusions & Not Covered (NC):
    - If a code or service is marked as Not Covered (NC) or excluded by the plan (e.g., Adult Fluoride D1206 NC, Crown Recement D2920 NC, Night Guard D9944 NC, Implants D6010 NC):
@@ -648,15 +667,51 @@ function enforceAgeLimitAndFrequencyRules(procedureCodes, insuranceDetails = {})
     const freqStr = String(item.frequency_limitation || '').trim().toLowerCase();
     const histStr = String(item.history_dates || '').trim();
 
-    // 1. AGE LIMITATION CHECK (D1206 Fluoride, D1351 Sealants, Ortho, etc.)
+    // 1. AGE LIMITATION CHECK (Minimum vs Maximum Age Thresholds)
     if (patientAge !== null && ageLimStr && !/^(none|nl|no limit|n\/a|-)$/i.test(ageLimStr)) {
       const match = ageLimStr.match(/(\d+)/);
       if (match) {
-        const maxAge = parseInt(match[1], 10);
-        if (patientAge > maxAge) {
-          item.is_eligible = false;
-          const ageNote = `Ineligible: Patient age (${patientAge}) exceeds plan age limit (${maxAge})`;
-          item.notes = item.notes ? `${item.notes} • ${ageNote}` : ageNote;
+        const targetAge = parseInt(match[1], 10);
+
+        const hasMinKeywords = /(and\s*over|and\s*older|&\s*over|&\s*older|\+|and\s*up|or\s*older|or\s*over|min\b|minimum|>=|>|over)/i.test(ageLimStr);
+        const isAdultCode = code.includes('D1110') || code.includes('D4346');
+        const hasMaxKeywords = /(under|through|up\s*to|to\s*age|and\s*under|&\s*under|or\s*younger|max\b|maximum|<=|<)/i.test(ageLimStr);
+
+        const isMinAge = hasMinKeywords || (isAdultCode && !hasMaxKeywords);
+
+        if (isMinAge) {
+          // Minimum Age Requirement (e.g. D1110, D4346: 14 and over)
+          if (patientAge < targetAge) {
+            item.is_eligible = false;
+            const ageNote = `Ineligible: Patient age (${patientAge}) is below plan minimum age requirement (${targetAge})`;
+            if (!item.notes || !item.notes.includes('below plan minimum age')) {
+              item.notes = item.notes ? `${item.notes} • ${ageNote}` : ageNote;
+            }
+          } else {
+            // Patient meets or exceeds minimum age (e.g. 27 >= 14 -> ELIGIBLE!)
+            if (item.notes && item.notes.includes('exceeds plan age limit')) {
+              item.notes = item.notes
+                .replace(/\s*•\s*Ineligible:\s*Patient age \(\d+\) exceeds plan age limit \(\d+\)/gi, '')
+                .replace(/Ineligible:\s*Patient age \(\d+\) exceeds plan age limit \(\d+\)\s*•\s*/gi, '')
+                .replace(/Ineligible:\s*Patient age \(\d+\) exceeds plan age limit \(\d+\)/gi, '')
+                .trim();
+            }
+            if (!histStr || /^(none|n\/a|-)$/i.test(histStr)) {
+              item.is_eligible = true;
+            }
+          }
+        } else {
+          // Maximum Age Limitation (e.g. D1206 Fluoride, D1351 Sealants, Ortho, D1120 Child Prophy)
+          const isStrictlyUnder = /under\s*\d+|<\s*\d+/i.test(ageLimStr);
+          const exceedsMax = isStrictlyUnder ? (patientAge >= targetAge) : (patientAge > targetAge);
+
+          if (exceedsMax) {
+            item.is_eligible = false;
+            const ageNote = `Ineligible: Patient age (${patientAge}) exceeds plan age limit (${targetAge})`;
+            if (!item.notes || !item.notes.includes('exceeds plan age limit')) {
+              item.notes = item.notes ? `${item.notes} • ${ageNote}` : ageNote;
+            }
+          }
         }
       }
     }
@@ -1000,6 +1055,25 @@ app.post('/api/verify', upload.array('files', 10), async (req, res) => {
           parsedResult.insurance_details.dob = req.body.dob.trim();
         }
       }
+
+      // Sanitize Group Name, Plan Name, and Secondary Insurance defaults
+      const ins = parsedResult.insurance_details;
+      if (!ins.group_name || /^(none|na|null|undefined|-)$/i.test(String(ins.group_name).trim())) {
+        ins.group_name = 'N/A';
+      }
+      if (!ins.plan_name || /^(none|na|null|undefined|-)$/i.test(String(ins.plan_name).trim())) {
+        ins.plan_name = 'N/A';
+      }
+      if (!ins.group_number || /^(none|na|null|undefined|-)$/i.test(String(ins.group_number).trim())) {
+        ins.group_number = 'N/A';
+      }
+      if (!ins.secondary_insurance || /^(none|na|null|undefined|-)$/i.test(String(ins.secondary_insurance).trim())) {
+        ins.secondary_insurance = 'None';
+      }
+      if (!ins.carrier || /^(none|na|null|undefined|-)$/i.test(String(ins.carrier).trim())) {
+        ins.carrier = 'Dental Insurance';
+      }
+
       parsedResult.insurance_details = enforcePolicyTermedRules(parsedResult.insurance_details);
     }
 
