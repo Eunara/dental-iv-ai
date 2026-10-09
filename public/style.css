@@ -1407,16 +1407,16 @@
       border-color: var(--teal-primary);
     }
 
-    /* Table Component - Natural Vertical Scrolling (Responsive Pababa) */
+    /* Table Component - Natural Auto-Height (Depends entirely on content) */
     .table-responsive-box {
       overflow-x: auto;
-      overflow-y: auto;
-      max-height: 72vh;
+      overflow-y: visible;
+      height: auto;
+      max-height: none !important;
       border-radius: var(--radius-md);
       border: 1px solid var(--border-subtle);
       background: rgba(12, 20, 39, 0.6);
       width: 100%;
-      scroll-behavior: smooth;
     }
 
     /* Custom sleek scrollbar for natural vertical scrolling */
@@ -2518,8 +2518,8 @@
         padding: 0.95rem 1.25rem;
       }
       .table-responsive-box {
-        max-height: 720px;
-        overflow-y: auto;
+        height: auto;
+        max-height: none !important;
       }
       table.cdt-data-table {
         min-width: 100%;
@@ -2550,8 +2550,8 @@
         border-radius: var(--radius-xl);
       }
       .table-responsive-box {
-        max-height: 780px;
-        overflow-y: auto;
+        height: auto;
+        max-height: none !important;
       }
       table.cdt-data-table {
         min-width: 100%;
@@ -2600,8 +2600,8 @@
         border-radius: var(--radius-xl);
       }
       .table-responsive-box {
-        max-height: 850px;
-        overflow-y: auto;
+        height: auto;
+        max-height: none !important;
       }
       table.cdt-data-table {
         min-width: 100%;
