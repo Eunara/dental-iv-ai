@@ -196,5 +196,74 @@ B. ARCHITECTURE & COMPONENTS:
       - Automatically generates instant Excel export.
 
 ================================================================================
+PHASE 6: CLINICAL RCM BUSINESS LOGIC ENGINE & FREQUENCY NOTATION
+================================================================================
+1. COMPACT FREQUENCY STANDARDIZATION ENGINE:
+   - Automated conversion of long portal sentence strings into standard clinical notation:
+     * "two of any ... within a calendar year" -> "2x1yr"
+     * "two of any ... within a 12 months" -> "2x12m"
+     * "one of any ... within a calendar year" -> "1x1yr"
+     * "one of any ... within a 12 months" -> "1x12m"
+     * "1 in 60 months / once every 5 years" -> "1x5yr"
+     * "1 in 36 months / once every 3 years" -> "1x3yr"
+     * "1 in 24 months / once every 2 years" -> "1x24m"
+     * "no frequency limit / unlimited" -> "NF"
+     * "once per lifetime" -> "1/LT"
+     * "1 per tooth lifetime" -> "1/tooth LT"
+   - Implemented at both Gemini AI prompt directive level and backend/frontend post-processor functions.
+
+2. CALENDAR YEAR VS ROLLING 12-MONTH RESET LOGIC:
+   - Calendar Year Plans: Procedure counters reset every January 1st.
+     * If a procedure has a prior calendar year history date (e.g. 10/25/2025 vs current 2026),
+       patient is automatically flagged as ELIGIBLE (is_eligible: true).
+   - Rolling 12-Month Plans (e.g. 2x12m): Evaluates the exact 12-month rolling window from last service date.
+     * If 1 of 2 procedures was consumed within the last 12 months, patient remains eligible for 1 remaining procedure.
+
+3. D0210 (FMX) & D0330 (PANO) MUTUAL SHARED FREQUENCY ENGINE:
+   - FMX and Panoramic Radiographs always share frequency limitations (typically 1 in 60 months / 5 years).
+   - Cross-code history syncing: A service date on either code is mutually applied to both.
+   - Computes precise next eligible date based on frequency elapsed months.
+
+4. D1206 / D1351 / ADULT AGE LIMIT LOGIC:
+   - Minimum Age Boundaries: Adult procedures (e.g. D1110, D4346 min age 14) are verified so that
+     adults (e.g. 27 years old) are flagged ELIGIBLE rather than misclassified as exceeding age limits.
+   - Maximum Age Boundaries: Pediatric/youth procedures (D1206 Fluoride, D1351 Sealants, Ortho) flag
+     ineligibility when the patient strictly exceeds the ceiling age (e.g. age 27 > 14).
+
+===============================================================================
+PHASE 7: PRE-CONFIGURED INSURANCE DIRECTORY SETTINGS & NETWORK PARTICIPATION
+================================================================================
+1. CUSTOM INSURANCE CLAIMS ADDRESS & PAYOR ID REPOSITORY:
+   - Clinic Settings modal with pre-configured directory of insurance payers (Cigna, Delta Dental, MetLife, Aetna, etc.).
+   - Staff can add, edit, or delete customized Claims Mailing Addresses, Phone Numbers, and Electronic Payor IDs.
+   - Auto-Wiring to Frontend:
+     * When an insurance carrier (e.g., Cigna) is detected or verified, system automatically wires the custom claims address
+       and payor ID into both the Hero Banner and the 8-cell "policy-details-compact-grid".
+   - Bulk Importer:
+     * Supports pasting tab-separated rows from Excel/Google Sheets, pipe-delimited (|), or CSV text.
+
+2. PRE-CONFIGURED IN-NETWORK / OUT-OF-NETWORK PARTICIPATION:
+   - 1-click interactive network toggle badge (.in / .out) per carrier in directory settings.
+   - Auto-applies clinic's contracted network status during document verification.
+   - 1-click live override pill directly on Breakdown Hero Card with automatic preference saving.
+
+================================================================================
+PHASE 8: UX ENHANCEMENTS, DYNAMIC VIEWPORT SCALING & INLINE EDITING
+================================================================================
+1. CDT CODES DATA TABLE AUTO-HEIGHT & SCROLL ARCHITECTURE:
+   - Natural dynamic height: Container height (.table-responsive-box) adapts dynamically to content rows
+     with zero vertical max-height capping (height: auto; max-height: none !important).
+   - Single-line word preservation: Removed word-break: break-word/overflow-wrap: anywhere to eliminate
+     broken words ("10" / "0%", "No" / "ne", "App" / "lies").
+   - 14-inch to 16-inch laptop screen optimization: Tightened cell padding and column footprint (1000px)
+     so all 10 columns fit comfortably on laptop displays without horizontal clipping.
+   - Multi-screen scalability: Responsive media queries scaling seamlessly from 14"-16" laptops up to 34" ultrawide monitors.
+
+2. 1-CLICK INLINE EDITING:
+   - Manual override cells for Benefit %, Deductible, Frequency Limitation, Age Limit, Eligibility Status,
+     History on File, and Downgrade Clauses.
+   - Automatic recalculation and real-time synchronization with PMS Note generator and Excel breakdown export.
+
+================================================================================
 END OF PLAN - READY FOR EXECUTION
 ================================================================================

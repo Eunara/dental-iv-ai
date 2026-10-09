@@ -1407,6 +1407,22 @@
         heroPaymentToDisplay.textContent = payToStr;
       }
 
+      // Claims Address & Payor ID Wired to Directory Settings in Compact Grid
+      const heroClaimsAddressDisplay = document.getElementById('heroClaimsAddressDisplay');
+      if (heroClaimsAddressDisplay) {
+        const addr = (details.insurance_address && !/^(none|n\/a|na|-)$/i.test(details.insurance_address.trim())) ? details.insurance_address.trim() : 'N/A';
+        heroClaimsAddressDisplay.textContent = addr;
+      }
+
+      const heroPayorIdDisplay = document.getElementById('heroPayorIdDisplay');
+      if (heroPayorIdDisplay) {
+        const pid = (details.payor_id && !/^(none|n\/a|na|-)$/i.test(details.payor_id.trim())) ? details.payor_id.trim() : 'N/A';
+        const ph = (details.insurance_phone && !/^(none|n\/a|na|-)$/i.test(details.insurance_phone.trim())) ? details.insurance_phone.trim() : '';
+        let sub = `Payor ID: ${pid}`;
+        if (ph) sub += ` • Ph: ${ph}`;
+        heroPayorIdDisplay.textContent = sub;
+      }
+
       // Annual Max Card
       document.getElementById('hudAnnualMax').textContent = fmtMoney(details.annual_maximum);
       document.getElementById('hudRemainingMax').textContent = 'Remaining: ' + fmtMoney(details.remaining_maximum);
