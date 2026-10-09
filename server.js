@@ -273,7 +273,7 @@ const dentalBreakdownSchema = {
           },
           frequency_limitation: {
             type: Type.STRING,
-            description: 'Frequency limitation rule (e.g., 2x1yr, 1x5yr, 1X24m, NF, 1 in 150 days, 1/LT)',
+            description: 'Standard short frequency limitation rule (e.g., 2x1yr for 2 per calendar year, 2x12m for 2 in 12 rolling months, 1x1yr, 1x5yr, 1x24m, NF for no frequency, 1/LT for lifetime). MUST format long descriptions into compact notations like 2x1yr or 2x12m.',
           },
           age_limit: {
             type: Type.STRING,
@@ -353,6 +353,20 @@ Your mission is to audit dental breakdown sheets, fee schedules, or insurance we
    - Check and flag Missing Tooth Clauses (MTC) and Waiting Periods (flag 'None' or 'No' if waived or not applicable, e.g. "Basic 6mo Major 12").
 
 4. Frequency, Calendar Year Resets, & Shared Rules:
+   - MANDATORY SHORT FREQUENCY NOTATION FORMATTING:
+     You MUST standardize and abbreviate all long frequency sentences into concise clinical dental breakdown notation:
+     * "two of any ... within a calendar year" -> "2x1yr"
+     * "two of any ... within a 12 months" or "2 in 12 months" -> "2x12m"
+     * "one of any ... within a calendar year" -> "1x1yr"
+     * "one of any ... within a 12 months" -> "1x12m"
+     * "two per year" or "twice a year" -> "2x1yr"
+     * "once every 5 years" or "1 in 60 months" -> "1x5yr" (or "1x60m")
+     * "once every 3 years" or "1 in 36 months" -> "1x3yr" (or "1x36m")
+     * "once every 2 years" or "1 in 24 months" -> "1x24m"
+     * "no frequency limit", "no limitation", "unlimited" -> "NF"
+     * "once per lifetime", "1 per lifetime", "lifetime limit" -> "1/LT"
+     * "1 per tooth lifetime" -> "1/tooth LT"
+     Never output long paragraphs or redundant code enumerations in the frequency_limitation column. Keep it clean and short like "2x1yr" or "2x12m". Put extra procedure references or details in the "notes" column if needed.
    - Calendar Year vs Rolling Months:
      * When plan is "Calendar Year" (or frequency is 2x1yr, 1x1yr): Benefits and procedure counts reset on January 1 of each calendar year. If a patient's last service date was in a prior calendar year (e.g., last exam was 10/25/2025 and current year is 2026), the patient IS ELIGIBLE (is_eligible: true).
      * When frequency is rolling months (e.g., 2x12m): A rolling 12-month window applies from the previous service date. If only 1 procedure was used within the last 12 months, 1 procedure remains available.
@@ -571,6 +585,87 @@ function formatDate(d) {
   return `${mm}/${dd}/${yyyy}`;
 }
 
+// Helper: standardizes long frequency sentences into concise clinical dental notation
+function formatFrequencyNotation(freqStr) {
+  if (!freqStr) return '-';
+  const raw = String(freqStr).trim();
+  const s = raw.toLowerCase();
+
+  // If already standard compact notation (e.g. 2x1yr, 2x12m, 1x5yr, 1x24m, NF, 1/LT)
+  if (/^\d+x\d+(?:yr|y|m|mo)$/i.test(raw) || /^(nf|none|n\/a|1\/lt|1\/tooth lt)$/i.test(raw)) {
+    return raw;
+  }
+
+  // Check for "no frequency" / "unlimited"
+  if (/no\s*frequency|unlimited|none|no\s*limit/i.test(s)) {
+    return 'NF';
+  }
+
+  // Lifetime
+  if (/lifetime/i.test(s)) {
+    if (/tooth/i.test(s)) return '1/tooth LT';
+    return '1/LT';
+  }
+
+  // Count determination (e.g. two / twice / 2 vs one / once / 1 vs 4 vs 3)
+  let count = 1;
+  if (/two|twice|\b2\b/i.test(s)) {
+    count = 2;
+  } else if (/four|\b4\b/i.test(s)) {
+    count = 4;
+  } else if (/three|\b3\b/i.test(s)) {
+    count = 3;
+  } else if (/one|once|\b1\b/i.test(s)) {
+    count = 1;
+  }
+
+  // Period determination: Calendar year vs rolling months vs years
+  if (/calendar\s*year/i.test(s)) {
+    return `${count}x1yr`;
+  }
+
+  // Months pattern (e.g. "within 12 months", "in 12 months", "12m", "24m", "60 months", "36 months")
+  const mMatch = s.match(/(\d+)\s*(?:m|mo|mos|month|months)\b/);
+  if (mMatch) {
+    const months = parseInt(mMatch[1], 10);
+    if (months === 12) {
+      return `${count}x12m`;
+    }
+    if (months === 24) {
+      return `${count}x24m`;
+    }
+    if (months === 36) {
+      return `${count}x36m`;
+    }
+    if (months === 60) {
+      return `${count}x5yr`;
+    }
+    return `${count}x${months}m`;
+  }
+
+  // Years pattern (e.g. "within 1 year", "per year", "every 5 years", "in 3 years")
+  const yMatch = s.match(/(\d+)\s*(?:y|yr|yrs|year|years)\b/);
+  if (yMatch) {
+    const years = parseInt(yMatch[1], 10);
+    return `${count}x${years}yr`;
+  }
+
+  if (/per\s*year|a\s*year|every\s*year|annual/i.test(s)) {
+    return `${count}x1yr`;
+  }
+
+  // If already relatively short (<= 12 chars), return cleaned string
+  if (raw.length <= 12) {
+    return raw;
+  }
+
+  // Fallback: if long sentence has calendar, return 2x1yr / 1x1yr
+  if (/calendar/i.test(s)) return `${count}x1yr`;
+  if (/12\s*m/i.test(s)) return `${count}x12m`;
+
+  return raw;
+}
+
 // Helper: parse frequency months (default 60 months / 5 years)
 function parseFrequencyMonths(freqStr) {
   if (!freqStr) return 60;
@@ -762,6 +857,11 @@ function enforceAgeLimitAndFrequencyRules(procedureCodes, insuranceDetails = {})
           }
         }
       }
+    }
+
+    // 3. MANDATORY COMPACT FREQUENCY STRING NORMALIZATION
+    if (item.frequency_limitation) {
+      item.frequency_limitation = formatFrequencyNotation(item.frequency_limitation);
     }
   });
 

@@ -172,6 +172,85 @@
       return 60;
     }
 
+    // Helper: standardizes long frequency sentences into concise clinical dental notation
+    function formatFrequencyNotation(freqStr) {
+      if (!freqStr) return '-';
+      const raw = String(freqStr).trim();
+      const s = raw.toLowerCase();
+
+      // If already standard compact notation (e.g. 2x1yr, 2x12m, 1x5yr, 1x24m, NF, 1/LT)
+      if (/^\d+x\d+(?:yr|y|m|mo)$/i.test(raw) || /^(nf|none|n\/a|1\/lt|1\/tooth lt)$/i.test(raw)) {
+        return raw;
+      }
+
+      // Check for "no frequency" / "unlimited"
+      if (/no\s*frequency|unlimited|none|no\s*limit/i.test(s)) {
+        return 'NF';
+      }
+
+      // Lifetime
+      if (/lifetime/i.test(s)) {
+        if (/tooth/i.test(s)) return '1/tooth LT';
+        return '1/LT';
+      }
+
+      // Count determination
+      let count = 1;
+      if (/two|twice|\b2\b/i.test(s)) {
+        count = 2;
+      } else if (/four|\b4\b/i.test(s)) {
+        count = 4;
+      } else if (/three|\b3\b/i.test(s)) {
+        count = 3;
+      } else if (/one|once|\b1\b/i.test(s)) {
+        count = 1;
+      }
+
+      // Period determination: Calendar year vs rolling months vs years
+      if (/calendar\s*year/i.test(s)) {
+        return `${count}x1yr`;
+      }
+
+      // Months pattern (e.g. "within 12 months", "in 12 months", "12m", "24m", "60 months", "36 months")
+      const mMatch = s.match(/(\d+)\s*(?:m|mo|mos|month|months)\b/);
+      if (mMatch) {
+        const months = parseInt(mMatch[1], 10);
+        if (months === 12) {
+          return `${count}x12m`;
+        }
+        if (months === 24) {
+          return `${count}x24m`;
+        }
+        if (months === 36) {
+          return `${count}x36m`;
+        }
+        if (months === 60) {
+          return `${count}x5yr`;
+        }
+        return `${count}x${months}m`;
+      }
+
+      // Years pattern (e.g. "within 1 year", "per year", "every 5 years", "in 3 years")
+      const yMatch = s.match(/(\d+)\s*(?:y|yr|yrs|year|years)\b/);
+      if (yMatch) {
+        const years = parseInt(yMatch[1], 10);
+        return `${count}x${years}yr`;
+      }
+
+      if (/per\s*year|a\s*year|every\s*year|annual/i.test(s)) {
+        return `${count}x1yr`;
+      }
+
+      if (raw.length <= 12) {
+        return raw;
+      }
+
+      if (/calendar/i.test(s)) return `${count}x1yr`;
+      if (/12\s*m/i.test(s)) return `${count}x12m`;
+
+      return raw;
+    }
+
     function formatDate(d) {
       const mm = String(d.getMonth() + 1).padStart(2, '0');
       const dd = String(d.getDate()).padStart(2, '0');
@@ -325,6 +404,11 @@
               }
             }
           }
+        }
+
+        // 3. Compact Frequency String Normalization
+        if (item.frequency_limitation) {
+          item.frequency_limitation = formatFrequencyNotation(item.frequency_limitation);
         }
       });
 
@@ -1735,7 +1819,9 @@
             if (field === 'downgrade_rule' && !val) val = 'None';
             if (field === 'age_limit' && !val) val = 'None';
             if (field === 'history_dates' && !val) val = 'None';
-            if (field === 'frequency_limitation' && !val) val = '-';
+            if (field === 'frequency_limitation') {
+              val = val ? formatFrequencyNotation(val) : '-';
+            }
             if (field === 'coverage_percentage' && !val) val = '0%';
             p[field] = val;
             displayToast(`Updated ${code} ${field.replace('_', ' ')}`);
