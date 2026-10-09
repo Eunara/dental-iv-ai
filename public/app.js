@@ -972,11 +972,13 @@
         heroPatientDobDisplay.textContent = pDob ? `DOB: ${pDob}${pAge !== null ? ` (Age: ${pAge})` : ''}` : 'DOB: Not Specified';
       }
 
-      if (details.patient_name && details.patient_name.trim() !== '' && details.patient_name.toLowerCase() !== 'n/a') {
-        patientHeroName.textContent = details.patient_name.trim();
-        patientHeroBadge.style.display = 'inline-flex';
-      } else {
-        patientHeroBadge.style.display = 'none';
+      if (patientHeroBadge && patientHeroName) {
+        if (details.patient_name && details.patient_name.trim() !== '' && details.patient_name.toLowerCase() !== 'n/a') {
+          patientHeroName.textContent = details.patient_name.trim();
+          patientHeroBadge.style.display = 'inline-flex';
+        } else {
+          patientHeroBadge.style.display = 'none';
+        }
       }
 
       // Group Name & Group #
@@ -991,8 +993,11 @@
       }
 
       // Carrier & Network
-      document.getElementById('carrierNameDisplay').textContent = details.carrier || 'Delta Dental PPO';
-      document.getElementById('planEffectiveDateDisplay').textContent = 'Effective: ' + (details.effective_date || '01/01/2026');
+      const carrierNameDisplay = document.getElementById('carrierNameDisplay');
+      if (carrierNameDisplay) carrierNameDisplay.textContent = details.carrier || 'Delta Dental PPO';
+
+      const planEffectiveDateDisplay = document.getElementById('planEffectiveDateDisplay');
+      if (planEffectiveDateDisplay) planEffectiveDateDisplay.textContent = 'Effective: ' + (details.effective_date || '01/01/2026');
       
       const netBadge = document.getElementById('networkStatusBadge');
       const heroNetBadge = document.getElementById('heroNetworkBadge');
