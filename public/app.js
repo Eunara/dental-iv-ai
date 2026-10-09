@@ -1015,11 +1015,9 @@
         }
       }
 
-      // Group Name, Plan Name & Group #
+      // Employer / Group Name, Plan Name & Group #
       const grp = (details.group_name && details.group_name.trim() !== '' && !/^(none|n\/a|na|-)$/i.test(details.group_name.trim())) ? details.group_name.trim() : '';
       const pln = (details.plan_name && details.plan_name.trim() !== '' && !/^(none|n\/a|na|-)$/i.test(details.plan_name.trim())) ? details.plan_name.trim() : '';
-      const insCarrier = (details.carrier && details.carrier.trim() !== '' && !/^(none|n\/a|na|-)$/i.test(details.carrier.trim())) ? details.carrier.trim() : '';
-      const secIns = (details.secondary_insurance && details.secondary_insurance.trim() !== '' && !/^(none|n\/a|na|-)$/i.test(details.secondary_insurance.trim())) ? details.secondary_insurance.trim() : '';
 
       let groupPlanDisplay = 'N/A';
       if (grp && pln && grp.toLowerCase() !== pln.toLowerCase()) {
@@ -1037,21 +1035,27 @@
 
       const heroGroupNumberDisplay = document.getElementById('heroGroupNumberDisplay');
       const grpNum = (details.group_number && details.group_number.trim() !== '' && !/^(none|n\/a|na|-)$/i.test(details.group_number.trim())) ? details.group_number.trim() : 'N/A';
-      
-      let subParts = [`Group #: ${grpNum}`];
-      if (insCarrier) {
-        subParts.push(`Ins: ${insCarrier}`);
-      }
-      if (secIns) {
-        subParts.push(`Sec: ${secIns}`);
-      }
       if (heroGroupNumberDisplay) {
-        heroGroupNumberDisplay.textContent = subParts.join(' • ');
+        heroGroupNumberDisplay.textContent = `Group #: ${grpNum}`;
       }
 
-      // Carrier & Network
+      // Carrier Name & Claims Mailing Address in Top Banner
       const carrierNameDisplay = document.getElementById('carrierNameDisplay');
       if (carrierNameDisplay) carrierNameDisplay.textContent = details.carrier || 'Dental Insurance';
+
+      const carrierAddressDisplay = document.getElementById('carrierAddressDisplay');
+      if (carrierAddressDisplay) {
+        const addr = (details.insurance_address && !/^(none|n\/a|na|-)$/i.test(details.insurance_address.trim())) ? details.insurance_address.trim() : '';
+        const ph = (details.insurance_phone && !/^(none|n\/a|na|-)$/i.test(details.insurance_phone.trim())) ? details.insurance_phone.trim() : '';
+        let addrParts = [];
+        if (addr) addrParts.push(`Claims Address: ${addr}`);
+        if (ph) addrParts.push(`Ph: ${ph}`);
+        if (addrParts.length > 0) {
+          carrierAddressDisplay.textContent = addrParts.join(' • ');
+        } else {
+          carrierAddressDisplay.textContent = 'Claims Address: N/A';
+        }
+      }
 
       const planEffectiveDateDisplay = document.getElementById('planEffectiveDateDisplay');
       if (planEffectiveDateDisplay) planEffectiveDateDisplay.textContent = 'Effective: ' + (details.effective_date || '01/01/2026');
@@ -1071,11 +1075,12 @@
 
       const heroCarrierSubDisplay = document.getElementById('heroCarrierSubDisplay');
       if (heroCarrierSubDisplay) {
-        let carrierText = details.carrier || 'Dental Insurance';
-        if (secIns) {
-          carrierText += ` (Sec: ${secIns})`;
+        const addr = (details.insurance_address && !/^(none|n\/a|na|-)$/i.test(details.insurance_address.trim())) ? details.insurance_address.trim() : '';
+        let sub = details.carrier || 'Dental Insurance';
+        if (addr) {
+          sub += ` • ${addr}`;
         }
-        heroCarrierSubDisplay.textContent = carrierText;
+        heroCarrierSubDisplay.textContent = sub;
       }
 
       // Effective & Termed Dates with Status Validation
@@ -1554,11 +1559,17 @@
         grpPlanNote = plnNote;
       }
 
-      txt += `GROUP / PLAN NAME:    ${grpPlanNote}\n`;
+      txt += `EMPLOYER / GROUP:     ${grpPlanNote}\n`;
       txt += `GROUP NUMBER:         ${d.group_number || 'N/A'}\n`;
-      txt += `CARRIER / INSURANCE:  ${d.carrier || 'Dental Insurance'}\n`;
-      if (d.secondary_insurance && d.secondary_insurance.trim() !== '' && !/^(none|n\/a|na|-)$/i.test(d.secondary_insurance.trim())) {
-        txt += `SECONDARY INSURANCE:  ${d.secondary_insurance.trim()}\n`;
+      txt += `INSURANCE COMPANY:    ${d.carrier || 'Dental Insurance'}\n`;
+      if (d.insurance_address && !/^(none|n\/a|na|-)$/i.test(d.insurance_address.trim())) {
+        txt += `INS CLAIMS ADDRESS:   ${d.insurance_address.trim()}\n`;
+      }
+      if (d.insurance_phone && !/^(none|n\/a|na|-)$/i.test(d.insurance_phone.trim())) {
+        txt += `INS PHONE NUMBER:     ${d.insurance_phone.trim()}\n`;
+      }
+      if (d.payor_id && !/^(none|n\/a|na|-)$/i.test(d.payor_id.trim())) {
+        txt += `ELECTRONIC PAYOR ID:  ${d.payor_id.trim()}\n`;
       }
       txt += `NETWORK STATUS:       ${d.network_status || 'In Network'}\n`;
       txt += `POLICY STATUS:        ${d.policy_status || 'Active'}\n`;
@@ -1729,7 +1740,9 @@
       }
       const groupNumber = (d.group_number && d.group_number.trim() !== '' && !/^(none|n\/a|na|-)$/i.test(d.group_number.trim())) ? d.group_number.trim() : 'N/A';
       const carrier = d.carrier || 'Dental Insurance';
-      const secInsDisplay = (d.secondary_insurance && d.secondary_insurance.trim() !== '' && !/^(none|n\/a|na|-)$/i.test(d.secondary_insurance.trim())) ? d.secondary_insurance.trim() : 'None / N/A';
+      const insAddress = (d.insurance_address && !/^(none|n\/a|na|-)$/i.test(d.insurance_address.trim())) ? d.insurance_address.trim() : 'N/A';
+      const insPhone = (d.insurance_phone && !/^(none|n\/a|na|-)$/i.test(d.insurance_phone.trim())) ? d.insurance_phone.trim() : 'N/A';
+      const payorId = (d.payor_id && !/^(none|n\/a|na|-)$/i.test(d.payor_id.trim())) ? d.payor_id.trim() : 'N/A';
       const network = d.network_status || 'In Network';
       const policyStatus = d.policy_status || 'Active';
       const effective = d.effective_date || '01/01/2026';
@@ -1758,9 +1771,10 @@
       let lines = [];
       lines.push([csvCell('DENTAL INSURANCE BENEFIT BREAKDOWN FORM')].join(','));
       lines.push('');
-      lines.push([csvCell('Patient Name:'), csvCell(patientName), csvCell('Date of Birth (DOB):'), csvCell(dobDisplay)].join(','));
-      lines.push([csvCell('Group / Plan Name:'), csvCell(groupPlanDisplay), csvCell('Group #:'), csvCell(groupNumber)].join(','));
-      lines.push([csvCell('Carrier / Insurance:'), csvCell(carrier), csvCell('Secondary Insurance:'), csvCell(secInsDisplay)].join(','));
+      lines.push([csvCell('Subscriber / Patient Name:'), csvCell(patientName), csvCell('Subscriber DOB:'), csvCell(dobDisplay)].join(','));
+      lines.push([csvCell('Employer / Group Name:'), csvCell(groupPlanDisplay), csvCell('Group #:'), csvCell(groupNumber)].join(','));
+      lines.push([csvCell('Ins Company:'), csvCell(carrier), csvCell('Ins Ph #:'), csvCell(insPhone)].join(','));
+      lines.push([csvCell('Ins Address (Claims):'), csvCell(insAddress), csvCell('Payor ID:'), csvCell(payorId)].join(','));
       lines.push([csvCell('Network Participation:'), csvCell(network), csvCell('Policy Status:'), csvCell(policyStatus)].join(','));
       lines.push([csvCell('Effective Date:'), csvCell(effective), csvCell('Plan Benefits:'), csvCell(planBenefits)].join(','));
       lines.push([csvCell('Insurance Payment goes to:'), csvCell(paymentTo), csvCell('Fee Schedule / Tier:'), csvCell(feeSchedule)].join(','));
@@ -1874,7 +1888,9 @@
       }
       const groupNumber = (d.group_number && d.group_number.trim() !== '' && !/^(none|n\/a|na|-)$/i.test(d.group_number.trim())) ? d.group_number.trim() : 'N/A';
       const carrier = d.carrier || 'Dental Insurance';
-      const secInsDisplay = (d.secondary_insurance && d.secondary_insurance.trim() !== '' && !/^(none|n\/a|na|-)$/i.test(d.secondary_insurance.trim())) ? d.secondary_insurance.trim() : 'None / N/A';
+      const insAddress = (d.insurance_address && !/^(none|n\/a|na|-)$/i.test(d.insurance_address.trim())) ? d.insurance_address.trim() : 'N/A';
+      const insPhone = (d.insurance_phone && !/^(none|n\/a|na|-)$/i.test(d.insurance_phone.trim())) ? d.insurance_phone.trim() : 'N/A';
+      const payorId = (d.payor_id && !/^(none|n\/a|na|-)$/i.test(d.payor_id.trim())) ? d.payor_id.trim() : 'N/A';
       const network = d.network_status || 'In Network';
       const policyStatus = d.policy_status || 'Active';
       const effective = d.effective_date || '01/01/2026';
@@ -1925,22 +1941,28 @@
           <!-- Patient Policy Header Table (Excel Gridline Aesthetic) -->
           <table class="excel-grid-table">
             <tr>
-              <td class="excel-label-cell" style="width: 20%; font-weight: 700;">Patient Name:</td>
+              <td class="excel-label-cell" style="width: 20%; font-weight: 700;">Subscriber Name:</td>
               <td class="excel-val-cell" style="width: 30%; font-weight: 700; color: #0284c7;">${escapeHtml(patientName)}</td>
-              <td class="excel-label-cell" style="width: 22%; font-weight: 700;">Date of Birth (DOB):</td>
+              <td class="excel-label-cell" style="width: 22%; font-weight: 700;">Subscriber DOB:</td>
               <td class="excel-val-cell" style="width: 28%; font-weight: 700;">${escapeHtml(dobDisplay)}</td>
             </tr>
             <tr>
-              <td class="excel-label-cell">Group / Plan Name:</td>
-              <td class="excel-val-cell" style="font-weight: 600;">${escapeHtml(groupPlanDisplay)}</td>
-              <td class="excel-label-cell">Group Policy #:</td>
-              <td class="excel-val-cell">${escapeHtml(groupNumber)}</td>
+              <td class="excel-label-cell">Employer / Group Name:</td>
+              <td class="excel-val-cell" style="font-weight: 700;">${escapeHtml(groupPlanDisplay)}</td>
+              <td class="excel-label-cell">Group #:</td>
+              <td class="excel-val-cell" style="font-weight: 700; font-family: var(--font-mono);">${escapeHtml(groupNumber)}</td>
             </tr>
             <tr>
-              <td class="excel-label-cell">Insurance Carrier:</td>
+              <td class="excel-label-cell">Ins Company:</td>
               <td class="excel-val-cell" style="font-weight: 700; color: #0f172a;">${escapeHtml(carrier)}</td>
-              <td class="excel-label-cell">Secondary Insurance:</td>
-              <td class="excel-val-cell">${escapeHtml(secInsDisplay)}</td>
+              <td class="excel-label-cell">Ins Ph #:</td>
+              <td class="excel-val-cell">${escapeHtml(insPhone)}</td>
+            </tr>
+            <tr>
+              <td class="excel-label-cell">Ins Address:</td>
+              <td class="excel-val-cell" style="color: #334155;">${escapeHtml(insAddress)}</td>
+              <td class="excel-label-cell">PayorID:</td>
+              <td class="excel-val-cell">${escapeHtml(payorId)}</td>
             </tr>
             <tr>
               <td class="excel-label-cell">Network Participation:</td>

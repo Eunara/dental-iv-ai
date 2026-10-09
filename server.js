@@ -71,16 +71,26 @@ const dentalBreakdownSchema = {
         },
         carrier: {
           type: Type.STRING,
-          description: 'Primary Dental Insurance Carrier Name / Payer (e.g. Ameritas Life Insurance Corp, Delta Dental, MetLife, Cigna, Guardian, Blue Cross Blue Shield). Must capture the actual insurance carrier.',
+          description: 'Dental Insurance Company / Carrier Name (e.g. METLIFE, Delta Dental, Ameritas, Cigna, Guardian, Blue Cross Blue Shield).',
         },
-        secondary_insurance: {
+        insurance_address: {
           type: Type.STRING,
-          description: 'Secondary or other dental insurance coverage if detected on the document or portal (e.g. Delta Dental, MetLife, None, N/A)',
+          description: 'Dental Insurance Claims Mailing Address if found on the document (e.g. P.O. Box 981282 El Paso, TX - 79998, N/A if not found)',
+          nullable: true,
+        },
+        insurance_phone: {
+          type: Type.STRING,
+          description: 'Dental Insurance Phone Number (e.g. (877) 638-3379, N/A if not found)',
+          nullable: true,
+        },
+        payor_id: {
+          type: Type.STRING,
+          description: 'Electronic Claims Payor ID if found on the document (e.g. 65978, N/A if not found)',
           nullable: true,
         },
         group_name: {
           type: Type.STRING,
-          description: 'Employer Group Name if found on the document (e.g. Boeing, State of California, N/A). Return N/A if not found. Do not invent names.',
+          description: 'Employer Name or Group Policy Name if found on the document (e.g. American Airlines, Boeing, Acme Corp, N/A if not found). Return N/A if not found.',
           nullable: true,
         },
         plan_name: {
@@ -90,7 +100,7 @@ const dentalBreakdownSchema = {
         },
         group_number: {
           type: Type.STRING,
-          description: 'Group Policy Number if found on the document (e.g. 12345-001, N/A if not found)',
+          description: 'Group Policy Number if found on the document (e.g. 316130, N/A if not found)',
           nullable: true,
         },
         effective_date: {
@@ -314,8 +324,8 @@ Your mission is to audit dental breakdown sheets, fee schedules, or insurance we
 1. STRICT HIPAA & PRIVACY DIRECTIVES
 ==================================================
 - Transient Processing: Process the uploaded document purely in memory. Never store, log, or persist data.
-- Necessary Policy Identifiers: Extract Patient Name, DOB, Group Name / Plan Name, Group Number, Effective Date, and Termed Date solely for clinical policy verification and eligibility matching.
-- Strict PII Exclusions: Strictly omit SSN, member/subscriber ID numbers, full street addresses, or payment card numbers.
+- Necessary Policy Identifiers: Extract Patient / Subscriber Name, DOB, Employer Name / Group Name, Group Number, Insurance Company Name, Insurance Claims Address, Phone, Payor ID, Effective Date, and Termed Date solely for clinical policy verification and claims filing.
+- Strict PII Exclusions: Strictly omit SSN, member/subscriber ID numbers, patient personal street addresses, or payment card numbers. (Note: Claims mailing address of the insurance company itself is standard institutional data and MUST be captured).
 - Scope: Restrict all extraction strictly to policy details, financial rules, network tiers, CDT codes, coverage percentages, frequencies, and clinical history dates.
 
 ==================================================
@@ -325,14 +335,16 @@ Your mission is to audit dental breakdown sheets, fee schedules, or insurance we
    - If a network tier (In-Network or Out-of-Network) is specified by the user or document, strictly extract benefit percentages, maximums, and deductibles for that selected tier.
    - If dual-column tables (In-Net vs Out-of-Net) exist and no preference is specified, prioritize In-Network while noting Out-of-Network variations in the notes.
 
-2. Policy, Carrier, Plan & Termed Date Validation:
-   - Extract Dental Insurance Carrier / Payer Name accurately (e.g. Ameritas Life Insurance Corp, Delta Dental, MetLife, Cigna, Guardian, Blue Cross Blue Shield). Must capture the actual insurance company.
-   - If secondary insurance or other coverage is mentioned or detected on the document/portal, extract it in secondary_insurance. If not found, return "None".
-   - Extract Employer Group Name and Dental Plan Name. If either is not present or detected on the document, strictly return "N/A". Never hallucinate or invent dummy names (e.g. Acme Corp).
-   - Extract Group Number. If not found, return "N/A".
+2. Policy, Carrier, Claims Address, Employer/Group & Termed Date Validation:
+   - Extract Dental Insurance Company / Carrier Name accurately (Ins Company, e.g. METLIFE, Delta Dental, Ameritas, Cigna, Guardian, Blue Cross Blue Shield).
+   - Extract Insurance Claims Mailing Address (Ins Address, e.g. P.O. Box 981282 El Paso, TX - 79998). If not found, return "N/A".
+   - Extract Insurance Phone Number (Ins Ph #, e.g. (877) 638-3379) and Electronic Payor ID (PayorID). If not found, return "N/A".
+   - Extract Employer Name / Group Name (e.g. American Airlines, Boeing). If labeled as "Employer Name" or "Group Name", map to group_name. If not found, strictly return "N/A". Never invent dummy names (e.g. Acme Corp).
+   - Extract Group Policy Number (Group #, e.g. 316130). If not found, return "N/A".
    - Extract Effective Date and Termed Date (Termination Date).
    - If a Termed Date exists and is on or before the current date, set policy_status to "Termed / Inactive".
    - If no termed date exists or it is in the future, set policy_status to "Active".
+   - Do NOT extract or include secondary insurance.
 
 3. Financials & Deductible Allocation:
    - Accurately parse Annual Maximum, Remaining Maximum, Individual Deductible, and Remaining Deductible.
@@ -1056,8 +1068,9 @@ app.post('/api/verify', upload.array('files', 10), async (req, res) => {
         }
       }
 
-      // Sanitize Group Name, Plan Name, and Secondary Insurance defaults
+      // Sanitize Employer/Group Name, Claims Address, Phone, Payor ID
       const ins = parsedResult.insurance_details;
+      delete ins.secondary_insurance;
       if (!ins.group_name || /^(none|na|null|undefined|-)$/i.test(String(ins.group_name).trim())) {
         ins.group_name = 'N/A';
       }
@@ -1067,8 +1080,14 @@ app.post('/api/verify', upload.array('files', 10), async (req, res) => {
       if (!ins.group_number || /^(none|na|null|undefined|-)$/i.test(String(ins.group_number).trim())) {
         ins.group_number = 'N/A';
       }
-      if (!ins.secondary_insurance || /^(none|na|null|undefined|-)$/i.test(String(ins.secondary_insurance).trim())) {
-        ins.secondary_insurance = 'None';
+      if (!ins.insurance_address || /^(none|na|null|undefined|-)$/i.test(String(ins.insurance_address).trim())) {
+        ins.insurance_address = 'N/A';
+      }
+      if (!ins.insurance_phone || /^(none|na|null|undefined|-)$/i.test(String(ins.insurance_phone).trim())) {
+        ins.insurance_phone = 'N/A';
+      }
+      if (!ins.payor_id || /^(none|na|null|undefined|-)$/i.test(String(ins.payor_id).trim())) {
+        ins.payor_id = 'N/A';
       }
       if (!ins.carrier || /^(none|na|null|undefined|-)$/i.test(String(ins.carrier).trim())) {
         ins.carrier = 'Dental Insurance';
