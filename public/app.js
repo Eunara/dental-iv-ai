@@ -831,6 +831,30 @@
     const historyListContainer = document.getElementById('historyListContainer');
     const headerHistoryCount = document.getElementById('headerHistoryCount');
     const historyModalCount = document.getElementById('historyModalCount');
+    const historySearchInput = document.getElementById('historySearchInput');
+
+    // Staff Auth & Session Elements
+    const openAuthModalBtn = document.getElementById('openAuthModalBtn');
+    const userBadgeLabel = document.getElementById('userBadgeLabel');
+    const authModal = document.getElementById('authModal');
+    const closeAuthModalBtn = document.getElementById('closeAuthModalBtn');
+    const btnCloseAuthModalBtn = document.getElementById('btnCloseAuthModalBtn');
+    const authLoggedInView = document.getElementById('authLoggedInView');
+    const authSessionUserName = document.getElementById('authSessionUserName');
+    const authSessionUserEmail = document.getElementById('authSessionUserEmail');
+    const authSessionPracticeName = document.getElementById('authSessionPracticeName');
+    const btnLogoutStaff = document.getElementById('btnLogoutStaff');
+    const authLoginForm = document.getElementById('authLoginForm');
+    const loginEmail = document.getElementById('loginEmail');
+    const loginPassword = document.getElementById('loginPassword');
+    const loginErrorMsg = document.getElementById('loginErrorMsg');
+    const btnSubmitLogin = document.getElementById('btnSubmitLogin');
+
+    // HIPAA Inactivity Modal Elements
+    const inactivityWarningModal = document.getElementById('inactivityWarningModal');
+    const inactivityCountdownSec = document.getElementById('inactivityCountdownSec');
+    const stayLoggedInBtn = document.getElementById('stayLoggedInBtn');
+    const logoutNowBtn = document.getElementById('logoutNowBtn');
 
     // Table elements
     const cdtSearchInput = document.getElementById('cdtSearchInput');
@@ -1174,6 +1198,9 @@
           currentAuditData.insurance_details.dob = patientDobVal;
         }
 
+        if (resData.meta && resData.meta.verification_id) {
+          currentAuditData.verification_id = resData.meta.verification_id;
+        }
         renderReportDashboard(currentAuditData);
         saveAuditToHistory(currentAuditData);
       } catch (err) {
@@ -3011,13 +3038,262 @@
     }
 
     // ==========================================
-    // PATIENT VERIFICATION HISTORY LOGIC
+    // CLINIC STAFF AUTH & SESSION LOGIC (HIPAA)
     // ==========================================
+    let currentUser = null;
+
+    async function checkUserAuth() {
+      try {
+        const res = await fetch('/api/auth/me');
+        if (res.ok) {
+          const data = await res.json();
+          if (data.authenticated && data.user) {
+            setCurrentUser(data.user);
+            await syncHistoryFromBackend();
+            return;
+          }
+        }
+      } catch (err) {
+        console.warn('Auth check skipped (offline or unauthenticated):', err);
+      }
+      setCurrentUser(null);
+    }
+
+    function setCurrentUser(user) {
+      currentUser = user;
+      if (user) {
+        if (userBadgeLabel) userBadgeLabel.textContent = user.full_name || user.email.split('@')[0];
+        if (openAuthModalBtn) {
+          openAuthModalBtn.classList.add('logged-in');
+          openAuthModalBtn.title = `${user.full_name} (${user.practice_name || 'Clinic Account'})`;
+        }
+        if (authLoggedInView) authLoggedInView.style.display = 'block';
+        if (authLoginForm) authLoginForm.style.display = 'none';
+        if (authSessionUserName) authSessionUserName.textContent = user.full_name || 'Clinic User';
+        if (authSessionUserEmail) authSessionUserEmail.textContent = user.email;
+        if (authSessionPracticeName) authSessionPracticeName.textContent = `Practice: ${user.practice_name || 'DentVerify Clinic'}`;
+      } else {
+        if (userBadgeLabel) userBadgeLabel.textContent = 'Sign In';
+        if (openAuthModalBtn) {
+          openAuthModalBtn.classList.remove('logged-in');
+          openAuthModalBtn.title = 'Clinic Staff Login & Session';
+        }
+        if (authLoggedInView) authLoggedInView.style.display = 'none';
+        if (authLoginForm) authLoginForm.style.display = 'block';
+      }
+    }
+
+    if (openAuthModalBtn) {
+      openAuthModalBtn.addEventListener('click', () => {
+        if (authModal) authModal.classList.add('active');
+        if (loginErrorMsg) loginErrorMsg.style.display = 'none';
+      });
+    }
+
+    if (closeAuthModalBtn) {
+      closeAuthModalBtn.addEventListener('click', () => {
+        if (authModal) authModal.classList.remove('active');
+      });
+    }
+
+    if (btnCloseAuthModalBtn) {
+      btnCloseAuthModalBtn.addEventListener('click', () => {
+        if (authModal) authModal.classList.remove('active');
+      });
+    }
+
+    if (authModal) {
+      authModal.addEventListener('click', (e) => {
+        if (e.target === authModal) {
+          authModal.classList.remove('active');
+        }
+      });
+    }
+
+    if (authLoginForm) {
+      authLoginForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        if (loginErrorMsg) loginErrorMsg.style.display = 'none';
+        if (btnSubmitLogin) {
+          btnSubmitLogin.disabled = true;
+          btnSubmitLogin.textContent = 'Signing in...';
+        }
+        try {
+          const res = await fetch('/api/auth/login', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              email: loginEmail.value.trim(),
+              password: loginPassword.value,
+            }),
+          });
+          const data = await res.json();
+          if (res.ok && data.success) {
+            setCurrentUser(data.user);
+            if (authModal) authModal.classList.remove('active');
+            displayToast(`Welcome, ${data.user.full_name}!`);
+            resetInactivityTimer();
+            await syncHistoryFromBackend();
+            renderHistoryList();
+          } else {
+            if (loginErrorMsg) {
+              loginErrorMsg.textContent = data.error || 'Invalid credentials.';
+              loginErrorMsg.style.display = 'block';
+            }
+          }
+        } catch (err) {
+          if (loginErrorMsg) {
+            loginErrorMsg.textContent = 'Network or server connection failed.';
+            loginErrorMsg.style.display = 'block';
+          }
+        } finally {
+          if (btnSubmitLogin) {
+            btnSubmitLogin.disabled = false;
+            btnSubmitLogin.textContent = 'Sign In to Practice';
+          }
+        }
+      });
+    }
+
+    if (btnLogoutStaff) {
+      btnLogoutStaff.addEventListener('click', async () => {
+        try {
+          await fetch('/api/auth/logout', { method: 'POST' });
+        } catch (e) {}
+        setCurrentUser(null);
+        if (authModal) authModal.classList.remove('active');
+        displayToast('Logged out of clinic session.');
+      });
+    }
+
+    // ==========================================
+    // HIPAA 15-MINUTE INACTIVITY AUTO-LOGOUT
+    // ==========================================
+    const INACTIVITY_TIMEOUT_MS = 15 * 60 * 1000; // 15 mins
+    const WARNING_DURATION_MS = 60 * 1000;       // 60 secs
+    const WARNING_TRIGGER_MS = INACTIVITY_TIMEOUT_MS - WARNING_DURATION_MS; // 14 mins
+
+    let inactivityTimer = null;
+    let warningCountdownTimer = null;
+    let secondsRemaining = 60;
+
+    function resetInactivityTimer() {
+      if (inactivityWarningModal && inactivityWarningModal.classList.contains('active')) {
+        inactivityWarningModal.classList.remove('active');
+      }
+      if (warningCountdownTimer) {
+        clearInterval(warningCountdownTimer);
+        warningCountdownTimer = null;
+      }
+      if (inactivityTimer) {
+        clearTimeout(inactivityTimer);
+      }
+      inactivityTimer = setTimeout(triggerInactivityWarning, WARNING_TRIGGER_MS);
+    }
+
+    function triggerInactivityWarning() {
+      if (!currentUser) return; // Only prompt countdown if clinic user is signed in
+      secondsRemaining = 60;
+      if (inactivityCountdownSec) inactivityCountdownSec.textContent = secondsRemaining;
+      if (inactivityWarningModal) inactivityWarningModal.classList.add('active');
+
+      warningCountdownTimer = setInterval(() => {
+        secondsRemaining--;
+        if (inactivityCountdownSec) inactivityCountdownSec.textContent = secondsRemaining;
+        if (secondsRemaining <= 0) {
+          clearInterval(warningCountdownTimer);
+          warningCountdownTimer = null;
+          executeAutoLogout();
+        }
+      }, 1000);
+    }
+
+    async function executeAutoLogout() {
+      if (inactivityWarningModal) inactivityWarningModal.classList.remove('active');
+      try {
+        await fetch('/api/auth/logout', { method: 'POST' });
+      } catch (e) {}
+      setCurrentUser(null);
+      displayToast('🔒 Session timed out after 15 minutes of inactivity (HIPAA Safeguard).');
+      if (authModal) {
+        if (loginErrorMsg) {
+          loginErrorMsg.textContent = 'Session locked due to 15-minute HIPAA inactivity limit. Please sign in again.';
+          loginErrorMsg.style.display = 'block';
+        }
+        authModal.classList.add('active');
+      }
+    }
+
+    // Register active user movement listeners
+    ['mousemove', 'mousedown', 'keydown', 'touchstart', 'scroll'].forEach((evt) => {
+      window.addEventListener(evt, () => {
+        if (!inactivityWarningModal || !inactivityWarningModal.classList.contains('active')) {
+          resetInactivityTimer();
+        }
+      }, { passive: true });
+    });
+
+    if (stayLoggedInBtn) {
+      stayLoggedInBtn.addEventListener('click', () => {
+        resetInactivityTimer();
+        displayToast('Session extended.');
+      });
+    }
+
+    if (logoutNowBtn) {
+      logoutNowBtn.addEventListener('click', () => {
+        executeAutoLogout();
+      });
+    }
+
+    // Start initial inactivity timer
+    resetInactivityTimer();
+
+    // ==========================================
+    // PATIENT VERIFICATION HISTORY LOGIC (POSTGRESQL + LOCAL CACHE)
+    // ==========================================
+    let cachedServerHistory = [];
+
+    async function syncHistoryFromBackend() {
+      try {
+        const res = await fetch('/api/verifications');
+        if (res.ok) {
+          const json = await res.json();
+          if (json.success && Array.isArray(json.history)) {
+            cachedServerHistory = json.history.map(row => ({
+              id: row.id,
+              isDbRecord: true,
+              timestamp: row.created_at,
+              displayDate: new Date(row.created_at).toLocaleDateString('en-US', {
+                month: 'short',
+                day: 'numeric',
+                year: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit',
+              }),
+              patientName: row.patient_name || 'Patient',
+              carrier: row.carrier || 'Dental Insurance',
+              networkStatus: row.network_status || 'In-Network',
+              codesCount: 30,
+              data: null,
+            }));
+            updateHistoryCountUI();
+            return cachedServerHistory;
+          }
+        }
+      } catch (e) {
+        console.warn('Backend history sync:', e);
+      }
+      return null;
+    }
+
     function getAuditHistory() {
+      if (cachedServerHistory && cachedServerHistory.length > 0) {
+        return cachedServerHistory;
+      }
       try {
         const raw = localStorage.getItem(HISTORY_STORAGE_KEY);
         const list = raw ? JSON.parse(raw) : [];
-        // Filter out any mock/sample test breakdowns from the history list
         return list.filter(item => !item.is_sample && !item.data?.is_sample && item.patientName !== 'Katherine Birdwell');
       } catch (e) {
         console.warn('Could not read audit history:', e);
@@ -3028,14 +3304,13 @@
     function saveAuditToHistory(auditData) {
       if (!auditData || auditData.is_sample) return;
       try {
-        const list = getAuditHistory();
         const d = auditData.insurance_details || {};
         const pName = (d.patient_name && d.patient_name.trim() !== '') ? d.patient_name.trim() : 'Patient (Unspecified)';
         if (pName === 'Katherine Birdwell' || auditData.is_sample) return;
         const carrier = d.carrier || 'Dental Insurance';
-        
+
         const historyRecord = {
-          id: 'hist_' + Date.now() + '_' + Math.random().toString(36).substr(2, 5),
+          id: auditData.verification_id || ('hist_' + Date.now() + '_' + Math.random().toString(36).substr(2, 5)),
           timestamp: new Date().toISOString(),
           displayDate: new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit' }),
           patientName: pName,
@@ -3045,20 +3320,41 @@
           data: auditData,
         };
 
-        // Prepend new record, keep up to 40 recent patient verifications
-        list.unshift(historyRecord);
-        if (list.length > 40) list.pop();
-        localStorage.setItem(HISTORY_STORAGE_KEY, JSON.stringify(list));
+        // Also save to localStorage cache
+        const localList = [];
+        try {
+          const raw = localStorage.getItem(HISTORY_STORAGE_KEY);
+          if (raw) localList.push(...JSON.parse(raw));
+        } catch (e) {}
+        localList.unshift(historyRecord);
+        if (localList.length > 40) localList.pop();
+        localStorage.setItem(HISTORY_STORAGE_KEY, JSON.stringify(localList));
+
+        // Prepend to cachedServerHistory
+        cachedServerHistory.unshift(historyRecord);
         updateHistoryCountUI();
       } catch (e) {
         console.warn('Could not save audit to history:', e);
       }
     }
 
-    function deleteHistoryItem(id) {
+    async function deleteHistoryItem(id) {
       try {
-        const list = getAuditHistory().filter(item => item.id !== id);
-        localStorage.setItem(HISTORY_STORAGE_KEY, JSON.stringify(list));
+        // If it's a UUID/DB record, delete on server
+        if (typeof id === 'string' && id.includes('-')) {
+          try {
+            await fetch(`/api/verifications/${id}`, { method: 'DELETE' });
+          } catch (e) {}
+        }
+        cachedServerHistory = cachedServerHistory.filter(item => item.id !== id);
+        try {
+          const raw = localStorage.getItem(HISTORY_STORAGE_KEY);
+          if (raw) {
+            const parsed = JSON.parse(raw).filter(item => item.id !== id);
+            localStorage.setItem(HISTORY_STORAGE_KEY, JSON.stringify(parsed));
+          }
+        } catch (e) {}
+
         renderHistoryList();
         updateHistoryCountUI();
         displayToast('History item deleted.');
@@ -3067,9 +3363,10 @@
       }
     }
 
-    function clearAllHistory() {
+    async function clearAllHistory() {
       if (!confirm('Are you sure you want to clear all patient verification history?')) return;
       localStorage.removeItem(HISTORY_STORAGE_KEY);
+      cachedServerHistory = [];
       renderHistoryList();
       updateHistoryCountUI();
       displayToast('All verification history cleared.');
@@ -3083,7 +3380,17 @@
     }
 
     function renderHistoryList() {
-      const list = getAuditHistory();
+      let list = getAuditHistory();
+      const searchTerm = (historySearchInput?.value || '').trim().toLowerCase();
+      if (searchTerm) {
+        list = list.filter(item =>
+          (item.patientName && item.patientName.toLowerCase().includes(searchTerm)) ||
+          (item.carrier && item.carrier.toLowerCase().includes(searchTerm)) ||
+          (item.networkStatus && item.networkStatus.toLowerCase().includes(searchTerm)) ||
+          (item.displayDate && item.displayDate.toLowerCase().includes(searchTerm))
+        );
+      }
+
       updateHistoryCountUI();
       if (!historyListContainer) return;
 
@@ -3096,8 +3403,8 @@
               <circle cx="12" cy="12" r="10"></circle>
               <polyline points="12 6 12 12 16 14"></polyline>
             </svg>
-            <div style="font-size: 1rem; font-weight: 600; color: #fff;">No Patient Verifications Recorded Yet</div>
-            <div style="font-size: 0.825rem; max-width: 380px;">Whenever you analyze an insurance breakdown, it will automatically save here so you can review previous patient benefits anytime without re-uploading.</div>
+            <div style="font-size: 1rem; font-weight: 600; color: #fff;">${searchTerm ? 'No Matching Patient Verifications Found' : 'No Patient Verifications Recorded Yet'}</div>
+            <div style="font-size: 0.825rem; max-width: 380px;">${searchTerm ? 'Try searching by another patient name, carrier, or status.' : 'Whenever you analyze an insurance breakdown, it will automatically save here so you can review previous patient benefits anytime without re-uploading.'}</div>
           </div>
         `;
         return;
@@ -3118,9 +3425,9 @@
             <div class="history-meta-info">
               <span>Verified: ${escapeHtml(item.displayDate)}</span>
               <span>•</span>
-              <span style="color: ${item.networkStatus.toLowerCase().includes('out') ? '#fda4af' : '#38bdf8'};">${escapeHtml(item.networkStatus)}</span>
+              <span style="color: ${(item.networkStatus || '').toLowerCase().includes('out') ? '#fda4af' : '#38bdf8'};">${escapeHtml(item.networkStatus || 'In-Network')}</span>
               <span>•</span>
-              <span>${item.codesCount} CDT codes</span>
+              <span>${item.codesCount || 30} CDT codes</span>
             </div>
           </div>
           <div class="history-actions-row">
@@ -3136,22 +3443,39 @@
           </div>
         `;
 
-        // Card clicks
-        const loadBtn = card.querySelector('.load-hist-btn');
-        loadBtn.addEventListener('click', (e) => {
-          e.stopPropagation();
-          currentAuditData = item.data;
-          renderReportDashboard(currentAuditData);
-          historyModal.classList.remove('active');
-          displayToast(`Loaded audit for: ${item.patientName}`);
-        });
+        async function handleLoadAudit(e) {
+          if (e) e.stopPropagation();
+          const loadBtn = card.querySelector('.load-hist-btn');
+          if (loadBtn) loadBtn.textContent = 'Loading...';
 
-        card.addEventListener('click', () => {
-          currentAuditData = item.data;
-          renderReportDashboard(currentAuditData);
-          historyModal.classList.remove('active');
-          displayToast(`Loaded audit for: ${item.patientName}`);
-        });
+          try {
+            if (!item.data && (item.isDbRecord || (typeof item.id === 'string' && item.id.includes('-')))) {
+              const res = await fetch(`/api/verifications/${item.id}`);
+              const json = await res.json();
+              if (json.success && json.record) {
+                item.data = json.record;
+              }
+            }
+
+            if (item.data) {
+              currentAuditData = item.data;
+              renderReportDashboard(currentAuditData);
+              historyModal.classList.remove('active');
+              displayToast(`Loaded audit for: ${item.patientName}`);
+            } else {
+              displayToast('Could not load breakdown data for this item.');
+            }
+          } catch (loadErr) {
+            console.error('Failed to load breakdown:', loadErr);
+            displayToast('Error loading breakdown record.');
+          } finally {
+            if (loadBtn) loadBtn.textContent = 'Load Audit';
+          }
+        }
+
+        const loadBtn = card.querySelector('.load-hist-btn');
+        loadBtn.addEventListener('click', handleLoadAudit);
+        card.addEventListener('click', handleLoadAudit);
 
         const delBtn = card.querySelector('.del-hist-btn');
         delBtn.addEventListener('click', (e) => {
@@ -3163,9 +3487,15 @@
       });
     }
 
-    // History Modal Open / Close Events
+    if (historySearchInput) {
+      historySearchInput.addEventListener('input', () => {
+        renderHistoryList();
+      });
+    }
+
     if (openHistoryBtn) {
-      openHistoryBtn.addEventListener('click', () => {
+      openHistoryBtn.addEventListener('click', async () => {
+        await syncHistoryFromBackend();
         renderHistoryList();
         historyModal.classList.add('active');
       });
@@ -3197,5 +3527,7 @@
       });
     }
 
-    // Update history badge counter on initial page load
+    // Startup initializations
     updateHistoryCountUI();
+    checkUserAuth();
+

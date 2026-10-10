@@ -2,10 +2,16 @@ require('dotenv').config();
 const express = require('express');
 const multer = require('multer');
 const path = require('path');
+const cookieParser = require('cookie-parser');
+const rateLimit = require('express-rate-limit');
+const bcrypt = require('bcryptjs');
+const jwt = require('jsonwebtoken');
 const { GoogleGenAI, Type } = require('@google/genai');
+const db = require('./db');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
+const JWT_SECRET = process.env.JWT_SECRET || 'f9f25bef7e2851f7f9e4860182e5d2138931b1d42d7fbf34430115661edc656a';
 
 // Configure Multer for memory buffer storage (up to 25MB)
 const storage = multer.memoryStorage();
@@ -51,6 +57,63 @@ app.use(express.static(path.join(__dirname, 'public'), {
   }
 }));
 app.use(express.json());
+app.use(cookieParser());
+
+// Auth Extraction Middleware (Attaches req.user if valid token provided)
+const authMiddleware = async (req, res, next) => {
+  let token = req.cookies?.dentverify_token;
+  if (!token && req.headers.authorization && req.headers.authorization.startsWith('Bearer ')) {
+    token = req.headers.authorization.split(' ')[1];
+  }
+  if (!token) {
+    req.user = null;
+    return next();
+  }
+  try {
+    const decoded = jwt.verify(token, JWT_SECRET);
+    const userRes = await db.query(
+      `SELECT u.id, u.email, u.full_name, u.role, u.practice_id, p.name as practice_name 
+       FROM dentverify.users u 
+       JOIN dentverify.practices p ON u.practice_id = p.id 
+       WHERE u.id = $1 AND u.is_active = true`,
+      [decoded.userId]
+    );
+    if (userRes.rows.length > 0) {
+      req.user = userRes.rows[0];
+    } else {
+      req.user = null;
+    }
+  } catch (err) {
+    req.user = null;
+  }
+  next();
+};
+app.use(authMiddleware);
+
+// HIPAA Audit Logging Helper
+async function recordAuditLog(req, action, targetId = null, metadata = {}) {
+  try {
+    const userId = req.user?.id || null;
+    const practiceId = req.user?.practice_id || null;
+    const ip = req.headers['x-forwarded-for'] || req.socket?.remoteAddress || '127.0.0.1';
+    const userAgent = req.headers['user-agent'] || 'Unknown';
+
+    await db.query(
+      `INSERT INTO dentverify.audit_logs (practice_id, user_id, action, target_id, ip_address, user_agent, metadata)
+       VALUES ($1, $2, $3, $4, $5, $6, $7)`,
+      [practiceId, userId, action, targetId, String(ip).slice(0, 45), userAgent, metadata]
+    );
+  } catch (err) {
+    console.error('Audit logging error:', err);
+  }
+}
+
+// Rate Limiter for Login
+const loginLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 10, // 10 attempts
+  message: { error: 'Too many login attempts. Please try again in 15 minutes.' },
+});
 
 // Strict Response Schema for Gemini
 const dentalBreakdownSchema = {
@@ -1019,6 +1082,203 @@ function enforceSharedFmxPanoRules(procedureCodes) {
   return procedureCodes;
 }
 
+// ==========================================
+// AUTHENTICATION ENDPOINTS (HIPAA COMPLIANT)
+// ==========================================
+
+// 1. POST /api/auth/login
+app.post('/api/auth/login', loginLimiter, async (req, res) => {
+  try {
+    const { email, password } = req.body;
+    if (!email || !password) {
+      return res.status(400).json({ error: 'Email and password are required.' });
+    }
+
+    const userRes = await db.query(
+      `SELECT u.id, u.email, u.password_hash, u.full_name, u.role, u.practice_id, u.is_active, p.name as practice_name 
+       FROM dentverify.users u 
+       JOIN dentverify.practices p ON u.practice_id = p.id 
+       WHERE LOWER(u.email) = LOWER($1)`,
+      [email.trim()]
+    );
+
+    if (userRes.rows.length === 0) {
+      await recordAuditLog(req, 'LOGIN_FAILED', null, { email: email.trim(), reason: 'User not found' });
+      return res.status(401).json({ error: 'Invalid email or password.' });
+    }
+
+    const user = userRes.rows[0];
+    if (!user.is_active) {
+      return res.status(403).json({ error: 'This clinic user account is deactivated.' });
+    }
+
+    const isMatch = await bcrypt.compare(password, user.password_hash);
+    if (!isMatch) {
+      await recordAuditLog(req, 'LOGIN_FAILED', user.id, { reason: 'Password mismatch' });
+      return res.status(401).json({ error: 'Invalid email or password.' });
+    }
+
+    // Generate JWT (12 hours expiration with rolling session)
+    const token = jwt.sign(
+      { userId: user.id, practiceId: user.practice_id, role: user.role },
+      JWT_SECRET,
+      { expiresIn: '12h' }
+    );
+
+    // Update last_login_at
+    await db.query('UPDATE dentverify.users SET last_login_at = NOW() WHERE id = $1', [user.id]);
+
+    // Set secure HttpOnly cookie
+    res.cookie('dentverify_token', token, {
+      httpOnly: true,
+      secure: false, // set true in strict SSL production
+      sameSite: 'lax',
+      maxAge: 12 * 60 * 60 * 1000,
+    });
+
+    req.user = user;
+    await recordAuditLog(req, 'LOGIN_SUCCESS', user.id);
+
+    res.json({
+      success: true,
+      user: {
+        id: user.id,
+        email: user.email,
+        full_name: user.full_name,
+        role: user.role,
+        practice_id: user.practice_id,
+        practice_name: user.practice_name,
+      },
+    });
+  } catch (err) {
+    console.error('Login error:', err);
+    res.status(500).json({ error: 'Internal server error during login.' });
+  }
+});
+
+// 2. GET /api/auth/me
+app.get('/api/auth/me', async (req, res) => {
+  if (!req.user) {
+    return res.status(401).json({ authenticated: false });
+  }
+  res.json({
+    authenticated: true,
+    user: {
+      id: req.user.id,
+      email: req.user.email,
+      full_name: req.user.full_name,
+      role: req.user.role,
+      practice_id: req.user.practice_id,
+      practice_name: req.user.practice_name,
+    },
+  });
+});
+
+// 3. POST /api/auth/logout
+app.post('/api/auth/logout', async (req, res) => {
+  await recordAuditLog(req, 'LOGOUT', req.user?.id);
+  res.clearCookie('dentverify_token');
+  res.json({ success: true, message: 'Logged out successfully.' });
+});
+
+// ==========================================
+// PERSISTENT VERIFICATION HISTORY ENDPOINTS
+// ==========================================
+
+// GET /api/verifications (List history records)
+app.get('/api/verifications', async (req, res) => {
+  try {
+    const practiceId = req.user?.practice_id;
+    const queryStr = practiceId
+      ? `SELECT id, carrier, patient_name_enc, patient_name_masked, member_id_enc, dob_enc, network_status, created_at,
+                breakdown_json->'insurance_details'->>'plan_benefits' as plan_benefits,
+                breakdown_json->'insurance_details'->>'effective_date' as effective_date,
+                breakdown_json->'insurance_details'->>'policy_status' as policy_status
+         FROM dentverify.verifications
+         WHERE practice_id = $1
+         ORDER BY created_at DESC
+         LIMIT 100;`
+      : `SELECT id, carrier, patient_name_enc, patient_name_masked, member_id_enc, dob_enc, network_status, created_at,
+                breakdown_json->'insurance_details'->>'plan_benefits' as plan_benefits,
+                breakdown_json->'insurance_details'->>'effective_date' as effective_date,
+                breakdown_json->'insurance_details'->>'policy_status' as policy_status
+         FROM dentverify.verifications
+         ORDER BY created_at DESC
+         LIMIT 100;`;
+
+    const result = practiceId ? await db.query(queryStr, [practiceId]) : await db.query(queryStr);
+
+    const records = result.rows.map(row => {
+      const decryptedName = db.decryptField(row.patient_name_enc);
+      const decryptedDob = db.decryptField(row.dob_enc);
+      return {
+        id: row.id,
+        carrier: row.carrier || 'Dental Insurance',
+        patient_name: decryptedName || row.patient_name_masked || 'N/A',
+        dob: decryptedDob || 'N/A',
+        network_status: row.network_status || 'In-Network',
+        plan_benefits: row.plan_benefits || 'Calendar Year',
+        effective_date: row.effective_date || '01/01/2026',
+        policy_status: row.policy_status || 'Active',
+        created_at: row.created_at,
+      };
+    });
+
+    await recordAuditLog(req, 'VIEW_HISTORY_LIST', null, { count: records.length });
+    res.json({ success: true, history: records });
+  } catch (err) {
+    console.error('History fetch error:', err);
+    res.status(500).json({ error: 'Failed to retrieve verification history.' });
+  }
+});
+
+// GET /api/verifications/:id (Fetch full breakdown JSON)
+app.get('/api/verifications/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const result = await db.query(
+      `SELECT id, carrier, patient_name_enc, member_id_enc, dob_enc, network_status, breakdown_json, created_at 
+       FROM dentverify.verifications 
+       WHERE id = $1`,
+      [id]
+    );
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'Verification record not found.' });
+    }
+
+    const row = result.rows[0];
+    const breakdown = row.breakdown_json;
+
+    // Decrypt patient details in returned JSON
+    if (breakdown.insurance_details) {
+      breakdown.insurance_details.patient_name = db.decryptField(row.patient_name_enc) || breakdown.insurance_details.patient_name;
+      if (row.dob_enc) {
+        breakdown.insurance_details.dob = db.decryptField(row.dob_enc) || breakdown.insurance_details.dob;
+      }
+    }
+
+    await recordAuditLog(req, 'VIEW_BREAKDOWN_RECORD', id);
+    res.json({ success: true, record: breakdown });
+  } catch (err) {
+    console.error('Record fetch error:', err);
+    res.status(500).json({ error: 'Failed to load verification record.' });
+  }
+});
+
+// DELETE /api/verifications/:id (Soft-delete or purge)
+app.delete('/api/verifications/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    await db.query(`DELETE FROM dentverify.verifications WHERE id = $1`, [id]);
+    await recordAuditLog(req, 'DELETE_BREAKDOWN_RECORD', id);
+    res.json({ success: true, message: 'Record deleted successfully.' });
+  } catch (err) {
+    console.error('Record delete error:', err);
+    res.status(500).json({ error: 'Failed to delete verification record.' });
+  }
+});
+
 // Verification Endpoint (Supports single or multiple files)
 app.post('/api/verify', upload.array('files', 10), async (req, res) => {
   try {
@@ -1202,9 +1462,56 @@ app.post('/api/verify', upload.array('files', 10), async (req, res) => {
       parsedResult.procedure_codes = enforceAgeLimitAndFrequencyRules(parsedResult.procedure_codes, parsedResult.insurance_details || {});
     }
 
+    // Persist to PostgreSQL Database with AES-256-GCM Field Encryption
+    let savedVerificationId = null;
+    try {
+      const ins = parsedResult.insurance_details || {};
+      const practiceId = req.user?.practice_id || null;
+      const userId = req.user?.id || null;
+      const rawPatientName = ins.patient_name || 'N/A';
+      const patientNameEnc = db.encryptField(rawPatientName);
+      const maskedName = rawPatientName.length > 3
+        ? `${rawPatientName[0]}*** ${rawPatientName.slice(-2)}`
+        : rawPatientName;
+      const dobEnc = db.encryptField(ins.dob || '');
+      const memberIdEnc = db.encryptField(ins.member_id || ins.subscriber_id || '');
+
+      const insertRes = await db.query(
+        `INSERT INTO dentverify.verifications (
+           practice_id, user_id, source, carrier, patient_name_enc, patient_name_masked,
+           member_id_enc, dob_enc, network_status, breakdown_json
+         ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+         RETURNING id;`,
+        [
+          practiceId,
+          userId,
+          'manual_upload',
+          ins.carrier || 'Dental Insurance',
+          patientNameEnc,
+          maskedName,
+          memberIdEnc,
+          dobEnc,
+          ins.network_status || 'In-Network',
+          JSON.stringify(parsedResult),
+        ]
+      );
+
+      if (insertRes.rows.length > 0) {
+        savedVerificationId = insertRes.rows[0].id;
+        await recordAuditLog(req, 'VERIFY_DOCUMENT_ANALYSIS', savedVerificationId, {
+          carrier: ins.carrier,
+          model: usedModel,
+          fileCount: uploadedFiles.length,
+        });
+      }
+    } catch (dbSaveErr) {
+      console.error('Failed to persist verification record to PostgreSQL:', dbSaveErr);
+    }
+
     res.json({
       success: true,
       meta: {
+        verification_id: savedVerificationId,
         files: uploadedFiles.map(f => ({
           filename: f.originalname,
           fileSize: f.size,
