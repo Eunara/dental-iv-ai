@@ -1,269 +1,102 @@
 ================================================================================
-DENTVERIFY.COM - COMPREHENSIVE ROADMAP & UPGRADE PLAN
-OBJECTIVE: HIPAA AUTH + PERSISTENT HISTORY + UNIFIED AUTO-VERIFY PORTAL ACCESS
+DENTVERIFY.COM - ACTIVE ROADMAP & UPGRADE PLAN
+OBJECTIVE: FULL-PAGE GATEKEEPER LOGIN + DEDICATED SUB-PORTALS + BACKGROUND BOT
 ================================================================================
 
-1. HIPAA TECHNICAL SAFEGUARDS COMPLIANCE (45 CFR Part 164)
 --------------------------------------------------------------------------------
-* § 164.312(a)(1) Access Control:
-  - Unique user identification and credential management.
-  - Role-Based Access Control (RBAC): Admin vs Clinic Staff.
-  - Multi-tenancy: Clinic A cannot view data from Clinic B.
-  - Strong password policy enforced (min 10 chars, uppercase, lowercase, numbers, symbols).
-  - Bcrypt password hashing (salt rounds: 12).
-
-* § 164.312(a)(2)(iii) Automatic Logoff:
-  - Enforce session timeout after 15 minutes of inactivity.
-  - Visual warning countdown before auto-logout occurs.
-
-* § 164.312(a)(2)(iv) Data Encryption at Rest:
-  - Field-level encryption using AES-256-GCM for all patient identifiers (Patient Name, DOB, Subscriber ID).
-  - AES-256-GCM encryption for stored payer portal credentials (usernames, passwords, PINs).
-  - Encryption keys stored securely in environment variables, never committed to git.
-
-* § 164.312(b) Audit Controls & Audit Trail:
-  - Tamper-evident logging of all ePHI access events:
-    [TIMESTAMP] [USER_ID] [OFFICE_ID] [ACTION] [RECORD_ID] [IP_ADDRESS] [USER_AGENT]
-  - Actions logged: LOGIN, LOGOUT, AUTO_VERIFY_TRIGGER, ANALYZE_FILE, VIEW_HISTORY_ITEM, EXPORT_EXCEL, DELETE_RECORD.
-  - Audit logs are append-only; standard users cannot modify or delete audit trails.
-
-* § 164.312(e)(1) Transmission Security:
-  - Full TLS 1.3 / HTTPS enforced via Cloudflare and Nginx.
-  - HSTS enabled.
-
-================================================================================
-2. DATABASE ARCHITECTURE (POSTGRESQL)
-================================================================================
-
-A. practices (Organizations / Clinics)
-   - id: UUID (Primary Key)
-   - name: VARCHAR(255)
-   - subscription_tier: VARCHAR(50) DEFAULT 'pro'
-   - created_at: TIMESTAMP WITH TIME ZONE DEFAULT NOW()
-
-B. users (Clinic Accounts)
-   - id: UUID (Primary Key)
-   - practice_id: UUID (Foreign Key -> practices.id)
-   - email: VARCHAR(255) UNIQUE NOT NULL
-   - password_hash: VARCHAR(255) NOT NULL
-   - full_name: VARCHAR(255) NOT NULL
-   - role: VARCHAR(50) DEFAULT 'staff'  -- 'admin' or 'staff'
-   - is_active: BOOLEAN DEFAULT TRUE
-   - last_login_at: TIMESTAMP WITH TIME ZONE
-   - created_at: TIMESTAMP WITH TIME ZONE DEFAULT NOW()
-
-C. payer_credentials (Encrypted Portal Vault)
-   - id: UUID (Primary Key)
-   - practice_id: UUID (Foreign Key -> practices.id)
-   - payer_key: VARCHAR(50) NOT NULL         -- 'delta_dental', 'metlife', 'cigna', 'guardian'
-   - username_enc: TEXT NOT NULL             -- AES-256-GCM encrypted
-   - password_enc: TEXT NOT NULL             -- AES-256-GCM encrypted
-   - tax_id_or_npi: VARCHAR(50)              -- Office NPI/TIN if required by portal
-   - extra_data_enc: TEXT                    -- Security questions / PINs encrypted
-   - status: VARCHAR(50) DEFAULT 'active'    -- 'active', 'invalid_credentials', 'otp_required'
-   - last_used_at: TIMESTAMP WITH TIME ZONE
-   - updated_at: TIMESTAMP WITH TIME ZONE DEFAULT NOW()
-
-D. verifications (Persistent Insurance History)
-   - id: UUID (Primary Key)
-   - practice_id: UUID (Foreign Key -> practices.id)
-   - user_id: UUID (Foreign Key -> users.id)
-   - source: VARCHAR(50) DEFAULT 'manual_upload' -- 'auto_portal', 'manual_upload'
-   - insurance_payer: VARCHAR(255)
-   - patient_name_enc: TEXT NOT NULL         -- AES-256-GCM encrypted
-   - member_id_enc: TEXT                     -- AES-256-GCM encrypted
-   - dob_enc: TEXT                           -- AES-256-GCM encrypted
-   - network_status: VARCHAR(100)
-   - full_breakdown_json: JSONB NOT NULL     -- Complete structured breakdown data
-   - created_at: TIMESTAMP WITH TIME ZONE DEFAULT NOW()
-
-E. audit_logs (Immutable HIPAA Access Logs)
-   - id: UUID (Primary Key)
-   - user_id: UUID (Foreign Key -> users.id)
-   - action: VARCHAR(100) NOT NULL           -- 'LOGIN', 'AUTO_VERIFY', 'VIEW_RECORD', etc.
-   - target_id: UUID                         -- verification ID accessed
-   - ip_address: VARCHAR(45)
-   - user_agent: TEXT
-   - metadata: JSONB
-   - created_at: TIMESTAMP WITH TIME ZONE DEFAULT NOW()
-
-================================================================================
-3. STEP-BY-STEP IMPLEMENTATION ROADMAP
-================================================================================
-
-PHASE 1: DATABASE PROVISIONING & SECURITY CONFIGURATION [COMPLETED]
+PRIORITY 1: FULL-PAGE GATEKEEPER LOGIN (STRICT CLINIC ACCESS CONTROL)
 --------------------------------------------------------------------------------
-[x] 1. PostgreSQL connection configured and verified on host.
-[x] 2. Dedicated schema `dentverify` created with complete multi-tenant structure.
-[x] 3. Database tables migrated: `practices`, `users`, `payer_credentials`, `verifications`, `audit_logs`.
-[x] 4. AES-256-GCM master encryption key generated & stored securely in `.env`.
+* Objective: When anyone opens `dentverify.com`, they must NOT freely access the site.
+  Instead, a full-screen modern Gatekeeper Login Screen appears immediately.
 
-PHASE 2: USER AUTHENTICATION & SESSION MANAGEMENT [COMPLETED]
+1. Full-Screen Gatekeeper Landing Screen:
+   - Blurs/hides the entire dashboard, uploader, history, and settings until authenticated.
+   - Professional Dental RCM branded login box with:
+     * Email / Username field
+     * Password field
+     * "Sign In to Clinic Workspace" button
+     * Error / validation feedback banner
+   - Auto-checks `/api/auth/me` on initial page load:
+     * If valid active cookie exists -> instantly unlocks dashboard.
+     * If unauthenticated or expired -> displays Gatekeeper Login Screen.
+
+2. Backend Route & API Lockdown:
+   - Guard `/api/verify`, `/api/prompts/*`, `/api/verifications` behind strict `authMiddleware`.
+   - Returns 401 Unauthorized if request does not contain a valid JWT session cookie.
+   - Logout button in top navigation immediately clears the cookie and resets the UI
+     back to the Gatekeeper Login Screen.
+
 --------------------------------------------------------------------------------
-[x] 1. Installed auth dependencies: `bcryptjs`, `jsonwebtoken`, `cookie-parser`, `express-rate-limit`, `pg`.
-[x] 2. Implemented HIPAA auth endpoints in `server.js`:
-       - POST /api/auth/login        (Rate-limited with bcrypt credential check & HttpOnly cookie)
-       - POST /api/auth/logout       (Clears session cookie & logs audit event)
-       - GET  /api/auth/me           (Validates session and returns clinic staff profile)
-[x] 3. Clinic Staff Auth UI in `public/index.html` & `public/app.js`:
-       - Clinic user status badge in header (`#userBadgeLabel` & `#openAuthModalBtn`).
-       - Professional Staff Login & Session modal (`#authModal`) with active practice details and logout controls.
-
-PHASE 3: PERSISTENT HISTORY & HISTORY DASHBOARD [COMPLETED]
+PRIORITY 2: DEDICATED INSURANCE DIRECTORY & SUB-PORTAL MANAGER
 --------------------------------------------------------------------------------
-[x] 1. Integrated persistence in `POST /api/verify`:
-       - Encrypts sensitive patient identifiers (Name, DOB, Member ID) with AES-256-GCM.
-       - Stores full breakdown JSON in `dentverify.verifications` tagged with practice and user.
-[x] 2. Implemented history API endpoints:
-       - GET /api/verifications          (Decrypted patient preview list filtered by practice)
-       - GET /api/verifications/:id      (Full structured breakdown JSON retrieval)
-       - DELETE /api/verifications/:id   (Purge record with tamper-evident audit logging)
-[x] 3. Connected Frontend History Drawer:
-       - Syncs with PostgreSQL (`/api/verifications`) with graceful local fallback.
-       - Real-time search filter (`#historySearchInput`) across patient names, carriers, and statuses.
-       - 1-click "Load Audit" fetches decrypted breakdown and restores interactive matrix & Excel export.
+* Objective: Separate Insurance Directory from AI Settings into its own dedicated
+  manager. Support complex multi-portal carriers like Delta Dental (DD CA, DD FEP).
 
-PHASE 4: HIPAA HARDENING & VERIFICATION [COMPLETED]
+1. Hierarchical Multi-Portal Payer Structure:
+   - Delta Dental (Parent Carrier)
+     * DD CA  - Delta Dental of California (Claims Address, Payor ID, Phone, In/Out Network)
+     * DD FEP - Delta Dental Federal Employees Program (Claims Address, Payor ID, Phone, In/Out Network)
+     * DD PPO / Premier / Regional
+   - MetLife Dental
+   - Cigna Dental
+   - Guardian Dental
+   - Aetna / Humana / Ameritas
+
+2. Dedicated Management UI ("Insurance Directory & Portals"):
+   - Independent button in top navigation bar (`Insurance Portals & Addresses`).
+   - Clean card/list view displaying each carrier and its sub-portals.
+   - Fields per sub-portal:
+     * Portal Sub-Name (e.g. DD CA, DD FEP)
+     * Claims Mailing Address
+     * Electronic Payor ID
+     * Provider Phone Number
+     * Contracted Network Status toggle (In-Network / Out-of-Network)
+   - Add, Edit, Delete sub-portals with persistent storage in PostgreSQL `dentverify.payer_credentials`.
+
+3. Frontend Auto-Wiring:
+   - When a breakdown or patient document identifies e.g. "DD CA" or "Delta Dental FEP",
+     the system automatically wires the exact matching sub-portal's Claims Address,
+     Phone, and Payor ID into Cell 8 of the "policy-details-compact-grid" and Hero Banner.
+
 --------------------------------------------------------------------------------
-[x] 1. 15-Minute Inactivity Auto-Logout (§ 164.312(a)(2)(iii)):
-       - Activity tracker in `public/app.js` listening for user input (mouse, keyboard, scroll, touch).
-       - Visual warning modal with 60-second countdown alert before session lock.
-       - "Stay Logged In" resets session; expiration triggers `/api/auth/logout`.
-[x] 2. Tamper-evident HIPAA Audit Trail (§ 164.312(b)):
-       - Records all ePHI views, logins, logouts, analysis, and record deletions to `dentverify.audit_logs`.
-[x] 3. Zero-Leakage:
-       - AES-256-GCM field encryption ensures patient identifiers are never logged or stored in plaintext.
+PRIORITY 3: BACKGROUND HEADLESS BROWSER VERIFICATION (PLAYWRIGHT AUTOMATION)
+--------------------------------------------------------------------------------
+* Objective: Staff enters Member ID + DOB + Payer -> System opens a background
+  headless browser, logs into the provider portal, retrieves live benefits,
+  and renders the full breakdown table automatically.
+
+1. Unified Auto-Verify Input Panel in Frontend:
+   - Toggle switch on main screen:
+     [⚡ Run Background Auto-Verify]  vs  [📄 Manual Document Upload]
+   - Input Fields:
+     * Insurance Portal Dropdown: [DD CA | DD FEP | Cigna | MetLife | Guardian]
+     * Subscriber / Member ID: [____________________]
+     * Patient DOB: [MM/DD/YYYY]
+     * Patient Name: [Last, First]
+   - Button: [⚡ Run Auto-Verify & Generate Breakdown]
+   - Live Progress Status Indicator:
+     "Launching background runner..." -> "Authenticating into portal..." ->
+     "Fetching patient benefits..." -> "AI Clinical Audit in progress..." -> "Done!"
+
+2. Backend Playwright Automation Runner:
+   - Headless browser runner hosted on VPS (`automation/payers/`).
+   - Loads encrypted clinic credentials for selected portal from PostgreSQL vault.
+   - Navigates to portal login URL and authenticates.
+   - Enters Patient Subscriber ID and DOB into portal search form.
+   - Captures benefits summary (PDF download or HTML DOM snapshot).
+   - Hands document buffer directly into Gemini AI RCM audit pipeline.
+
+3. Human-in-the-Loop 2FA / OTP Relay Modal:
+   - If portal prompts 2FA SMS or email code on login:
+     * Runner pauses and triggers live OTP prompt in DentVerify frontend:
+       "2FA Code Required: Enter code sent to clinic [phone/email]: [ _____ ] [Verify]"
+     * Staff enters code -> runner resumes session and completes patient eligibility retrieval.
+
+4. Output Delivery:
+   - AI outputs formatted CDT codes table, shared frequencies, and deductible math.
+   - Automatically saves to persistent PostgreSQL history under practice.
+   - Automatically generates instant Excel breakdown and PMS note.
 
 ================================================================================
-PHASE 5: UNIFIED AUTO-VERIFY & PORTAL AUTOMATION (TOP INSURANCE PILOT)
-================================================================================
-OBJECTIVE: Staff enters Member ID + DOB + Payer -> System logs into the portal,
-retrieves the live benefits document/HTML, parses it via Gemini, and renders
-the full breakdown instantly without manual portal navigation.
-
-A. TARGET TOP PAYERS (PILOT PHASE):
-   1. Delta Dental (National / Regional Portal)
-   2. MetLife Dental Portal
-   3. Cigna Dental Provider Portal
-   4. Guardian Dental Portal
-
-B. ARCHITECTURE & COMPONENTS:
-   1. Portal Credential Vault (`/settings/portals`):
-      - Clinic Admin inputs login username and password per insurance.
-      - Passwords encrypted with AES-256-GCM at rest.
-      - Status badge: Connected, Credentials Missing, or Login Failed.
-
-   2. Playwright Headless Automation Runner:
-      - Modular scrapers under `automation/payers/`:
-        * `delta_dental.js`
-        * `metlife.js`
-        * `cigna.js`
-        * `guardian.js`
-      - Features: Stealth plugin enabled, rotating browser fingerprints, randomized delays.
-      - Flow:
-        Step 1: Launch headless browser & navigate to portal login URL.
-        Step 2: Enter encrypted credentials & solve captcha if present.
-        Step 3: Handle 2FA / OTP relay if requested (see below).
-        Step 4: Navigate to "Patient / Member Search".
-        Step 5: Fill Subscriber ID, Patient First/Last Name, and DOB.
-        Step 6: Capture complete Benefits Summary (PDF download or full DOM snapshot).
-        Step 7: Return document buffer to DentVerify AI analysis pipeline.
-
-   3. Real-Time 2FA / OTP Relay (Human-in-the-Loop):
-      - When a portal requests SMS or Email OTP during login:
-        * Runner sends event via Server-Sent Events (SSE) or WebSocket to client.
-        * DentVerify UI displays live modal:
-          "2FA Required: Enter the code sent to [clinic phone/email]: [ _____ ] [Submit]"
-        * User inputs the code within 120s -> Bot submits OTP and completes session.
-      - Optional: Dedicated clinic email auto-reader for 100% automated OTP capture.
-
-   4. Unified Frontend Search Bar (`public/index.html`):
-      - Toggle between:
-        [⚡ Unified Auto-Verify]  and  [📄 Manual Document Upload]
-      - Input fields:
-        * Insurance Dropdown: [Delta Dental | MetLife | Cigna | Guardian]
-        * Subscriber / Member ID: [____________________]
-        * Patient DOB: [MM/DD/YYYY]
-        * Patient Name: [Last, First]
-      - Button: [⚡ Verify Patient & Generate Breakdown]
-      - Live Progress Bar:
-        "Connecting to Delta Dental..." -> "Searching subscriber..." -> "Parsing benefits with AI..." -> "Done!"
-
-   5. Seamless Pipeline Handoff:
-      - Raw scraped document/text is piped directly into `/api/analyze`.
-      - Gemini formats benefits matrix, shared frequencies (D0210/D0330), and coinsurances.
-      - Automatically saves to persistent PostgreSQL history under practice.
-      - Automatically generates instant Excel export.
-
-================================================================================
-PHASE 6: CLINICAL RCM BUSINESS LOGIC ENGINE & FREQUENCY NOTATION
-================================================================================
-1. COMPACT FREQUENCY STANDARDIZATION ENGINE:
-   - Automated conversion of long portal sentence strings into standard clinical notation:
-     * "two of any ... within a calendar year" -> "2x1yr"
-     * "two of any ... within a 12 months" -> "2x12m"
-     * "one of any ... within a calendar year" -> "1x1yr"
-     * "one of any ... within a 12 months" -> "1x12m"
-     * "1 in 60 months / once every 5 years" -> "1x5yr"
-     * "1 in 36 months / once every 3 years" -> "1x3yr"
-     * "1 in 24 months / once every 2 years" -> "1x24m"
-     * "no frequency limit / unlimited" -> "NF"
-     * "once per lifetime" -> "1/LT"
-     * "1 per tooth lifetime" -> "1/tooth LT"
-   - Implemented at both Gemini AI prompt directive level and backend/frontend post-processor functions.
-
-2. CALENDAR YEAR VS ROLLING 12-MONTH RESET LOGIC:
-   - Calendar Year Plans: Procedure counters reset every January 1st.
-     * If a procedure has a prior calendar year history date (e.g. 10/25/2025 vs current 2026),
-       patient is automatically flagged as ELIGIBLE (is_eligible: true).
-   - Rolling 12-Month Plans (e.g. 2x12m): Evaluates the exact 12-month rolling window from last service date.
-     * If 1 of 2 procedures was consumed within the last 12 months, patient remains eligible for 1 remaining procedure.
-
-3. D0210 (FMX) & D0330 (PANO) MUTUAL SHARED FREQUENCY ENGINE:
-   - FMX and Panoramic Radiographs always share frequency limitations (typically 1 in 60 months / 5 years).
-   - Cross-code history syncing: A service date on either code is mutually applied to both.
-   - Computes precise next eligible date based on frequency elapsed months.
-
-4. D1206 / D1351 / ADULT AGE LIMIT LOGIC:
-   - Minimum Age Boundaries: Adult procedures (e.g. D1110, D4346 min age 14) are verified so that
-     adults (e.g. 27 years old) are flagged ELIGIBLE rather than misclassified as exceeding age limits.
-   - Maximum Age Boundaries: Pediatric/youth procedures (D1206 Fluoride, D1351 Sealants, Ortho) flag
-     ineligibility when the patient strictly exceeds the ceiling age (e.g. age 27 > 14).
-
-===============================================================================
-PHASE 7: PRE-CONFIGURED INSURANCE DIRECTORY SETTINGS & NETWORK PARTICIPATION
-================================================================================
-1. CUSTOM INSURANCE CLAIMS ADDRESS & PAYOR ID REPOSITORY:
-   - Clinic Settings modal with pre-configured directory of insurance payers (Cigna, Delta Dental, MetLife, Aetna, etc.).
-   - Staff can add, edit, or delete customized Claims Mailing Addresses, Phone Numbers, and Electronic Payor IDs.
-   - Auto-Wiring to Frontend:
-     * When an insurance carrier (e.g., Cigna) is detected or verified, system automatically wires the custom claims address
-       and payor ID into both the Hero Banner and the 8-cell "policy-details-compact-grid".
-   - Bulk Importer:
-     * Supports pasting tab-separated rows from Excel/Google Sheets, pipe-delimited (|), or CSV text.
-
-2. PRE-CONFIGURED IN-NETWORK / OUT-OF-NETWORK PARTICIPATION:
-   - 1-click interactive network toggle badge (.in / .out) per carrier in directory settings.
-   - Auto-applies clinic's contracted network status during document verification.
-   - 1-click live override pill directly on Breakdown Hero Card with automatic preference saving.
-
-================================================================================
-PHASE 8: UX ENHANCEMENTS, DYNAMIC VIEWPORT SCALING & INLINE EDITING
-================================================================================
-1. CDT CODES DATA TABLE AUTO-HEIGHT & SCROLL ARCHITECTURE:
-   - Natural dynamic height: Container height (.table-responsive-box) adapts dynamically to content rows
-     with zero vertical max-height capping (height: auto; max-height: none !important).
-   - Single-line word preservation: Removed word-break: break-word/overflow-wrap: anywhere to eliminate
-     broken words ("10" / "0%", "No" / "ne", "App" / "lies").
-   - 14-inch to 16-inch laptop screen optimization: Tightened cell padding and column footprint (1000px)
-     so all 10 columns fit comfortably on laptop displays without horizontal clipping.
-   - Multi-screen scalability: Responsive media queries scaling seamlessly from 14"-16" laptops up to 34" ultrawide monitors.
-
-2. 1-CLICK INLINE EDITING:
-   - Manual override cells for Benefit %, Deductible, Frequency Limitation, Age Limit, Eligibility Status,
-     History on File, and Downgrade Clauses.
-   - Automatic recalculation and real-time synchronization with PMS Note generator and Excel breakdown export.
-
-================================================================================
-END OF PLAN - READY FOR EXECUTION
+END OF ACTIVE ROADMAP - READY FOR EXECUTION
 ================================================================================
