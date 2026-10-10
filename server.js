@@ -1350,12 +1350,10 @@ app.post('/api/verify', upload.array('files', 10), async (req, res) => {
     // Candidate models to try in priority order for resilience
     const candidateModels = [
       process.env.GEMINI_MODEL,
-      'gemini-2.5-flash',
-      'gemini-flash-latest',
-      'gemini-3.5-flash-lite',
-      'gemini-flash-lite-latest',
-      'gemini-3.1-flash-lite',
       'gemini-3.8-flash',
+      'gemini-3.5-flash-lite',
+      'gemini-flash-latest',
+      'gemini-flash-lite-latest',
     ].filter(Boolean);
     const modelsToTry = [...new Set(candidateModels)];
 
