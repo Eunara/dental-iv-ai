@@ -54,6 +54,13 @@
           </svg>
           <span>AI Settings</span>
         </button>
+        <button type="button" class="btn-auth-user" id="openAuthModalBtn" title="Clinic Staff Login & Session">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+            <circle cx="12" cy="7" r="4"></circle>
+          </svg>
+          <span id="userBadgeLabel">Sign In</span>
+        </button>
         <div class="meta-chip">
           <span class="pulse-dot"></span>
           <span>Gemini AI Engine</span>
@@ -808,6 +815,10 @@
         </button>
       </div>
 
+      <div class="history-search-row" style="padding: 0.75rem 1.25rem 0.25rem; display: flex; gap: 0.5rem; border-bottom: 1px solid rgba(255,255,255,0.06);">
+        <input type="text" id="historySearchInput" class="table-search-input" style="width: 100%;" placeholder="Search patient name, carrier, or status...">
+      </div>
+
       <div class="history-list-body" id="historyListContainer">
         <!-- Dynamically rendered verification history cards -->
       </div>
@@ -818,6 +829,93 @@
         </button>
         <button type="button" class="btn-restore-defaults" id="btnCloseHistoryFooterBtn">
           Close
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- CLINIC STAFF AUTH & SESSION MODAL -->
+  <div class="settings-modal-backdrop" id="authModal">
+    <div class="settings-modal-box" style="max-width: 480px;">
+      <div class="pms-modal-header">
+        <h3 style="display: flex; align-items: center; gap: 0.55rem; color: #fff; font-size: 1.05rem; font-weight: 700;">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#38bdf8" stroke-width="2">
+            <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+            <circle cx="12" cy="7" r="4"></circle>
+          </svg>
+          <span id="authModalTitle">Clinic Staff Authentication</span>
+        </h3>
+        <button type="button" class="btn-close-modal" id="closeAuthModalBtn">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <line x1="18" y1="6" x2="6" y2="18"></line>
+            <line x1="6" y1="6" x2="18" y2="18"></line>
+          </svg>
+        </button>
+      </div>
+
+      <!-- Logged-in State View -->
+      <div id="authLoggedInView" style="display: none; padding: 1.25rem;">
+        <div style="background: rgba(16, 185, 129, 0.1); border: 1px solid rgba(16, 185, 129, 0.3); border-radius: 8px; padding: 1rem; margin-bottom: 1.2rem;">
+          <div style="font-size: 0.72rem; text-transform: uppercase; color: #34d399; font-weight: 700; margin-bottom: 0.3rem;">Active Clinic Session (HIPAA Protected)</div>
+          <div style="font-size: 1.1rem; font-weight: 700; color: #fff;" id="authSessionUserName">Clinic Admin</div>
+          <div style="font-size: 0.8rem; color: #94a3b8;" id="authSessionUserEmail">admin@dentverify.com</div>
+          <div style="font-size: 0.75rem; color: #38bdf8; margin-top: 0.35rem;" id="authSessionPracticeName">Practice: DentVerify Dental Clinic</div>
+        </div>
+        <div style="display: flex; gap: 0.6rem; justify-content: flex-end;">
+          <button type="button" class="btn-restore-defaults" id="btnLogoutStaff" style="color: #fda4af;">
+            Log Out Session
+          </button>
+          <button type="button" class="btn-verify-primary" id="btnCloseAuthModalBtn" style="padding: 0.4rem 0.85rem; font-size: 0.75rem;">
+            Done
+          </button>
+        </div>
+      </div>
+
+      <!-- Login Form View -->
+      <form id="authLoginForm" style="padding: 1.25rem;">
+        <div class="settings-info-badge" style="margin-bottom: 1rem;">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#38bdf8" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg>
+          <span>Sign in to access encrypted patient history across devices and HIPAA audit trails.</span>
+        </div>
+        <div style="display: flex; flex-direction: column; gap: 0.8rem; margin-bottom: 1rem;">
+          <div>
+            <label style="display: block; font-size: 0.74rem; font-weight: 600; color: #94a3b8; margin-bottom: 0.3rem;">Staff Email</label>
+            <input type="email" id="loginEmail" class="table-search-input" style="width: 100%;" placeholder="admin@dentverify.com" required value="admin@dentverify.com">
+          </div>
+          <div>
+            <label style="display: block; font-size: 0.74rem; font-weight: 600; color: #94a3b8; margin-bottom: 0.3rem;">Password</label>
+            <input type="password" id="loginPassword" class="table-search-input" style="width: 100%;" placeholder="••••••••••••" required value="ClinicAdmin2026!">
+          </div>
+        </div>
+        <div id="loginErrorMsg" style="display: none; color: #f87171; font-size: 0.75rem; margin-bottom: 0.8rem; background: rgba(239, 68, 68, 0.1); padding: 0.45rem 0.75rem; border-radius: 4px; border: 1px solid rgba(239, 68, 68, 0.25);"></div>
+        <div style="display: flex; justify-content: flex-end; gap: 0.6rem;">
+          <button type="submit" class="btn-verify-primary" id="btnSubmitLogin" style="width: 100%; justify-content: center; padding: 0.55rem;">
+            Sign In to Practice
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- HIPAA 15-MINUTE INACTIVITY WARNING MODAL -->
+  <div class="inactivity-modal-backdrop" id="inactivityWarningModal">
+    <div class="inactivity-modal-box">
+      <div class="inactivity-icon-wrap">
+        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#f59e0b" stroke-width="2.2">
+          <circle cx="12" cy="12" r="10"></circle>
+          <polyline points="12 6 12 12 16 14"></polyline>
+        </svg>
+      </div>
+      <div class="inactivity-title">HIPAA Security Inactivity Alert</div>
+      <div class="inactivity-desc">
+        For ePHI safeguard compliance, your clinic session has been inactive. Your screen will automatically lock in <span id="inactivityCountdownSec" style="color: #fbbf24; font-weight: 800;">60</span> seconds.
+      </div>
+      <div class="inactivity-actions">
+        <button type="button" class="btn-verify-primary" id="stayLoggedInBtn" style="flex: 1; justify-content: center;">
+          Stay Logged In
+        </button>
+        <button type="button" class="btn-restore-defaults" id="logoutNowBtn" style="color: #fda4af;">
+          Log Out Now
         </button>
       </div>
     </div>
