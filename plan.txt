@@ -1,65 +1,9 @@
 ================================================================================
 DENTVERIFY.COM - ACTIVE ROADMAP & UPGRADE PLAN
-OBJECTIVE: FULL-PAGE GATEKEEPER LOGIN + DEDICATED SUB-PORTALS + BACKGROUND BOT
 ================================================================================
 
 --------------------------------------------------------------------------------
-PRIORITY 1: FULL-PAGE GATEKEEPER LOGIN (STRICT CLINIC ACCESS CONTROL)
---------------------------------------------------------------------------------
-* Objective: When anyone opens `dentverify.com`, they must NOT freely access the site.
-  Instead, a full-screen modern Gatekeeper Login Screen appears immediately.
-
-1. Full-Screen Gatekeeper Landing Screen:
-   - Blurs/hides the entire dashboard, uploader, history, and settings until authenticated.
-   - Professional Dental RCM branded login box with:
-     * Email / Username field
-     * Password field
-     * "Sign In to Clinic Workspace" button
-     * Error / validation feedback banner
-   - Auto-checks `/api/auth/me` on initial page load:
-     * If valid active cookie exists -> instantly unlocks dashboard.
-     * If unauthenticated or expired -> displays Gatekeeper Login Screen.
-
-2. Backend Route & API Lockdown:
-   - Guard `/api/verify`, `/api/prompts/*`, `/api/verifications` behind strict `authMiddleware`.
-   - Returns 401 Unauthorized if request does not contain a valid JWT session cookie.
-   - Logout button in top navigation immediately clears the cookie and resets the UI
-     back to the Gatekeeper Login Screen.
-
---------------------------------------------------------------------------------
-PRIORITY 2: DEDICATED INSURANCE DIRECTORY & SUB-PORTAL MANAGER
---------------------------------------------------------------------------------
-* Objective: Separate Insurance Directory from AI Settings into its own dedicated
-  manager. Support complex multi-portal carriers like Delta Dental (DD CA, DD FEP).
-
-1. Hierarchical Multi-Portal Payer Structure:
-   - Delta Dental (Parent Carrier)
-     * DD CA  - Delta Dental of California (Claims Address, Payor ID, Phone, In/Out Network)
-     * DD FEP - Delta Dental Federal Employees Program (Claims Address, Payor ID, Phone, In/Out Network)
-     * DD PPO / Premier / Regional
-   - MetLife Dental
-   - Cigna Dental
-   - Guardian Dental
-   - Aetna / Humana / Ameritas
-
-2. Dedicated Management UI ("Insurance Directory & Portals"):
-   - Independent button in top navigation bar (`Insurance Portals & Addresses`).
-   - Clean card/list view displaying each carrier and its sub-portals.
-   - Fields per sub-portal:
-     * Portal Sub-Name (e.g. DD CA, DD FEP)
-     * Claims Mailing Address
-     * Electronic Payor ID
-     * Provider Phone Number
-     * Contracted Network Status toggle (In-Network / Out-of-Network)
-   - Add, Edit, Delete sub-portals with persistent storage in PostgreSQL `dentverify.payer_credentials`.
-
-3. Frontend Auto-Wiring:
-   - When a breakdown or patient document identifies e.g. "DD CA" or "Delta Dental FEP",
-     the system automatically wires the exact matching sub-portal's Claims Address,
-     Phone, and Payor ID into Cell 8 of the "policy-details-compact-grid" and Hero Banner.
-
---------------------------------------------------------------------------------
-PRIORITY 3: BACKGROUND HEADLESS BROWSER VERIFICATION (PLAYWRIGHT AUTOMATION)
+NEXT UP: BACKGROUND HEADLESS BROWSER VERIFICATION (PLAYWRIGHT AUTOMATION)
 --------------------------------------------------------------------------------
 * Objective: Staff enters Member ID + DOB + Payer -> System opens a background
   headless browser, logs into the provider portal, retrieves live benefits,
@@ -94,9 +38,9 @@ PRIORITY 3: BACKGROUND HEADLESS BROWSER VERIFICATION (PLAYWRIGHT AUTOMATION)
 
 4. Output Delivery:
    - AI outputs formatted CDT codes table, shared frequencies, and deductible math.
-   - Automatically saves to persistent PostgreSQL history under practice.
+   - Automatically saves to persistent PostgreSQL history under active clinic workspace.
    - Automatically generates instant Excel breakdown and PMS note.
 
 ================================================================================
-END OF ACTIVE ROADMAP - READY FOR EXECUTION
+END OF ACTIVE ROADMAP
 ================================================================================

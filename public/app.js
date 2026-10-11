@@ -657,124 +657,225 @@
       return 'major';
     }
 
-    // ── Pre-configured Payer Addresses & Payor IDs Directory ──────────
+    // ── Pre-configured Payer Addresses & Sub-Portal Directory (Clinic-Isolated) ──────────
     const PAYER_DIRECTORY_STORAGE_KEY = 'dentverify_payer_directory';
     const DEFAULT_PAYER_DIRECTORY = [
       {
-        id: 'payer_metlife',
-        name: 'MetLife Dental',
+        id: 'dd_ca',
+        parentCarrier: 'Delta Dental Ins',
+        name: 'Delta Dental of CA (DD CA)',
+        carrier: 'Delta Dental of CA (DD CA)',
         network: 'In-Network',
-        matchKeys: ['metlife', 'met life'],
-        address: 'P.O. Box 981282 El Paso, TX 79998',
-        phone: '(877) 638-3379',
-        payorId: '65978'
+        networkStatus: 'In-Network',
+        matchKeys: ['dd ca', 'delta dental of california', 'delta dental ca', 'delta ca'],
+        address: 'P.O. Box 997330, Sacramento, CA 95899-7330',
+        phone: '(888) 335-8227',
+        payorId: '94276'
       },
       {
-        id: 'payer_delta',
-        name: 'Delta Dental',
+        id: 'dd_fep',
+        parentCarrier: 'Delta Dental Ins',
+        name: 'Delta Dental FEP (DD FEP)',
+        carrier: 'Delta Dental FEP (DD FEP)',
+        network: 'Out-of-Network',
+        networkStatus: 'Out-of-Network',
+        matchKeys: ['dd fep', 'delta dental fep', 'federal employees dental', 'fedvip delta'],
+        address: 'P.O. Box 537007, Sacramento, CA 95853-7007',
+        phone: '(855) 410-3255',
+        payorId: 'FEPDD'
+      },
+      {
+        id: 'dd_ppo',
+        parentCarrier: 'Delta Dental Ins',
+        name: 'Delta Dental PPO / National',
+        carrier: 'Delta Dental PPO / National',
         network: 'In-Network',
-        matchKeys: ['delta dental', 'delta'],
-        address: 'P.O. Box 9051 Farmington Hills, MI 48333',
+        networkStatus: 'In-Network',
+        matchKeys: ['delta dental', 'delta ppo', 'delta premier', 'delta'],
+        address: 'P.O. Box 9051, Farmington Hills, MI 48333',
         phone: '(800) 524-0149',
         payorId: '05430'
       },
       {
-        id: 'payer_ameritas',
-        name: 'Ameritas Life Insurance',
+        id: 'payer_metlife',
+        parentCarrier: 'MetLife',
+        name: 'MetLife Dental PDP',
+        carrier: 'MetLife Dental PDP',
         network: 'In-Network',
-        matchKeys: ['ameritas'],
-        address: 'P.O. Box 81889 Lincoln, NE 68501',
-        phone: '(800) 487-5553',
-        payorId: '47009'
+        networkStatus: 'In-Network',
+        matchKeys: ['metlife', 'met life'],
+        address: 'P.O. Box 981282, El Paso, TX 79998',
+        phone: '(877) 638-3379',
+        payorId: '65978'
       },
       {
         id: 'payer_cigna',
-        name: 'Cigna Dental',
+        parentCarrier: 'Cigna',
+        name: 'Cigna Dental DPPO',
+        carrier: 'Cigna Dental DPPO',
         network: 'In-Network',
+        networkStatus: 'In-Network',
         matchKeys: ['cigna'],
-        address: 'P.O. Box 188037 Chattanooga, TN 37422',
+        address: 'P.O. Box 188037, Chattanooga, TN 37422',
         phone: '(800) 244-6224',
         payorId: '62308'
       },
       {
         id: 'payer_guardian',
-        name: 'Guardian Dental',
+        parentCarrier: 'Guardian',
+        name: 'Guardian DentalGuard Preferred',
+        carrier: 'Guardian DentalGuard Preferred',
         network: 'In-Network',
+        networkStatus: 'In-Network',
         matchKeys: ['guardian'],
-        address: 'P.O. Box 981572 El Paso, TX 79998',
+        address: 'P.O. Box 981572, El Paso, TX 79998',
         phone: '(800) 541-7846',
         payorId: '13463'
       },
       {
         id: 'payer_aetna',
-        name: 'Aetna Dental',
+        parentCarrier: 'Aetna',
+        name: 'Aetna Dental PPO',
+        carrier: 'Aetna Dental PPO',
         network: 'In-Network',
+        networkStatus: 'In-Network',
         matchKeys: ['aetna'],
-        address: 'P.O. Box 14094 Lexington, KY 40512',
+        address: 'P.O. Box 14094, Lexington, KY 40512',
         phone: '(877) 238-6200',
         payorId: '60054'
       },
       {
-        id: 'payer_uhc',
-        name: 'UnitedHealthcare Dental',
+        id: 'payer_ameritas',
+        parentCarrier: 'Other',
+        name: 'Ameritas Life Insurance',
+        carrier: 'Ameritas Life Insurance',
         network: 'In-Network',
+        networkStatus: 'In-Network',
+        matchKeys: ['ameritas'],
+        address: 'P.O. Box 81889, Lincoln, NE 68501',
+        phone: '(800) 487-5553',
+        payorId: '47009'
+      },
+      {
+        id: 'payer_uhc',
+        parentCarrier: 'Other',
+        name: 'UnitedHealthcare Dental',
+        carrier: 'UnitedHealthcare Dental',
+        network: 'In-Network',
+        networkStatus: 'In-Network',
         matchKeys: ['unitedhealthcare', 'united healthcare', 'uhc'],
-        address: 'P.O. Box 30567 Salt Lake City, UT 84130',
+        address: 'P.O. Box 30567, Salt Lake City, UT 84130',
         phone: '(877) 816-3596',
         payorId: '52133'
       },
       {
         id: 'payer_bcbs',
+        parentCarrier: 'Other',
         name: 'Blue Cross Blue Shield (BCBS)',
+        carrier: 'Blue Cross Blue Shield (BCBS)',
         network: 'In-Network',
+        networkStatus: 'In-Network',
         matchKeys: ['blue cross', 'bluecross', 'bcbs', 'anthem', 'regence', 'premera', 'horizon', 'carefirst'],
-        address: 'P.O. Box 660247 Dallas, TX 75266',
+        address: 'P.O. Box 660247, Dallas, TX 75266',
         phone: '(800) 521-2227',
         payorId: '84980'
       },
       {
         id: 'payer_humana',
+        parentCarrier: 'Other',
         name: 'Humana Dental',
+        carrier: 'Humana Dental',
         network: 'Out-of-Network',
+        networkStatus: 'Out-of-Network',
         matchKeys: ['humana'],
-        address: 'P.O. Box 14611 Lexington, KY 40512',
+        address: 'P.O. Box 14611, Lexington, KY 40512',
         phone: '(800) 233-4013',
         payorId: '61101'
       },
       {
         id: 'payer_principal',
+        parentCarrier: 'Other',
         name: 'Principal Financial Group',
+        carrier: 'Principal Financial Group',
         network: 'In-Network',
+        networkStatus: 'In-Network',
         matchKeys: ['principal'],
-        address: 'P.O. Box 10350 Des Moines, IA 50306',
+        address: 'P.O. Box 10350, Des Moines, IA 50306',
         phone: '(800) 247-4695',
         payorId: '61271'
       }
     ];
 
+    let activeClinicPayers = null;
+
+    function normalizePayerItem(p, idx = 0) {
+      const displayName = p.name || p.carrier || 'Dental Carrier';
+      const parentGroup = p.parentCarrier || p.parentGroup || (displayName.toLowerCase().includes('delta') ? 'Delta Dental Ins' : 'Standard Carrier');
+      const net = p.network || p.networkStatus || 'In-Network';
+      return {
+        id: p.id || ('payer_' + idx + '_' + Date.now()),
+        parentCarrier: parentGroup,
+        name: displayName,
+        carrier: displayName,
+        network: net,
+        networkStatus: net,
+        matchKeys: Array.isArray(p.matchKeys) ? p.matchKeys : [displayName.toLowerCase()],
+        address: p.address || 'N/A',
+        phone: p.phone || 'N/A',
+        payorId: p.payorId || 'N/A',
+        isCustom: Boolean(p.isCustom)
+      };
+    }
+
+    async function loadClinicPayersFromServer() {
+      try {
+        const res = await fetch('/api/payers');
+        if (res.ok) {
+          const data = await res.json();
+          if (data.success && Array.isArray(data.payers) && data.payers.length > 0) {
+            activeClinicPayers = data.payers.map((item, idx) => normalizePayerItem(item, idx));
+            return activeClinicPayers;
+          }
+        }
+      } catch (e) {
+        console.warn('Could not load clinic payers from server:', e);
+      }
+      activeClinicPayers = DEFAULT_PAYER_DIRECTORY.map((item, idx) => normalizePayerItem(item, idx));
+      return activeClinicPayers;
+    }
+
     function getPayerDirectory() {
+      if (activeClinicPayers && activeClinicPayers.length > 0) {
+        return activeClinicPayers;
+      }
       try {
         const raw = localStorage.getItem(PAYER_DIRECTORY_STORAGE_KEY);
         if (raw) {
           const parsed = JSON.parse(raw);
           if (Array.isArray(parsed) && parsed.length > 0) {
-            return parsed.map(item => ({
-              ...item,
-              network: item.network || 'In-Network'
-            }));
+            activeClinicPayers = parsed.map((item, idx) => normalizePayerItem(item, idx));
+            return activeClinicPayers;
           }
         }
-      } catch (e) {
-        console.warn('Could not read payer directory:', e);
-      }
-      return DEFAULT_PAYER_DIRECTORY.slice();
+      } catch (e) {}
+      activeClinicPayers = DEFAULT_PAYER_DIRECTORY.map((item, idx) => normalizePayerItem(item, idx));
+      return activeClinicPayers;
     }
 
-    function savePayerDirectory(list) {
+    async function savePayerDirectory(list) {
+      const normalized = list.map((item, idx) => normalizePayerItem(item, idx));
+      activeClinicPayers = normalized;
       try {
-        localStorage.setItem(PAYER_DIRECTORY_STORAGE_KEY, JSON.stringify(list));
+        localStorage.setItem(PAYER_DIRECTORY_STORAGE_KEY, JSON.stringify(normalized));
+      } catch (e) {}
+      try {
+        await fetch('/api/payers', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ payers: normalized })
+        });
       } catch (e) {
-        console.warn('Could not save payer directory:', e);
+        console.warn('Could not save payers to clinic database:', e);
       }
     }
 
@@ -792,6 +893,7 @@
       }
       return null;
     }
+
 
     // File State
     let selectedFiles = [];
@@ -2657,7 +2759,6 @@
     // Open Settings Modal
     openSettingsBtn.addEventListener('click', () => {
       loadPromptSettings();
-      renderPayerDirectory(payerSearchInput?.value || '');
       settingsModal.classList.add('active');
     });
 
@@ -2703,29 +2804,59 @@
     loadPromptSettings();
 
     // ==========================================
-    // PAYER DIRECTORY UI LOGIC
+    // DEDICATED INSURANCE DIRECTORY & SUB-PORTALS UI
     // ==========================================
-    const payerSearchInput = document.getElementById('payerSearchInput');
-    const toggleAddPayerFormBtn = document.getElementById('toggleAddPayerFormBtn');
-    const addPayerFormPanel = document.getElementById('addPayerFormPanel');
-    const newPayerName = document.getElementById('newPayerName');
-    const newPayerId = document.getElementById('newPayerId');
-    const newPayerAddress = document.getElementById('newPayerAddress');
-    const newPayerPhone = document.getElementById('newPayerPhone');
-    const cancelAddPayerBtn = document.getElementById('cancelAddPayerBtn');
-    const saveNewPayerBtn = document.getElementById('saveNewPayerBtn');
-    const payerDirectoryListContainer = document.getElementById('payerDirectoryListContainer');
+    const openInsuranceDirectoryBtn = document.getElementById('openInsuranceDirectoryBtn');
+    const insuranceDirectoryModal = document.getElementById('insuranceDirectoryModal');
+    const closeInsuranceDirectoryModalBtn = document.getElementById('closeInsuranceDirectoryModalBtn');
+    const dirCloseFooterBtn = document.getElementById('dirCloseFooterBtn');
+    const payerDirectorySearchInput = document.getElementById('payerDirectorySearchInput');
+    const payerParentFilter = document.getElementById('payerParentFilter');
+    const dirToggleBulkImportBtn = document.getElementById('dirToggleBulkImportBtn');
+    const dirBulkImportPanel = document.getElementById('dirBulkImportPanel');
+    const dirBulkImportTextarea = document.getElementById('dirBulkImportTextarea');
+    const dirCancelBulkImportBtn = document.getElementById('dirCancelBulkImportBtn');
+    const dirProcessBulkImportBtn = document.getElementById('dirProcessBulkImportBtn');
+    const dirToggleAddBtn = document.getElementById('dirToggleAddBtn');
+    const dirAddPayerFormPanel = document.getElementById('dirAddPayerFormPanel');
+    const dirNewParentCarrier = document.getElementById('dirNewParentCarrier');
+    const dirNewCarrierName = document.getElementById('dirNewCarrierName');
+    const dirNewPayorId = document.getElementById('dirNewPayorId');
+    const dirNewAddress = document.getElementById('dirNewAddress');
+    const dirNewPhone = document.getElementById('dirNewPhone');
+    const dirNewNetwork = document.getElementById('dirNewNetwork');
+    const dirCancelAddBtn = document.getElementById('dirCancelAddBtn');
+    const dirSavePayerBtn = document.getElementById('dirSavePayerBtn');
+    const dirPayerListContainer = document.getElementById('dirPayerListContainer');
+    const dirResetDefaultsBtn = document.getElementById('dirResetDefaultsBtn');
     const openPayerDirectoryQuickBtn = document.getElementById('openPayerDirectoryQuickBtn');
 
-    function renderPayerDirectory(filter = '') {
-      if (!payerDirectoryListContainer) return;
-      payerDirectoryListContainer.innerHTML = '';
+    function renderDedicatedPayerDirectory() {
+      if (!dirPayerListContainer) return;
+      dirPayerListContainer.innerHTML = '';
+
       const list = getPayerDirectory();
-      const q = filter.trim().toLowerCase();
+      const q = (payerDirectorySearchInput?.value || '').trim().toLowerCase();
+      const parentVal = payerParentFilter?.value || 'ALL';
 
       const filtered = list.filter(p => {
+        const parentStr = (p.parentCarrier || '').toLowerCase();
+        const nameStr = (p.name || p.carrier || '').toLowerCase();
+
+        if (parentVal !== 'ALL') {
+          const pv = parentVal.toLowerCase();
+          if (pv === 'delta dental') {
+            if (!parentStr.includes('delta') && !nameStr.includes('delta')) return false;
+          } else if (pv === 'other') {
+            if (parentStr.includes('delta') || parentStr.includes('metlife') || parentStr.includes('cigna') || parentStr.includes('guardian') || parentStr.includes('aetna')) return false;
+          } else {
+            if (!parentStr.includes(pv) && !nameStr.includes(pv)) return false;
+          }
+        }
+
         if (!q) return true;
-        return (p.name || '').toLowerCase().includes(q) ||
+        return nameStr.includes(q) ||
+               parentStr.includes(q) ||
                (p.address || '').toLowerCase().includes(q) ||
                (p.payorId || '').toLowerCase().includes(q) ||
                (p.phone || '').toLowerCase().includes(q) ||
@@ -2733,9 +2864,9 @@
       });
 
       if (filtered.length === 0) {
-        payerDirectoryListContainer.innerHTML = `
+        dirPayerListContainer.innerHTML = `
           <div style="text-align: center; padding: 2rem 1rem; color: var(--text-muted); font-size: 0.78rem;">
-            No insurance carriers found matching "${escapeHtml(filter)}".
+            No insurance carriers or sub-portals found matching your filter.
           </div>
         `;
         return;
@@ -2746,13 +2877,15 @@
         card.className = 'payer-directory-card';
         const isOut = (p.network || 'In-Network').toLowerCase().includes('out');
         const netLabel = isOut ? 'Out-of-Network' : 'In-Network';
+        const parentGroup = p.parentCarrier || 'Standard Carrier';
+        const isDelta = parentGroup.toLowerCase().includes('delta') || (p.name || '').toLowerCase().includes('delta');
 
         card.innerHTML = `
           <div class="payer-card-info">
-            <div class="payer-card-name">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 6.5 2z"></path></svg>
-              <span>${escapeHtml(p.name)}</span>
-              <button type="button" class="payer-network-toggle-badge ${isOut ? 'out' : 'in'}" data-id="${p.id}" title="Click to toggle In-Network / Out-of-Network for this carrier">
+            <div class="payer-card-name" style="flex-wrap: wrap; gap: 0.45rem;">
+              <span class="payer-parent-badge ${isDelta ? 'delta' : ''}">${escapeHtml(parentGroup)}</span>
+              <span style="font-weight: 700; color: #fff;">${escapeHtml(p.name)}</span>
+              <button type="button" class="payer-network-toggle-badge ${isOut ? 'out' : 'in'}" data-id="${p.id}" title="Click to toggle In-Network / Out-of-Network for this portal">
                 ${netLabel}
               </button>
             </div>
@@ -2760,70 +2893,73 @@
             <div class="payer-card-meta">
               <span>Ph: ${escapeHtml(p.phone || 'N/A')}</span>
               <span>•</span>
-              <span>Payor ID: <strong>${escapeHtml(p.payorId || 'N/A')}</strong></span>
+              <span>Payor ID: <strong style="color: #38bdf8;">${escapeHtml(p.payorId || 'N/A')}</strong></span>
             </div>
           </div>
           <div style="display: flex; gap: 0.4rem; align-items: center;">
-            <button type="button" class="btn-apply-payer" data-id="${p.id || ''}" title="Apply this address, network status, and Payor ID to the active policy card and exports">
+            <button type="button" class="btn-apply-payer" data-id="${p.id || ''}" title="Apply this sub-portal address, network status, and Payor ID to the active breakdown">
               Apply to Policy
             </button>
-            ${p.isCustom ? `
-              <button type="button" class="del-payer-btn" data-id="${p.id}" title="Delete custom payer" style="background: none; border: none; color: #ef4444; cursor: pointer; padding: 4px;">
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
-              </button>
-            ` : ''}
+            <button type="button" class="del-payer-btn" data-id="${p.id}" title="Remove from clinic directory" style="background: none; border: none; color: #ef4444; cursor: pointer; padding: 4px;">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+            </button>
           </div>
         `;
 
         // Network toggle badge click
         const netBtn = card.querySelector('.payer-network-toggle-badge');
         if (netBtn) {
-          netBtn.addEventListener('click', (e) => {
+          netBtn.addEventListener('click', async (e) => {
             e.stopPropagation();
             const allPayers = getPayerDirectory();
             const targetPayer = allPayers.find(item => item.id === p.id);
             if (targetPayer) {
               const curNet = targetPayer.network || 'In-Network';
-              targetPayer.network = curNet.toLowerCase().includes('out') ? 'In-Network' : 'Out-of-Network';
-              savePayerDirectory(allPayers);
-              renderPayerDirectory(payerSearchInput?.value || '');
+              const nextNet = curNet.toLowerCase().includes('out') ? 'In-Network' : 'Out-of-Network';
+              targetPayer.network = nextNet;
+              targetPayer.networkStatus = nextNet;
+              await savePayerDirectory(allPayers);
+              renderDedicatedPayerDirectory();
 
-              // If active breakdown matches, sync immediately
               if (currentAuditData && currentAuditData.insurance_details && currentAuditData.insurance_details.carrier) {
                 const c = currentAuditData.insurance_details.carrier.toLowerCase();
                 if (c.includes(targetPayer.name.toLowerCase()) || targetPayer.name.toLowerCase().includes(c)) {
-                  currentAuditData.insurance_details.network_status = targetPayer.network;
+                  currentAuditData.insurance_details.network_status = nextNet;
                   renderReportDashboard(currentAuditData);
                   renderExcelBreakdownSheet(currentAuditData);
                   if (pmsModal && pmsModal.classList.contains('active')) buildPmsNote();
                 }
               }
-
-              displayToast(`${targetPayer.name} is now set as ${targetPayer.network}!`);
+              displayToast(`${targetPayer.name} set to ${nextNet} for this clinic!`);
             }
           });
         }
 
         const applyBtn = card.querySelector('.btn-apply-payer');
-        applyBtn.addEventListener('click', () => {
-          applyPayerToCurrentAudit(p);
-        });
-
-        const delBtn = card.querySelector('.del-payer-btn');
-        if (delBtn) {
-          delBtn.addEventListener('click', (e) => {
-            e.stopPropagation();
-            deleteCustomPayer(p.id);
+        if (applyBtn) {
+          applyBtn.addEventListener('click', () => {
+            applyPayerToCurrentAudit(p);
           });
         }
 
-        payerDirectoryListContainer.appendChild(card);
+        const delBtn = card.querySelector('.del-payer-btn');
+        if (delBtn) {
+          delBtn.addEventListener('click', async (e) => {
+            e.stopPropagation();
+            const list = getPayerDirectory().filter(item => item.id !== p.id);
+            await savePayerDirectory(list);
+            renderDedicatedPayerDirectory();
+            displayToast(`Removed ${p.name} from clinic directory.`);
+          });
+        }
+
+        dirPayerListContainer.appendChild(card);
       });
     }
 
     function applyPayerToCurrentAudit(payer) {
       if (!currentAuditData) {
-        displayToast('No active breakdown loaded. Upload a breakdown first.');
+        displayToast('No active breakdown loaded. Upload or load a breakdown first.');
         return;
       }
       if (!currentAuditData.insurance_details) currentAuditData.insurance_details = {};
@@ -2838,50 +2974,131 @@
       renderReportDashboard(currentAuditData);
       renderExcelBreakdownSheet(currentAuditData);
       if (pmsModal && pmsModal.classList.contains('active')) buildPmsNote();
-      settingsModal.classList.remove('active');
-      displayToast(`Applied ${payer.name} (${payer.network || 'In-Network'}) to policy!`);
+      if (insuranceDirectoryModal) insuranceDirectoryModal.classList.remove('active');
+      displayToast(`Applied ${payer.name} (${payer.network || 'In-Network'}) to active policy!`);
     }
 
-    function deleteCustomPayer(id) {
-      const list = getPayerDirectory().filter(p => p.id !== id);
-      savePayerDirectory(list);
-      renderPayerDirectory(payerSearchInput?.value || '');
-      displayToast('Custom payer deleted.');
+    function openInsuranceDirectory() {
+      renderDedicatedPayerDirectory();
+      if (insuranceDirectoryModal) insuranceDirectoryModal.classList.add('active');
     }
 
-    if (payerSearchInput) {
-      payerSearchInput.addEventListener('input', (e) => {
-        renderPayerDirectory(e.target.value);
+    if (openInsuranceDirectoryBtn) {
+      openInsuranceDirectoryBtn.addEventListener('click', openInsuranceDirectory);
+    }
+
+    if (openPayerDirectoryQuickBtn) {
+      openPayerDirectoryQuickBtn.addEventListener('click', openInsuranceDirectory);
+    }
+
+    if (closeInsuranceDirectoryModalBtn) {
+      closeInsuranceDirectoryModalBtn.addEventListener('click', () => {
+        if (insuranceDirectoryModal) insuranceDirectoryModal.classList.remove('active');
       });
     }
 
-    // Bulk Import Logic
-    const toggleBulkImportBtn = document.getElementById('toggleBulkImportBtn');
-    const bulkImportPanel = document.getElementById('bulkImportPanel');
-    const bulkImportTextarea = document.getElementById('bulkImportTextarea');
-    const cancelBulkImportBtn = document.getElementById('cancelBulkImportBtn');
-    const processBulkImportBtn = document.getElementById('processBulkImportBtn');
-
-    if (toggleBulkImportBtn && bulkImportPanel) {
-      toggleBulkImportBtn.addEventListener('click', () => {
-        const isHidden = bulkImportPanel.style.display === 'none';
-        bulkImportPanel.style.display = isHidden ? 'block' : 'none';
-        if (addPayerFormPanel) addPayerFormPanel.style.display = 'none';
+    if (dirCloseFooterBtn) {
+      dirCloseFooterBtn.addEventListener('click', () => {
+        if (insuranceDirectoryModal) insuranceDirectoryModal.classList.remove('active');
       });
     }
 
-    if (cancelBulkImportBtn && bulkImportPanel) {
-      cancelBulkImportBtn.addEventListener('click', () => {
-        bulkImportPanel.style.display = 'none';
-        if (bulkImportTextarea) bulkImportTextarea.value = '';
+    if (insuranceDirectoryModal) {
+      insuranceDirectoryModal.addEventListener('click', (e) => {
+        if (e.target === insuranceDirectoryModal) {
+          insuranceDirectoryModal.classList.remove('active');
+        }
       });
     }
 
-    if (processBulkImportBtn && bulkImportTextarea) {
-      processBulkImportBtn.addEventListener('click', () => {
-        const rawText = bulkImportTextarea.value.trim();
+    if (payerDirectorySearchInput) {
+      payerDirectorySearchInput.addEventListener('input', renderDedicatedPayerDirectory);
+    }
+
+    if (payerParentFilter) {
+      payerParentFilter.addEventListener('change', renderDedicatedPayerDirectory);
+    }
+
+    // Add Sub-Portal / Carrier Form
+    if (dirToggleAddBtn && dirAddPayerFormPanel) {
+      dirToggleAddBtn.addEventListener('click', () => {
+        const isHidden = dirAddPayerFormPanel.style.display === 'none';
+        dirAddPayerFormPanel.style.display = isHidden ? 'block' : 'none';
+        if (dirBulkImportPanel) dirBulkImportPanel.style.display = 'none';
+        dirToggleAddBtn.textContent = isHidden ? '✕ Close Form' : '+ Add Sub-Portal / Carrier';
+      });
+    }
+
+    if (dirCancelAddBtn && dirAddPayerFormPanel) {
+      dirCancelAddBtn.addEventListener('click', () => {
+        dirAddPayerFormPanel.style.display = 'none';
+        if (dirToggleAddBtn) dirToggleAddBtn.textContent = '+ Add Sub-Portal / Carrier';
+      });
+    }
+
+    if (dirSavePayerBtn) {
+      dirSavePayerBtn.addEventListener('click', async () => {
+        const parentCarrier = dirNewParentCarrier?.value.trim() || 'Delta Dental Ins';
+        const name = dirNewCarrierName?.value.trim();
+        const address = dirNewAddress?.value.trim();
+        const phone = dirNewPhone?.value.trim() || 'N/A';
+        const payorId = dirNewPayorId?.value.trim() || 'N/A';
+        const network = dirNewNetwork?.value || 'In-Network';
+
+        if (!name || !address) {
+          alert('Please enter both the Portal/Carrier Name and Claims Address.');
+          return;
+        }
+
+        const list = getPayerDirectory();
+        list.unshift({
+          id: 'payer_custom_' + Date.now(),
+          parentCarrier,
+          name,
+          carrier: name,
+          network,
+          networkStatus: network,
+          matchKeys: [name.toLowerCase()],
+          address,
+          phone,
+          payorId,
+          isCustom: true
+        });
+
+        await savePayerDirectory(list);
+        if (dirAddPayerFormPanel) dirAddPayerFormPanel.style.display = 'none';
+        if (dirToggleAddBtn) dirToggleAddBtn.textContent = '+ Add Sub-Portal / Carrier';
+        if (dirNewCarrierName) dirNewCarrierName.value = '';
+        if (dirNewPayorId) dirNewPayorId.value = '';
+        if (dirNewAddress) dirNewAddress.value = '';
+        if (dirNewPhone) dirNewPhone.value = '';
+
+        renderDedicatedPayerDirectory();
+        displayToast(`Added ${name} under ${parentCarrier} for this clinic!`);
+      });
+    }
+
+    // Bulk Import in Dedicated Modal
+    if (dirToggleBulkImportBtn && dirBulkImportPanel) {
+      dirToggleBulkImportBtn.addEventListener('click', () => {
+        const isHidden = dirBulkImportPanel.style.display === 'none';
+        dirBulkImportPanel.style.display = isHidden ? 'block' : 'none';
+        if (dirAddPayerFormPanel) dirAddPayerFormPanel.style.display = 'none';
+      });
+    }
+
+    if (dirCancelBulkImportBtn && dirBulkImportPanel) {
+      dirCancelBulkImportBtn.addEventListener('click', () => {
+        dirBulkImportPanel.style.display = 'none';
+        if (dirBulkImportTextarea) dirBulkImportTextarea.value = '';
+      });
+    }
+
+    if (dirProcessBulkImportBtn && dirBulkImportTextarea) {
+      dirProcessBulkImportBtn.addEventListener('click', async () => {
+        const rawText = dirBulkImportTextarea.value.trim();
         if (!rawText) {
-          alert('Please paste your insurance list text first.');
+          alert('Please paste your insurance carrier/portal list first.');
           return;
         }
 
@@ -2901,146 +3118,113 @@
           const parts = line.split(delimiter).map(p => p.trim());
           if (parts.length === 0 || !parts[0]) return;
 
-          const name = parts[0];
-          let address = parts[1] || 'N/A';
+          let parentCarrier = 'Standard Carrier';
+          let name = parts[0];
+          let address = 'N/A';
           let network = 'In-Network';
           let phone = 'N/A';
           let payorId = 'N/A';
 
-          for (let i = 2; i < parts.length; i++) {
-            const val = parts[i];
-            if (/^(in|in-network|in network|inn)$/i.test(val)) {
-              network = 'In-Network';
-            } else if (/^(out|out-of-network|out of network|oon)$/i.test(val)) {
-              network = 'Out-of-Network';
-            } else if (/^[0-9A-Z]{4,8}$/i.test(val) && !val.includes('(')) {
-              payorId = val;
-            } else if (/\d{3}[-.)]\s*\d{3}/.test(val)) {
-              phone = val;
-            } else if (address === 'N/A') {
-              address = val;
+          // Check if 6-column format: Parent | Portal | Address | Network | Phone | PayorID
+          if (parts.length >= 5 && !/\d{3}/.test(parts[1])) {
+            parentCarrier = parts[0];
+            name = parts[1];
+            address = parts[2] || 'N/A';
+            for (let i = 3; i < parts.length; i++) {
+              const val = parts[i];
+              if (/out/i.test(val)) network = 'Out-of-Network';
+              else if (/in/i.test(val)) network = 'In-Network';
+              else if (/^[0-9A-Z]{4,8}$/i.test(val) && !val.includes('(')) payorId = val;
+              else if (/\d{3}[-.)]\s*\d{3}/.test(val)) phone = val;
+            }
+          } else {
+            name = parts[0];
+            parentCarrier = name.toLowerCase().includes('delta') ? 'Delta Dental Ins' : 'Standard Carrier';
+            address = parts[1] || 'N/A';
+            for (let i = 2; i < parts.length; i++) {
+              const val = parts[i];
+              if (/out/i.test(val)) network = 'Out-of-Network';
+              else if (/in/i.test(val)) network = 'In-Network';
+              else if (/^[0-9A-Z]{4,8}$/i.test(val) && !val.includes('(')) payorId = val;
+              else if (/\d{3}[-.)]\s*\d{3}/.test(val)) phone = val;
             }
           }
 
-          if (parts[2] && /out/i.test(parts[2])) network = 'Out-of-Network';
-          else if (parts[2] && /in/i.test(parts[2])) network = 'In-Network';
-
-          const existing = list.find(item => item.name && item.name.toLowerCase() === name.toLowerCase());
-          if (existing) {
-            if (address !== 'N/A') existing.address = address;
-            if (network) existing.network = network;
-            if (phone !== 'N/A') existing.phone = phone;
-            if (payorId !== 'N/A') existing.payorId = payorId;
-          } else {
-            list.unshift({
-              id: 'payer_custom_' + Date.now() + '_' + idx,
-              name,
-              network,
-              matchKeys: [name.toLowerCase()],
-              address,
-              phone,
-              payorId,
-              isCustom: true
-            });
-          }
+          list.unshift({
+            id: 'payer_custom_' + Date.now() + '_' + idx,
+            parentCarrier,
+            name,
+            carrier: name,
+            network,
+            networkStatus: network,
+            matchKeys: [name.toLowerCase()],
+            address,
+            phone,
+            payorId,
+            isCustom: true
+          });
           importedCount++;
         });
 
-        savePayerDirectory(list);
-        bulkImportPanel.style.display = 'none';
-        bulkImportTextarea.value = '';
-        renderPayerDirectory();
-        displayToast(`Successfully imported ${importedCount} insurance carriers into Directory!`);
+        await savePayerDirectory(list);
+        dirBulkImportPanel.style.display = 'none';
+        dirBulkImportTextarea.value = '';
+        renderDedicatedPayerDirectory();
+        displayToast(`Imported ${importedCount} carrier portals into active clinic directory!`);
       });
     }
 
-    if (toggleAddPayerFormBtn && addPayerFormPanel) {
-      toggleAddPayerFormBtn.addEventListener('click', () => {
-        const isHidden = addPayerFormPanel.style.display === 'none';
-        addPayerFormPanel.style.display = isHidden ? 'block' : 'none';
-        if (bulkImportPanel) bulkImportPanel.style.display = 'none';
-        toggleAddPayerFormBtn.textContent = isHidden ? '✕ Close Form' : '+ Add Carrier';
-      });
-    }
-
-    if (cancelAddPayerBtn && addPayerFormPanel) {
-      cancelAddPayerBtn.addEventListener('click', () => {
-        addPayerFormPanel.style.display = 'none';
-        if (toggleAddPayerFormBtn) toggleAddPayerFormBtn.textContent = '+ Add Carrier';
-        if (newPayerName) newPayerName.value = '';
-        if (newPayerId) newPayerId.value = '';
-        if (newPayerAddress) newPayerAddress.value = '';
-        if (newPayerPhone) newPayerPhone.value = '';
-      });
-    }
-
-    if (saveNewPayerBtn) {
-      saveNewPayerBtn.addEventListener('click', () => {
-        const name = newPayerName?.value.trim();
-        const address = newPayerAddress?.value.trim();
-        const phone = newPayerPhone?.value.trim() || 'N/A';
-        const payorId = newPayerId?.value.trim() || 'N/A';
-        const newPayerNetwork = document.getElementById('newPayerNetwork');
-        const network = newPayerNetwork?.value || 'In-Network';
-
-        if (!name || !address) {
-          alert('Please enter both the Carrier Name and Claims Address.');
-          return;
-        }
-
-        const list = getPayerDirectory();
-        const newRecord = {
-          id: 'payer_custom_' + Date.now(),
-          name,
-          network,
-          matchKeys: [name.toLowerCase()],
-          address,
-          phone,
-          payorId,
-          isCustom: true
-        };
-
-        list.unshift(newRecord);
-        savePayerDirectory(list);
-
-        if (addPayerFormPanel) addPayerFormPanel.style.display = 'none';
-        if (toggleAddPayerFormBtn) toggleAddPayerFormBtn.textContent = '+ Add Carrier';
-        if (newPayerName) newPayerName.value = '';
-        if (newPayerId) newPayerId.value = '';
-        if (newPayerAddress) newPayerAddress.value = '';
-        if (newPayerPhone) newPayerPhone.value = '';
-
-        renderPayerDirectory();
-        displayToast(`Saved ${name} (${network}) to Insurance Directory!`);
-      });
-    }
-
-    if (openPayerDirectoryQuickBtn) {
-      openPayerDirectoryQuickBtn.addEventListener('click', () => {
-        loadPromptSettings();
-        settingsModal.classList.add('active');
-        // Activate Tab 3
-        settingsTabBtns.forEach(b => b.classList.remove('active'));
-        settingsTabPanes.forEach(p => p.classList.remove('active'));
-        const payerTabBtn = document.querySelector('.settings-tab-btn[data-tab="tabPayers"]');
-        if (payerTabBtn) payerTabBtn.classList.add('active');
-        document.getElementById('tabPayers')?.classList.add('active');
-        renderPayerDirectory(payerSearchInput?.value || '');
-      });
-    }
-
-    // Tab button click handler for tabPayers
-    const tabPayersBtn = document.querySelector('.settings-tab-btn[data-tab="tabPayers"]');
-    if (tabPayersBtn) {
-      tabPayersBtn.addEventListener('click', () => {
-        renderPayerDirectory(payerSearchInput?.value || '');
+    if (dirResetDefaultsBtn) {
+      dirResetDefaultsBtn.addEventListener('click', async () => {
+        if (!confirm('Reset this clinic\'s insurance directory to default sub-portals (DD CA, DD FEP, DD PPO, MetLife, Cigna, etc.)?')) return;
+        await savePayerDirectory(DEFAULT_PAYER_DIRECTORY.slice());
+        renderDedicatedPayerDirectory();
+        displayToast('Clinic insurance directory reset to defaults.');
       });
     }
 
     // ==========================================
-    // CLINIC STAFF AUTH & SESSION LOGIC (HIPAA)
+    // GATEKEEPER LOGIN, MULTI-CLINIC WORKSPACE & USER ASSIGNMENT
     // ==========================================
     let currentUser = null;
+    let cachedPractices = [];
+    let cachedUsers = [];
+
+    const gatekeeperScreen = document.getElementById('gatekeeperScreen');
+    const appWorkspace = document.getElementById('appWorkspace');
+    const gatekeeperForm = document.getElementById('gatekeeperForm');
+    const gateEmail = document.getElementById('gateEmail');
+    const gatePassword = document.getElementById('gatePassword');
+    const gateErrorMsg = document.getElementById('gateErrorMsg');
+    const btnGateSubmit = document.getElementById('btnGateSubmit');
+
+    const btnWorkspaceSwitcher = document.getElementById('btnWorkspaceSwitcher');
+    const activeWorkspaceLabel = document.getElementById('activeWorkspaceLabel');
+    const workspaceChevron = document.getElementById('workspaceChevron');
+    const workspaceDropdownPanel = document.getElementById('workspaceDropdownPanel');
+
+    const openClinicManagerBtn = document.getElementById('openClinicManagerBtn');
+    const clinicManagerModal = document.getElementById('clinicManagerModal');
+    const closeClinicManagerModalBtn = document.getElementById('closeClinicManagerModalBtn');
+    const closeClinicManagerFooterBtn = document.getElementById('closeClinicManagerFooterBtn');
+    const clinicCountBadge = document.getElementById('clinicCountBadge');
+    const userCountBadge = document.getElementById('userCountBadge');
+    const paneWorkspaces = document.getElementById('paneWorkspaces');
+    const paneStaffUsers = document.getElementById('paneStaffUsers');
+    const newClinicNameInput = document.getElementById('newClinicNameInput');
+    const btnCreateClinic = document.getElementById('btnCreateClinic');
+    const clinicWorkspacesList = document.getElementById('clinicWorkspacesList');
+
+    const toggleAddUserFormBtn = document.getElementById('toggleAddUserFormBtn');
+    const addUserFormPanel = document.getElementById('addUserFormPanel');
+    const newUserName = document.getElementById('newUserName');
+    const newUserEmail = document.getElementById('newUserEmail');
+    const newUserPassword = document.getElementById('newUserPassword');
+    const newUserRole = document.getElementById('newUserRole');
+    const newUserPracticeSelect = document.getElementById('newUserPracticeSelect');
+    const cancelAddUserBtn = document.getElementById('cancelAddUserBtn');
+    const btnSaveNewUser = document.getElementById('btnSaveNewUser');
+    const usersListContainer = document.getElementById('usersListContainer');
 
     async function checkUserAuth() {
       try {
@@ -3048,39 +3232,480 @@
         if (res.ok) {
           const data = await res.json();
           if (data.authenticated && data.user) {
-            setCurrentUser(data.user);
-            await syncHistoryFromBackend();
+            await setCurrentUser(data.user);
             return;
           }
         }
       } catch (err) {
-        console.warn('Auth check skipped (offline or unauthenticated):', err);
+        console.warn('Auth check skipped:', err);
       }
-      setCurrentUser(null);
+      await setCurrentUser(null);
     }
 
-    function setCurrentUser(user) {
+    async function setCurrentUser(user) {
       currentUser = user;
       if (user) {
+        // Hide Gatekeeper, unlock Main Workspace
+        if (gatekeeperScreen) gatekeeperScreen.style.display = 'none';
+        if (appWorkspace) appWorkspace.style.display = 'block';
+
+        // Header User Badge
         if (userBadgeLabel) userBadgeLabel.textContent = user.full_name || user.email.split('@')[0];
         if (openAuthModalBtn) {
           openAuthModalBtn.classList.add('logged-in');
-          openAuthModalBtn.title = `${user.full_name} (${user.practice_name || 'Clinic Account'})`;
+          openAuthModalBtn.title = `${user.full_name} (${user.role.toUpperCase()} • ${user.practice_name || 'Clinic'})`;
         }
+
+        // Active Workspace Pill
+        if (activeWorkspaceLabel) {
+          activeWorkspaceLabel.textContent = user.practice_name || 'Clinic Workspace';
+        }
+
+        // Owner vs Staff Controls
+        const isOwner = user.role === 'owner';
+        if (openClinicManagerBtn) {
+          openClinicManagerBtn.style.display = isOwner ? 'inline-flex' : 'none';
+        }
+        if (workspaceChevron) {
+          workspaceChevron.style.display = isOwner ? 'inline-block' : 'none';
+        }
+        if (btnWorkspaceSwitcher) {
+          btnWorkspaceSwitcher.style.cursor = isOwner ? 'pointer' : 'default';
+          btnWorkspaceSwitcher.title = isOwner
+            ? 'Click to switch between Clinic 1, Clinic 2, and Clinic 3'
+            : `Assigned Workspace: ${user.practice_name}`;
+        }
+
+        // Auth Modal Details
         if (authLoggedInView) authLoggedInView.style.display = 'block';
         if (authLoginForm) authLoginForm.style.display = 'none';
-        if (authSessionUserName) authSessionUserName.textContent = user.full_name || 'Clinic User';
+        if (authSessionUserName) authSessionUserName.textContent = `${user.full_name || 'Clinic User'} (${user.role.toUpperCase()})`;
         if (authSessionUserEmail) authSessionUserEmail.textContent = user.email;
-        if (authSessionPracticeName) authSessionPracticeName.textContent = `Practice: ${user.practice_name || 'DentVerify Clinic'}`;
+        if (authSessionPracticeName) authSessionPracticeName.textContent = `Active Workspace: ${user.practice_name || 'DentVerify Clinic'}`;
+
+        // Load isolated clinic data
+        await loadClinicPayersFromServer();
+        await syncHistoryFromBackend();
+        renderHistoryList();
+        if (isOwner) {
+          await loadOwnerClinicsAndUsers();
+        }
       } else {
+        // Lock Workspace, Show Gatekeeper Login Screen
+        if (appWorkspace) appWorkspace.style.display = 'none';
+        if (gatekeeperScreen) gatekeeperScreen.style.display = 'flex';
+        if (workspaceDropdownPanel) workspaceDropdownPanel.style.display = 'none';
+
         if (userBadgeLabel) userBadgeLabel.textContent = 'Sign In';
         if (openAuthModalBtn) {
           openAuthModalBtn.classList.remove('logged-in');
-          openAuthModalBtn.title = 'Clinic Staff Login & Session';
         }
         if (authLoggedInView) authLoggedInView.style.display = 'none';
         if (authLoginForm) authLoginForm.style.display = 'block';
       }
+    }
+
+    // Gatekeeper Login Form Handler
+    if (gatekeeperForm) {
+      gatekeeperForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        if (gateErrorMsg) gateErrorMsg.style.display = 'none';
+        if (btnGateSubmit) {
+          btnGateSubmit.disabled = true;
+          btnGateSubmit.innerHTML = '<span>Unlocking Clinic Workspace...</span>';
+        }
+
+        try {
+          const res = await fetch('/api/auth/login', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              email: gateEmail.value.trim(),
+              password: gatePassword.value,
+            }),
+          });
+          const data = await res.json();
+          if (res.ok && data.success && data.user) {
+            gatePassword.value = '';
+            await setCurrentUser(data.user);
+            resetInactivityTimer();
+            displayToast(`Unlocked ${data.user.practice_name || 'Clinic Workspace'} — Welcome, ${data.user.full_name}!`);
+          } else {
+            if (gateErrorMsg) {
+              gateErrorMsg.textContent = data.error || 'Invalid clinic email or password.';
+              gateErrorMsg.style.display = 'block';
+            }
+          }
+        } catch (err) {
+          if (gateErrorMsg) {
+            gateErrorMsg.textContent = 'Server connection error. Please try again.';
+            gateErrorMsg.style.display = 'block';
+          }
+        } finally {
+          if (btnGateSubmit) {
+            btnGateSubmit.disabled = false;
+            btnGateSubmit.innerHTML = `
+              <span>Sign In to Clinic Workspace</span>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                <polyline points="9 18 15 12 9 6"></polyline>
+              </svg>
+            `;
+          }
+        }
+      });
+    }
+
+    // Owner Workspace Switcher & Management Functions
+    async function loadOwnerClinicsAndUsers() {
+      if (!currentUser || currentUser.role !== 'owner') return;
+      try {
+        const [pracRes, usrRes] = await Promise.all([
+          fetch('/api/practices'),
+          fetch('/api/users')
+        ]);
+        if (pracRes.ok) {
+          const pData = await pracRes.json();
+          if (pData.success) cachedPractices = pData.practices || [];
+        }
+        if (usrRes.ok) {
+          const uData = await usrRes.json();
+          if (uData.success) cachedUsers = uData.users || [];
+        }
+        renderWorkspaceSwitcherDropdown();
+        renderClinicManagerModalContent();
+      } catch (e) {
+        console.warn('Could not load clinics/users:', e);
+      }
+    }
+
+    function renderWorkspaceSwitcherDropdown() {
+      if (!workspaceDropdownPanel || !currentUser || currentUser.role !== 'owner') return;
+      workspaceDropdownPanel.innerHTML = `
+        <div style="font-size: 0.65rem; font-weight: 700; text-transform: uppercase; color: #64748b; padding: 0.25rem 0.6rem; letter-spacing: 0.05em;">
+          Switch Active Clinic Workspace
+        </div>
+      `;
+
+      cachedPractices.forEach(prac => {
+        const isCurrent = prac.id === currentUser.practice_id;
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = `workspace-item-btn ${isCurrent ? 'active' : ''}`;
+        btn.innerHTML = `
+          <div style="display: flex; flex-direction: column; gap: 2px;">
+            <span>${escapeHtml(prac.name)}</span>
+            <span style="font-size: 0.65rem; color: #94a3b8; font-weight: 400;">${prac.verification_count || 0} breakdowns • ${prac.user_count || 0} staff</span>
+          </div>
+          ${isCurrent ? '<span style="color: #34d399; font-weight: 800;">✓</span>' : ''}
+        `;
+        btn.addEventListener('click', async () => {
+          workspaceDropdownPanel.style.display = 'none';
+          if (isCurrent) return;
+          await switchActiveClinicWorkspace(prac.id);
+        });
+        workspaceDropdownPanel.appendChild(btn);
+      });
+    }
+
+    async function switchActiveClinicWorkspace(practiceId) {
+      try {
+        const res = await fetch(`/api/practices/switch/${practiceId}`, { method: 'POST' });
+        const data = await res.json();
+        if (res.ok && data.success) {
+          currentUser.practice_id = data.practice_id;
+          currentUser.practice_name = data.practice_name;
+          if (activeWorkspaceLabel) activeWorkspaceLabel.textContent = data.practice_name;
+          if (authSessionPracticeName) authSessionPracticeName.textContent = `Active Workspace: ${data.practice_name}`;
+
+          // Clear current audit screen if open and reload isolated clinic data
+          await loadClinicPayersFromServer();
+          await syncHistoryFromBackend();
+          renderHistoryList();
+          renderWorkspaceSwitcherDropdown();
+          renderClinicManagerModalContent();
+          displayToast(`Switched active workspace to: ${data.practice_name}`);
+        } else {
+          displayToast(data.error || 'Failed to switch clinic workspace.');
+        }
+      } catch (e) {
+        displayToast('Error switching workspace.');
+      }
+    }
+
+    if (btnWorkspaceSwitcher) {
+      btnWorkspaceSwitcher.addEventListener('click', (e) => {
+        e.stopPropagation();
+        if (!currentUser || currentUser.role !== 'owner') return;
+        const isHidden = workspaceDropdownPanel.style.display === 'none';
+        if (isHidden) {
+          loadOwnerClinicsAndUsers();
+          workspaceDropdownPanel.style.display = 'flex';
+        } else {
+          workspaceDropdownPanel.style.display = 'none';
+        }
+      });
+    }
+
+    document.addEventListener('click', (e) => {
+      if (workspaceDropdownPanel && workspaceDropdownPanel.style.display !== 'none') {
+        if (!workspaceDropdownPanel.contains(e.target) && e.target !== btnWorkspaceSwitcher) {
+          workspaceDropdownPanel.style.display = 'none';
+        }
+      }
+    });
+
+    // Clinic & User Management Modal Logic
+    function renderClinicManagerModalContent() {
+      if (clinicCountBadge) clinicCountBadge.textContent = cachedPractices.length;
+      if (userCountBadge) userCountBadge.textContent = cachedUsers.length;
+
+      // Populate Practice Select in Add User Form
+      if (newUserPracticeSelect) {
+        newUserPracticeSelect.innerHTML = cachedPractices.map(p =>
+          `<option value="${escapeHtml(p.id)}">${escapeHtml(p.name)}</option>`
+        ).join('');
+      }
+
+      // Render Clinic Workspaces List
+      if (clinicWorkspacesList) {
+        clinicWorkspacesList.innerHTML = '';
+        cachedPractices.forEach(prac => {
+          const isCurrent = currentUser && prac.id === currentUser.practice_id;
+          const card = document.createElement('div');
+          card.className = 'clinic-mgmt-card';
+          card.innerHTML = `
+            <div style="flex: 1;">
+              <div class="clinic-mgmt-title">
+                <input type="text" class="table-search-input clinic-rename-input" value="${escapeHtml(prac.name)}" style="font-weight: 700; color: #fff; max-width: 280px; padding: 0.25rem 0.5rem; font-size: 0.8rem;">
+                ${isCurrent ? '<span class="user-role-badge staff">Active</span>' : ''}
+              </div>
+              <div class="clinic-mgmt-stats">
+                <span>📋 ${prac.verification_count || 0} Patient Breakdowns</span>
+                <span>•</span>
+                <span>👥 ${prac.user_count || 0} Assigned Users</span>
+              </div>
+            </div>
+            <div style="display: flex; gap: 0.4rem; align-items: center;">
+              <button type="button" class="btn-action-ghost btn-save-clinic-name" style="padding: 0.3rem 0.6rem; font-size: 0.7rem;">Save Name</button>
+              ${!isCurrent ? `<button type="button" class="btn-verify-primary btn-switch-here" style="padding: 0.3rem 0.65rem; font-size: 0.7rem;">Switch Here</button>` : ''}
+            </div>
+          `;
+
+          const renameInput = card.querySelector('.clinic-rename-input');
+          const saveNameBtn = card.querySelector('.btn-save-clinic-name');
+          saveNameBtn.addEventListener('click', async () => {
+            const newName = renameInput.value.trim();
+            if (!newName) return;
+            const res = await fetch(`/api/practices/${prac.id}`, {
+              method: 'PUT',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ name: newName })
+            });
+            if (res.ok) {
+              if (currentUser && currentUser.practice_id === prac.id) {
+                currentUser.practice_name = newName;
+                if (activeWorkspaceLabel) activeWorkspaceLabel.textContent = newName;
+              }
+              await loadOwnerClinicsAndUsers();
+              displayToast(`Renamed clinic to "${newName}"`);
+            }
+          });
+
+          const switchBtn = card.querySelector('.btn-switch-here');
+          if (switchBtn) {
+            switchBtn.addEventListener('click', async () => {
+              await switchActiveClinicWorkspace(prac.id);
+            });
+          }
+
+          clinicWorkspacesList.appendChild(card);
+        });
+      }
+
+      // Render Users List
+      if (usersListContainer) {
+        usersListContainer.innerHTML = '';
+        cachedUsers.forEach(u => {
+          const card = document.createElement('div');
+          card.className = 'user-mgmt-card';
+          const practiceOptions = cachedPractices.map(p =>
+            `<option value="${escapeHtml(p.id)}" ${p.id === u.practice_id ? 'selected' : ''}>${escapeHtml(p.name)}</option>`
+          ).join('');
+
+          card.innerHTML = `
+            <div style="flex: 1;">
+              <div class="clinic-mgmt-title">
+                <span>${escapeHtml(u.full_name)}</span>
+                <span class="user-role-badge ${u.role === 'owner' ? 'owner' : 'staff'}">${escapeHtml(u.role)}</span>
+              </div>
+              <div class="clinic-mgmt-stats">
+                <span style="color: #38bdf8;">${escapeHtml(u.email)}</span>
+              </div>
+            </div>
+            <div style="display: flex; gap: 0.45rem; align-items: center; flex-wrap: wrap;">
+              <select class="table-search-input user-clinic-select" style="background: #0f172a; color: #f8fafc; border: 1px solid rgba(56, 189, 248, 0.3); border-radius: 6px; padding: 0.28rem 0.5rem; font-size: 0.72rem;">
+                ${practiceOptions}
+              </select>
+              <button type="button" class="btn-action-ghost btn-reset-user-pw" style="padding: 0.28rem 0.55rem; font-size: 0.68rem;" title="Set new password">🔑 Password</button>
+              ${u.id !== currentUser?.id ? `<button type="button" class="del-payer-btn btn-del-user" title="Delete user" style="background: none; border: none; color: #ef4444; cursor: pointer; padding: 4px;">✕</button>` : ''}
+            </div>
+          `;
+
+          // Reassign clinic dropdown
+          const clinicSelect = card.querySelector('.user-clinic-select');
+          clinicSelect.addEventListener('change', async () => {
+            const newPracticeId = clinicSelect.value;
+            const res = await fetch(`/api/users/${u.id}`, {
+              method: 'PUT',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ practice_id: newPracticeId })
+            });
+            if (res.ok) {
+              await loadOwnerClinicsAndUsers();
+              displayToast(`Assigned ${u.full_name} to new clinic workspace!`);
+            }
+          });
+
+          // Reset password button
+          const pwBtn = card.querySelector('.btn-reset-user-pw');
+          pwBtn.addEventListener('click', async () => {
+            const newPassword = prompt(`Enter new password for ${u.full_name} (${u.email}):`);
+            if (!newPassword) return;
+            if (newPassword.length < 8) {
+              alert('Password must be at least 8 characters.');
+              return;
+            }
+            const res = await fetch(`/api/users/${u.id}`, {
+              method: 'PUT',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ password: newPassword })
+            });
+            if (res.ok) {
+              displayToast(`Password updated for ${u.email}!`);
+            }
+          });
+
+          // Delete user button
+          const delBtn = card.querySelector('.btn-del-user');
+          if (delBtn) {
+            delBtn.addEventListener('click', async () => {
+              if (!confirm(`Delete user account ${u.email}?`)) return;
+              const res = await fetch(`/api/users/${u.id}`, { method: 'DELETE' });
+              if (res.ok) {
+                await loadOwnerClinicsAndUsers();
+                displayToast(`Deleted user ${u.email}.`);
+              }
+            });
+          }
+
+          usersListContainer.appendChild(card);
+        });
+      }
+    }
+
+    if (openClinicManagerBtn) {
+      openClinicManagerBtn.addEventListener('click', async () => {
+        await loadOwnerClinicsAndUsers();
+        if (clinicManagerModal) clinicManagerModal.classList.add('active');
+      });
+    }
+
+    if (closeClinicManagerModalBtn) {
+      closeClinicManagerModalBtn.addEventListener('click', () => {
+        if (clinicManagerModal) clinicManagerModal.classList.remove('active');
+      });
+    }
+
+    if (closeClinicManagerFooterBtn) {
+      closeClinicManagerFooterBtn.addEventListener('click', () => {
+        if (clinicManagerModal) clinicManagerModal.classList.remove('active');
+      });
+    }
+
+    if (clinicManagerModal) {
+      clinicManagerModal.addEventListener('click', (e) => {
+        if (e.target === clinicManagerModal) {
+          clinicManagerModal.classList.remove('active');
+        }
+      });
+    }
+
+    // Tab switching in Clinic Manager Modal
+    document.querySelectorAll('[data-mgmt-tab]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        document.querySelectorAll('[data-mgmt-tab]').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        const target = btn.dataset.mgmtTab;
+        if (paneWorkspaces) paneWorkspaces.style.display = target === 'tabWorkspaces' ? 'block' : 'none';
+        if (paneStaffUsers) paneStaffUsers.style.display = target === 'tabStaffUsers' ? 'block' : 'none';
+      });
+    });
+
+    // Create New Clinic
+    if (btnCreateClinic && newClinicNameInput) {
+      btnCreateClinic.addEventListener('click', async () => {
+        const name = newClinicNameInput.value.trim();
+        if (!name) {
+          alert('Please enter a clinic workspace name.');
+          return;
+        }
+        const res = await fetch('/api/practices', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ name })
+        });
+        if (res.ok) {
+          newClinicNameInput.value = '';
+          await loadOwnerClinicsAndUsers();
+          displayToast(`Created clinic workspace: ${name}`);
+        }
+      });
+    }
+
+    // Create & Assign New User
+    if (toggleAddUserFormBtn && addUserFormPanel) {
+      toggleAddUserFormBtn.addEventListener('click', () => {
+        const isHidden = addUserFormPanel.style.display === 'none';
+        addUserFormPanel.style.display = isHidden ? 'block' : 'none';
+      });
+    }
+
+    if (cancelAddUserBtn && addUserFormPanel) {
+      cancelAddUserBtn.addEventListener('click', () => {
+        addUserFormPanel.style.display = 'none';
+      });
+    }
+
+    if (btnSaveNewUser) {
+      btnSaveNewUser.addEventListener('click', async () => {
+        const full_name = newUserName?.value.trim();
+        const email = newUserEmail?.value.trim();
+        const password = newUserPassword?.value;
+        const role = newUserRole?.value || 'staff';
+        const practice_id = newUserPracticeSelect?.value;
+
+        if (!full_name || !email || !password || !practice_id) {
+          alert('Please fill in Full Name, Email, Password, and Assigned Clinic.');
+          return;
+        }
+
+        const res = await fetch('/api/users', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ full_name, email, password, role, practice_id })
+        });
+        const data = await res.json();
+        if (res.ok && data.success) {
+          if (newUserName) newUserName.value = '';
+          if (newUserEmail) newUserEmail.value = '';
+          if (newUserPassword) newUserPassword.value = '';
+          if (addUserFormPanel) addUserFormPanel.style.display = 'none';
+          await loadOwnerClinicsAndUsers();
+          displayToast(`Created & assigned user: ${email}`);
+        } else {
+          alert(data.error || 'Could not create user.');
+        }
+      });
     }
 
     if (openAuthModalBtn) {
@@ -3129,12 +3754,10 @@
           });
           const data = await res.json();
           if (res.ok && data.success) {
-            setCurrentUser(data.user);
+            await setCurrentUser(data.user);
             if (authModal) authModal.classList.remove('active');
             displayToast(`Welcome, ${data.user.full_name}!`);
             resetInactivityTimer();
-            await syncHistoryFromBackend();
-            renderHistoryList();
           } else {
             if (loginErrorMsg) {
               loginErrorMsg.textContent = data.error || 'Invalid credentials.';
@@ -3160,9 +3783,9 @@
         try {
           await fetch('/api/auth/logout', { method: 'POST' });
         } catch (e) {}
-        setCurrentUser(null);
         if (authModal) authModal.classList.remove('active');
-        displayToast('Logged out of clinic session.');
+        await setCurrentUser(null);
+        displayToast('Logged out of clinic workspace.');
       });
     }
 
@@ -3192,7 +3815,7 @@
     }
 
     function triggerInactivityWarning() {
-      if (!currentUser) return; // Only prompt countdown if clinic user is signed in
+      if (!currentUser) return;
       secondsRemaining = 60;
       if (inactivityCountdownSec) inactivityCountdownSec.textContent = secondsRemaining;
       if (inactivityWarningModal) inactivityWarningModal.classList.add('active');
@@ -3213,15 +3836,12 @@
       try {
         await fetch('/api/auth/logout', { method: 'POST' });
       } catch (e) {}
-      setCurrentUser(null);
-      displayToast('🔒 Session timed out after 15 minutes of inactivity (HIPAA Safeguard).');
-      if (authModal) {
-        if (loginErrorMsg) {
-          loginErrorMsg.textContent = 'Session locked due to 15-minute HIPAA inactivity limit. Please sign in again.';
-          loginErrorMsg.style.display = 'block';
-        }
-        authModal.classList.add('active');
+      await setCurrentUser(null);
+      if (gateErrorMsg) {
+        gateErrorMsg.textContent = '🔒 Session locked after 15 minutes of inactivity (HIPAA Safeguard). Please sign in again.';
+        gateErrorMsg.style.display = 'block';
       }
+      displayToast('🔒 Session timed out after 15 minutes of inactivity.');
     }
 
     // Register active user movement listeners
@@ -3288,17 +3908,13 @@
     }
 
     function getAuditHistory() {
+      if (currentUser) {
+        return Array.isArray(cachedServerHistory) ? cachedServerHistory : [];
+      }
       if (cachedServerHistory && cachedServerHistory.length > 0) {
         return cachedServerHistory;
       }
-      try {
-        const raw = localStorage.getItem(HISTORY_STORAGE_KEY);
-        const list = raw ? JSON.parse(raw) : [];
-        return list.filter(item => !item.is_sample && !item.data?.is_sample && item.patientName !== 'Katherine Birdwell');
-      } catch (e) {
-        console.warn('Could not read audit history:', e);
-        return [];
-      }
+      return [];
     }
 
     function saveAuditToHistory(auditData) {
@@ -3320,17 +3936,7 @@
           data: auditData,
         };
 
-        // Also save to localStorage cache
-        const localList = [];
-        try {
-          const raw = localStorage.getItem(HISTORY_STORAGE_KEY);
-          if (raw) localList.push(...JSON.parse(raw));
-        } catch (e) {}
-        localList.unshift(historyRecord);
-        if (localList.length > 40) localList.pop();
-        localStorage.setItem(HISTORY_STORAGE_KEY, JSON.stringify(localList));
-
-        // Prepend to cachedServerHistory
+        // Prepend to cachedServerHistory for active clinic
         cachedServerHistory.unshift(historyRecord);
         updateHistoryCountUI();
       } catch (e) {

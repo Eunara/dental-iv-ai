@@ -16,58 +16,163 @@
 </head>
 <body>
 
-  <!-- Top Navigation Header -->
-  <header>
-    <div class="nav-container">
-      <a href="/" class="brand-group">
-        <div class="brand-mark" title="DentVerify AI">
-          <!-- Dental Molar & Verification Checkmark Brandmark -->
-          <svg width="22" height="22" viewBox="0 0 40 40" fill="none">
+  <!-- FULL-PAGE GATEKEEPER LOGIN SCREEN -->
+  <div class="gatekeeper-screen" id="gatekeeperScreen">
+    <div class="gatekeeper-card">
+      <div class="gatekeeper-brand">
+        <div class="gatekeeper-logo">
+          <svg width="34" height="34" viewBox="0 0 40 40" fill="none">
             <defs>
-              <linearGradient id="hdrToothGrad" x1="4" y1="2" x2="36" y2="38" gradientUnits="userSpaceOnUse">
+              <linearGradient id="gateToothGrad" x1="4" y1="2" x2="36" y2="38" gradientUnits="userSpaceOnUse">
                 <stop offset="0%" stop-color="#ffffff"/>
                 <stop offset="100%" stop-color="#e0f2fe"/>
               </linearGradient>
             </defs>
-            <path d="M12 6 C17 6 18.5 8.5 20 8.5 C21.5 8.5 23 6 28 6 C34 6 36.5 11 35.5 17.5 C34.5 24 33 29.5 30.5 34 C29 36.5 26.5 36 25 32 C23.5 28 23 25 20 25 C17 25 16.5 28 15 32 C13.5 36 11 36.5 9.5 34 C7 29.5 5.5 24 4.5 17.5 C3.5 11 6 6 12 6 Z" fill="url(#hdrToothGrad)"/>
+            <path d="M12 6 C17 6 18.5 8.5 20 8.5 C21.5 8.5 23 6 28 6 C34 6 36.5 11 35.5 17.5 C34.5 24 33 29.5 30.5 34 C29 36.5 26.5 36 25 32 C23.5 28 23 25 20 25 C17 25 16.5 28 15 32 C13.5 36 11 36.5 9.5 34 C7 29.5 5.5 24 4.5 17.5 C3.5 11 6 6 12 6 Z" fill="url(#gateToothGrad)"/>
             <path d="M14.5 19.5 L18.5 23.5 L26.5 14" stroke="#0284c7" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round"/>
             <circle cx="31.5" cy="9.5" r="2.2" fill="#06b6d4"/>
           </svg>
         </div>
-        <div class="brand-titles">
-          <h1>DentVerify <span class="highlight">AI</span></h1>
-          <div class="brand-tag">Dental RCM & CDT Breakdown Engine</div>
+        <h2>DentVerify <span class="highlight">AI</span></h2>
+        <p class="gatekeeper-subtitle">Clinical Dental RCM & Verification Platform</p>
+      </div>
+
+      <div class="gatekeeper-notice">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#38bdf8" stroke-width="2">
+          <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
+          <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+        </svg>
+        <span>Authorized Dental Clinic Workspace Login</span>
+      </div>
+
+      <form id="gatekeeperForm" class="gatekeeper-form">
+        <div class="form-group">
+          <label for="gateEmail">Clinic Account Email</label>
+          <div class="input-with-icon">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path>
+              <polyline points="22,6 12,13 2,6"></polyline>
+            </svg>
+            <input type="email" id="gateEmail" placeholder="admin@dentverify.com" required autocomplete="username" value="admin@dentverify.com">
+          </div>
         </div>
-      </a>
-      <div class="header-system-meta">
-        <button type="button" class="btn-history-toggle" id="openHistoryBtn" title="View Previously Verified Patients">
-          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <circle cx="12" cy="12" r="10"></circle>
-            <polyline points="12 6 12 12 16 14"></polyline>
-          </svg>
-          <span id="headerHistoryCount">History (0)</span>
-        </button>
-        <button type="button" class="btn-prompt-settings" id="openSettingsBtn" title="Customize AI Role & Extraction Directives">
-          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <circle cx="12" cy="12" r="3"></circle>
-            <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
-          </svg>
-          <span>AI Settings</span>
-        </button>
-        <button type="button" class="btn-auth-user" id="openAuthModalBtn" title="Clinic Staff Login & Session">
-          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
-            <circle cx="12" cy="7" r="4"></circle>
-          </svg>
-          <span id="userBadgeLabel">Sign In</span>
-        </button>
-        <div class="meta-chip">
-          <span class="pulse-dot"></span>
-          <span>Gemini AI Engine</span>
+
+        <div class="form-group">
+          <label for="gatePassword">Password</label>
+          <div class="input-with-icon">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
+              <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+            </svg>
+            <input type="password" id="gatePassword" placeholder="••••••••••••" required autocomplete="current-password" value="ClinicAdmin2026!">
+          </div>
         </div>
+
+        <div id="gateErrorMsg" class="gatekeeper-error" style="display: none;"></div>
+
+        <button type="submit" class="btn-gatekeeper-submit" id="btnGateSubmit">
+          <span>Sign In to Clinic Workspace</span>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+            <polyline points="9 18 15 12 9 6"></polyline>
+          </svg>
+        </button>
+      </form>
+
+      <div class="gatekeeper-footer">
+        <span>Protected by AES-256-GCM encryption & HIPAA audit trail</span>
       </div>
     </div>
-  </header>
+  </div>
+
+  <!-- MAIN APP WORKSPACE (Hidden until authenticated) -->
+  <div id="appWorkspace" style="display: none;">
+
+    <!-- Top Navigation Header -->
+    <header>
+      <div class="nav-container">
+        <a href="/" class="brand-group">
+          <div class="brand-mark" title="DentVerify AI">
+            <!-- Dental Molar & Verification Checkmark Brandmark -->
+            <svg width="22" height="22" viewBox="0 0 40 40" fill="none">
+              <defs>
+                <linearGradient id="hdrToothGrad" x1="4" y1="2" x2="36" y2="38" gradientUnits="userSpaceOnUse">
+                  <stop offset="0%" stop-color="#ffffff"/>
+                  <stop offset="100%" stop-color="#e0f2fe"/>
+                </linearGradient>
+              </defs>
+              <path d="M12 6 C17 6 18.5 8.5 20 8.5 C21.5 8.5 23 6 28 6 C34 6 36.5 11 35.5 17.5 C34.5 24 33 29.5 30.5 34 C29 36.5 26.5 36 25 32 C23.5 28 23 25 20 25 C17 25 16.5 28 15 32 C13.5 36 11 36.5 9.5 34 C7 29.5 5.5 24 4.5 17.5 C3.5 11 6 6 12 6 Z" fill="url(#hdrToothGrad)"/>
+              <path d="M14.5 19.5 L18.5 23.5 L26.5 14" stroke="#0284c7" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round"/>
+              <circle cx="31.5" cy="9.5" r="2.2" fill="#06b6d4"/>
+            </svg>
+          </div>
+          <div class="brand-titles">
+            <h1>DentVerify <span class="highlight">AI</span></h1>
+            <div class="brand-tag">Dental RCM & CDT Breakdown Engine</div>
+          </div>
+        </a>
+
+        <div class="header-system-meta">
+          <!-- Active Clinic Workspace Dropdown (Owner) / Static Badge (Staff) -->
+          <div class="workspace-pill-container" id="workspacePillContainer">
+            <button type="button" class="btn-workspace-switcher" id="btnWorkspaceSwitcher" title="Active Clinic Workspace">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#38bdf8" stroke-width="2.2">
+                <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path>
+                <polyline points="9 22 9 12 15 12 15 22"></polyline>
+              </svg>
+              <span id="activeWorkspaceLabel">Clinic 1 (Primary Workspace)</span>
+              <svg class="chevron-icon" id="workspaceChevron" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"></polyline></svg>
+            </button>
+            <div class="workspace-dropdown-panel" id="workspaceDropdownPanel" style="display: none;">
+              <!-- Populated by JS -->
+            </div>
+          </div>
+
+          <!-- Dedicated Insurance Directory Button -->
+          <button type="button" class="btn-payers-directory" id="openInsuranceDirectoryBtn" title="Manage Custom Claims Addresses, Payor IDs, and Sub-Portals (DD CA, DD FEP, etc.)">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path>
+              <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path>
+            </svg>
+            <span>Insurance Directory</span>
+          </button>
+
+          <!-- Manage Clinics & Users (Owner Only) -->
+          <button type="button" class="btn-manage-clinics" id="openClinicManagerBtn" style="display: none;" title="Manage Clinic Workspaces & Assign Users">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
+              <circle cx="9" cy="7" r="4"></circle>
+              <path d="M23 21v-2a4 4 0 0 0-3-3.87"></path>
+              <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
+            </svg>
+            <span>Manage Clinics</span>
+          </button>
+
+          <button type="button" class="btn-history-toggle" id="openHistoryBtn" title="View Previously Verified Patients">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <circle cx="12" cy="12" r="10"></circle>
+              <polyline points="12 6 12 12 16 14"></polyline>
+            </svg>
+            <span id="headerHistoryCount">History (0)</span>
+          </button>
+
+          <button type="button" class="btn-prompt-settings" id="openSettingsBtn" title="Customize AI Role & Extraction Directives">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <circle cx="12" cy="12" r="3"></circle>
+              <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
+            </svg>
+            <span>AI Settings</span>
+          </button>
+
+          <button type="button" class="btn-auth-user" id="openAuthModalBtn" title="Clinic Staff Login & Session">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+              <circle cx="12" cy="7" r="4"></circle>
+            </svg>
+            <span id="userBadgeLabel">Sign In</span>
+          </button>
+        </div>
+      </div>
+    </header>
 
   <main>
     <!-- Hero / Verification Kicker -->
@@ -560,6 +665,7 @@
       </div>
     </div>
   </main>
+  </div> <!-- /#appWorkspace -->
 
   <!-- EXCEL BREAKDOWN SHEET MODAL (OPTION 4: CLEAN BORDERED EXCEL SPREADSHEET & PDF) -->
   <div class="excel-modal-backdrop" id="excelModal">
@@ -695,13 +801,6 @@
           </svg>
           Required CDT Codes & Directives
         </button>
-        <button type="button" class="settings-tab-btn" data-tab="tabPayers">
-          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path>
-            <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path>
-          </svg>
-          Insurance Directory & Addresses
-        </button>
       </div>
 
       <div class="pms-modal-body" style="padding-top: 1.25rem;">
@@ -722,64 +821,6 @@
           </div>
           <textarea id="settingCustomPrompt" class="prompt-editor-textarea" spellcheck="false" placeholder="Enter CDT Codes Directives..."></textarea>
         </div>
-
-        <!-- Tab 3: Insurance Directory & Addresses -->
-        <div class="settings-tab-pane" id="tabPayers">
-          <div class="settings-info-badge" style="margin-bottom: 0.85rem;">
-            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#38bdf8" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg>
-            <span>Pre-configured Claims Addresses, Phone Numbers, and Electronic Payor IDs for major dental carriers. Click "Apply to Policy" to populate active headers instantly.</span>
-          </div>
-
-          <!-- Search and Add row -->
-          <div style="display: flex; gap: 0.6rem; margin-bottom: 0.85rem; flex-wrap: wrap;">
-            <input type="text" id="payerSearchInput" class="table-search-input" style="flex: 1; min-width: 180px;" placeholder="Search carriers (e.g. Delta, MetLife, Cigna, Guardian, Aetna)...">
-            <button type="button" class="btn-action-ghost" id="toggleBulkImportBtn" style="padding: 0.35rem 0.75rem; font-size: 0.72rem;" title="Paste multiple insurances from Excel or CSV">
-              📋 Paste / Import List
-            </button>
-            <button type="button" class="btn-action-ghost" id="toggleAddPayerFormBtn" style="padding: 0.35rem 0.75rem; font-size: 0.72rem;">
-              + Add Carrier
-            </button>
-          </div>
-
-          <!-- Bulk Import Panel (hidden by default) -->
-          <div id="bulkImportPanel" style="display: none; background: rgba(15, 23, 42, 0.85); border: 1px solid rgba(56, 189, 248, 0.4); border-radius: 6px; padding: 0.85rem; margin-bottom: 0.85rem;">
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.4rem; flex-wrap: wrap; gap: 0.4rem;">
-              <h5 style="color: #38bdf8; font-size: 0.78rem; font-weight: 700; margin: 0;">Bulk Import Insurances (Excel / CSV / Text)</h5>
-              <span style="font-size: 0.68rem; color: #94a3b8;">Carrier | Address | In-Network or Out-of-Network | Phone | Payor ID</span>
-            </div>
-            <textarea id="bulkImportTextarea" class="prompt-editor-textarea" style="min-height: 120px; font-size: 0.74rem; font-family: var(--font-mono); margin-bottom: 0.5rem;" placeholder="Paste your insurance list here (e.g. copy from Excel, Google Sheets, or CSV):&#10;Delta Dental | P.O. Box 9051 Farmington Hills, MI 48333 | In-Network | 800-524-0149 | 05430&#10;MetLife Dental | P.O. Box 981282 El Paso, TX 79998 | In-Network | 877-638-3379 | 65978&#10;Humana Dental | P.O. Box 14611 Lexington, KY 40512 | Out-of-Network | 800-233-4013 | 61101"></textarea>
-            <div style="display: flex; gap: 0.5rem; justify-content: flex-end;">
-              <button type="button" class="btn-restore-defaults" id="cancelBulkImportBtn" style="padding: 0.25rem 0.6rem; font-size: 0.7rem;">Cancel</button>
-              <button type="button" class="btn-verify-primary" id="processBulkImportBtn" style="padding: 0.25rem 0.75rem; font-size: 0.7rem;">Import List Now</button>
-            </div>
-          </div>
-
-          <!-- Add Payer Inline Form (hidden by default) -->
-          <div id="addPayerFormPanel" style="display: none; background: rgba(15, 23, 42, 0.75); border: 1px dashed rgba(56, 189, 248, 0.4); border-radius: 6px; padding: 0.75rem; margin-bottom: 0.85rem;">
-            <h5 style="color: #38bdf8; font-size: 0.76rem; font-weight: 700; margin-bottom: 0.5rem;">Add New Insurance Carrier</h5>
-            <div style="display: grid; grid-template-columns: 2fr 1fr 1fr; gap: 0.5rem; margin-bottom: 0.5rem;">
-              <input type="text" id="newPayerName" class="table-search-input" placeholder="Carrier Name (e.g. Humana Dental)">
-              <select id="newPayerNetwork" class="table-search-input" style="background: #0f172a; color: #f8fafc; border: 1px solid rgba(56, 189, 248, 0.3); border-radius: 6px; padding: 0.35rem 0.5rem; font-size: 0.74rem;">
-                <option value="In-Network">In-Network</option>
-                <option value="Out-of-Network">Out-of-Network</option>
-              </select>
-              <input type="text" id="newPayerId" class="table-search-input" placeholder="Payor ID (e.g. 61101)">
-            </div>
-            <div style="display: grid; grid-template-columns: 2fr 1fr; gap: 0.5rem; margin-bottom: 0.6rem;">
-              <input type="text" id="newPayerAddress" class="table-search-input" placeholder="Claims Address (e.g. P.O. Box 14611 Lexington, KY 40512)">
-              <input type="text" id="newPayerPhone" class="table-search-input" placeholder="Phone # (e.g. 800-233-4013)">
-            </div>
-            <div style="display: flex; gap: 0.5rem; justify-content: flex-end;">
-              <button type="button" class="btn-restore-defaults" id="cancelAddPayerBtn" style="padding: 0.25rem 0.6rem; font-size: 0.7rem;">Cancel</button>
-              <button type="button" class="btn-verify-primary" id="saveNewPayerBtn" style="padding: 0.25rem 0.75rem; font-size: 0.7rem;">Save Payer</button>
-            </div>
-          </div>
-
-          <!-- Directory Cards List -->
-          <div id="payerDirectoryListContainer" style="display: flex; flex-direction: column; gap: 0.5rem; max-height: 380px; overflow-y: auto; padding-right: 4px;">
-            <!-- Rendered by JS -->
-          </div>
-        </div>
       </div>
 
       <div class="pms-modal-footer">
@@ -791,6 +832,249 @@
             <polyline points="20 6 9 17 4 12"></polyline>
           </svg>
           Save & Apply Directives
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- DEDICATED INSURANCE DIRECTORY & SUB-PORTALS MODAL -->
+  <div class="settings-modal-backdrop" id="insuranceDirectoryModal">
+    <div class="settings-modal-box" style="max-width: 920px;">
+      <div class="pms-modal-header">
+        <h3 style="display: flex; align-items: center; gap: 0.55rem; color: #fff; font-size: 1.05rem; font-weight: 700;">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#38bdf8" stroke-width="2">
+            <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path>
+            <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path>
+          </svg>
+          Insurance Directory & Sub-Portals (Claims Addresses & Payor IDs)
+        </h3>
+        <button type="button" class="btn-close-modal" id="closeInsuranceDirectoryModalBtn">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <line x1="18" y1="6" x2="6" y2="18"></line>
+            <line x1="6" y1="6" x2="18" y2="18"></line>
+          </svg>
+        </button>
+      </div>
+
+      <div class="pms-modal-body" style="padding-top: 1rem;">
+        <div class="settings-info-badge" style="margin-bottom: 0.85rem;">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#38bdf8" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg>
+          <span>Dedicated directory isolated per Clinic Workspace. Supports multi-branch payers like <strong>Delta Dental</strong> (DD CA, DD FEP, DD PPO), Cigna, MetLife, Guardian. Click "Apply to Policy" to populate active headers instantly.</span>
+        </div>
+
+        <!-- Filter chips & actions -->
+        <div style="display: flex; gap: 0.6rem; margin-bottom: 0.85rem; flex-wrap: wrap; align-items: center;">
+          <input type="text" id="payerDirectorySearchInput" class="table-search-input" style="flex: 1; min-width: 200px;" placeholder="Search carriers or sub-portals (e.g. Delta CA, FEP, MetLife, Cigna)...">
+          
+          <select id="payerParentFilter" class="table-search-input" style="background: #0f172a; color: #f8fafc; border: 1px solid rgba(56, 189, 248, 0.3); border-radius: 6px; padding: 0.35rem 0.6rem; font-size: 0.74rem;">
+            <option value="ALL">All Carriers / Portals</option>
+            <option value="Delta Dental">Delta Dental Portals (DD CA, DD FEP, etc.)</option>
+            <option value="MetLife">MetLife</option>
+            <option value="Cigna">Cigna</option>
+            <option value="Guardian">Guardian</option>
+            <option value="Aetna">Aetna</option>
+            <option value="Other">Other Carriers</option>
+          </select>
+
+          <button type="button" class="btn-action-ghost" id="dirToggleBulkImportBtn" style="padding: 0.35rem 0.75rem; font-size: 0.72rem;">
+            📋 Paste / Import
+          </button>
+          <button type="button" class="btn-verify-primary" id="dirToggleAddBtn" style="padding: 0.35rem 0.75rem; font-size: 0.72rem;">
+            + Add Sub-Portal / Carrier
+          </button>
+        </div>
+
+        <!-- Bulk Import Panel -->
+        <div id="dirBulkImportPanel" style="display: none; background: rgba(15, 23, 42, 0.85); border: 1px solid rgba(56, 189, 248, 0.4); border-radius: 6px; padding: 0.85rem; margin-bottom: 0.85rem;">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.4rem; flex-wrap: wrap; gap: 0.4rem;">
+            <h5 style="color: #38bdf8; font-size: 0.78rem; font-weight: 700; margin: 0;">Bulk Import Carrier Portals (Excel / CSV / Text)</h5>
+            <span style="font-size: 0.68rem; color: #94a3b8;">Format: Parent Group | Portal Name | Address | In-Net/Out-Net | Phone | Payor ID</span>
+          </div>
+          <textarea id="dirBulkImportTextarea" class="prompt-editor-textarea" style="min-height: 120px; font-size: 0.74rem; font-family: var(--font-mono); margin-bottom: 0.5rem;" placeholder="Delta Dental | Delta Dental of California (DD CA) | P.O. Box 997330 Sacramento, CA 95899 | In-Network | 800-765-6003 | 94276&#10;Delta Dental | Delta Dental FEP (Federal Employees) | P.O. Box 6006 Mechanicsburg, PA 17055 | In-Network | 855-410-3255 | FEPDD&#10;MetLife Dental | MetLife Dental Claims | P.O. Box 981282 El Paso, TX 79998 | In-Network | 877-638-3379 | 65978"></textarea>
+          <div style="display: flex; gap: 0.5rem; justify-content: flex-end;">
+            <button type="button" class="btn-restore-defaults" id="dirCancelBulkImportBtn" style="padding: 0.25rem 0.6rem; font-size: 0.7rem;">Cancel</button>
+            <button type="button" class="btn-verify-primary" id="dirProcessBulkImportBtn" style="padding: 0.25rem 0.75rem; font-size: 0.7rem;">Import List Now</button>
+          </div>
+        </div>
+
+        <!-- Add Sub-Portal Inline Form -->
+        <div id="dirAddPayerFormPanel" style="display: none; background: rgba(15, 23, 42, 0.75); border: 1px dashed rgba(56, 189, 248, 0.4); border-radius: 6px; padding: 0.85rem; margin-bottom: 0.85rem;">
+          <h5 style="color: #38bdf8; font-size: 0.76rem; font-weight: 700; margin-bottom: 0.5rem;" id="dirFormTitle">Add Insurance Carrier / Sub-Portal</h5>
+          <div style="display: grid; grid-template-columns: 1.2fr 2fr 1fr; gap: 0.5rem; margin-bottom: 0.5rem;">
+            <div>
+              <label style="display: block; font-size: 0.68rem; color: #94a3b8; margin-bottom: 0.2rem;">Parent Group</label>
+              <input type="text" id="dirNewParentCarrier" class="table-search-input" placeholder="e.g. Delta Dental Ins">
+            </div>
+            <div>
+              <label style="display: block; font-size: 0.68rem; color: #94a3b8; margin-bottom: 0.2rem;">Portal / Carrier Name</label>
+              <input type="text" id="dirNewCarrierName" class="table-search-input" placeholder="e.g. Delta Dental of California (DD CA)">
+            </div>
+            <div>
+              <label style="display: block; font-size: 0.68rem; color: #94a3b8; margin-bottom: 0.2rem;">Payor ID</label>
+              <input type="text" id="dirNewPayorId" class="table-search-input" placeholder="e.g. 94276">
+            </div>
+          </div>
+          <div style="display: grid; grid-template-columns: 2fr 1fr 1fr; gap: 0.5rem; margin-bottom: 0.6rem;">
+            <div>
+              <label style="display: block; font-size: 0.68rem; color: #94a3b8; margin-bottom: 0.2rem;">Claims Address</label>
+              <input type="text" id="dirNewAddress" class="table-search-input" placeholder="P.O. Box 997330 Sacramento, CA 95899">
+            </div>
+            <div>
+              <label style="display: block; font-size: 0.68rem; color: #94a3b8; margin-bottom: 0.2rem;">Phone #</label>
+              <input type="text" id="dirNewPhone" class="table-search-input" placeholder="800-765-6003">
+            </div>
+            <div>
+              <label style="display: block; font-size: 0.68rem; color: #94a3b8; margin-bottom: 0.2rem;">Network Status</label>
+              <select id="dirNewNetwork" class="table-search-input" style="background: #0f172a; color: #f8fafc; border: 1px solid rgba(56, 189, 248, 0.3); border-radius: 6px; padding: 0.35rem 0.5rem; font-size: 0.74rem;">
+                <option value="In-Network">In-Network</option>
+                <option value="Out-of-Network">Out-of-Network</option>
+              </select>
+            </div>
+          </div>
+          <div style="display: flex; gap: 0.5rem; justify-content: flex-end;">
+            <button type="button" class="btn-restore-defaults" id="dirCancelAddBtn" style="padding: 0.25rem 0.6rem; font-size: 0.7rem;">Cancel</button>
+            <button type="button" class="btn-verify-primary" id="dirSavePayerBtn" style="padding: 0.25rem 0.75rem; font-size: 0.7rem;">Save Carrier / Portal</button>
+          </div>
+        </div>
+
+        <!-- Dedicated Directory Grid Container -->
+        <div id="dirPayerListContainer" style="display: flex; flex-direction: column; gap: 0.6rem; max-height: 420px; overflow-y: auto; padding-right: 4px;">
+          <!-- Rendered dynamically by JS -->
+        </div>
+      </div>
+
+      <div class="pms-modal-footer">
+        <button type="button" class="btn-restore-defaults" id="dirResetDefaultsBtn">
+          ↺ Reset Clinic Directory Defaults
+        </button>
+        <button type="button" class="btn-restore-defaults" id="dirCloseFooterBtn">
+          Close
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- OWNER CLINIC & USER MANAGEMENT MODAL -->
+  <div class="settings-modal-backdrop" id="clinicManagerModal">
+    <div class="settings-modal-box" style="max-width: 760px;">
+      <div class="pms-modal-header">
+        <h3 style="display: flex; align-items: center; gap: 0.55rem; color: #fff; font-size: 1.05rem; font-weight: 700;">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#38bdf8" stroke-width="2">
+            <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
+            <circle cx="9" cy="7" r="4"></circle>
+            <path d="M23 21v-2a4 4 0 0 0-3-3.87"></path>
+            <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
+          </svg>
+          Clinic Workspaces & User Assignment (Owner Control)
+        </h3>
+        <button type="button" class="btn-close-modal" id="closeClinicManagerModalBtn">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <line x1="18" y1="6" x2="6" y2="18"></line>
+            <line x1="6" y1="6" x2="18" y2="18"></line>
+          </svg>
+        </button>
+      </div>
+
+      <div class="settings-tabs-row">
+        <button type="button" class="settings-tab-btn active" data-mgmt-tab="tabWorkspaces">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path>
+            <polyline points="9 22 9 12 15 12 15 22"></polyline>
+          </svg>
+          Clinic Workspaces (<span id="clinicCountBadge">3</span>)
+        </button>
+        <button type="button" class="settings-tab-btn" data-mgmt-tab="tabStaffUsers">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"></path>
+            <circle cx="9" cy="7" r="4"></circle>
+            <line x1="19" y1="8" x2="19" y2="14"></line>
+            <line x1="22" y1="11" x2="16" y2="11"></line>
+          </svg>
+          Users & Assignments (<span id="userCountBadge">4</span>)
+        </button>
+      </div>
+
+      <div class="pms-modal-body" style="padding-top: 1.15rem;">
+        <!-- Tab 1: Clinic Workspaces -->
+        <div class="clinic-mgmt-pane active" id="paneWorkspaces">
+          <div class="settings-info-badge" style="margin-bottom: 0.85rem;">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#38bdf8" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg>
+            <span>Each clinic has isolated patient verifications, audit trails, and custom payer directories. You can rename clinics or add more.</span>
+          </div>
+
+          <!-- Add Clinic Form -->
+          <div style="display: flex; gap: 0.5rem; margin-bottom: 1rem;">
+            <input type="text" id="newClinicNameInput" class="table-search-input" style="flex: 1;" placeholder="New Clinic Name (e.g. Westside Dental Care)...">
+            <button type="button" class="btn-verify-primary" id="btnCreateClinic" style="padding: 0.4rem 0.85rem; font-size: 0.74rem;">+ Add Clinic</button>
+          </div>
+
+          <!-- List of Clinics -->
+          <div id="clinicWorkspacesList" style="display: flex; flex-direction: column; gap: 0.55rem; max-height: 340px; overflow-y: auto;">
+            <!-- Populated by JS -->
+          </div>
+        </div>
+
+        <!-- Tab 2: Users & Clinic Assignment -->
+        <div class="clinic-mgmt-pane" id="paneStaffUsers" style="display: none;">
+          <div class="settings-info-badge" style="margin-bottom: 0.85rem;">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#38bdf8" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg>
+            <span>Assign each user to their specific clinic. When they log in on dentverify.com, they will only see their assigned clinic's records.</span>
+          </div>
+
+          <!-- Create User Toggle & Form -->
+          <div style="display: flex; justify-content: flex-end; margin-bottom: 0.75rem;">
+            <button type="button" class="btn-action-ghost" id="toggleAddUserFormBtn" style="padding: 0.35rem 0.75rem; font-size: 0.72rem;">
+              + Create & Assign User
+            </button>
+          </div>
+
+          <div id="addUserFormPanel" style="display: none; background: rgba(15, 23, 42, 0.8); border: 1px dashed rgba(56, 189, 248, 0.4); border-radius: 6px; padding: 0.85rem; margin-bottom: 1rem;">
+            <h5 style="color: #38bdf8; font-size: 0.76rem; font-weight: 700; margin-bottom: 0.5rem;">New User Credentials & Clinic Assignment</h5>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem; margin-bottom: 0.5rem;">
+              <div>
+                <label style="display: block; font-size: 0.68rem; color: #94a3b8; margin-bottom: 0.2rem;">Full Name</label>
+                <input type="text" id="newUserName" class="table-search-input" placeholder="e.g. Maria Santos">
+              </div>
+              <div>
+                <label style="display: block; font-size: 0.68rem; color: #94a3b8; margin-bottom: 0.2rem;">Email</label>
+                <input type="email" id="newUserEmail" class="table-search-input" placeholder="maria@clinic2.com">
+              </div>
+            </div>
+            <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 0.5rem; margin-bottom: 0.6rem;">
+              <div>
+                <label style="display: block; font-size: 0.68rem; color: #94a3b8; margin-bottom: 0.2rem;">Password</label>
+                <input type="password" id="newUserPassword" class="table-search-input" placeholder="Min 8 characters">
+              </div>
+              <div>
+                <label style="display: block; font-size: 0.68rem; color: #94a3b8; margin-bottom: 0.2rem;">Role</label>
+                <select id="newUserRole" class="table-search-input" style="background: #0f172a; color: #f8fafc; border: 1px solid rgba(56, 189, 248, 0.3); border-radius: 6px; padding: 0.35rem 0.5rem; font-size: 0.74rem;">
+                  <option value="staff">Staff</option>
+                  <option value="owner">Owner</option>
+                </select>
+              </div>
+              <div>
+                <label style="display: block; font-size: 0.68rem; color: #94a3b8; margin-bottom: 0.2rem;">Assigned Clinic</label>
+                <select id="newUserPracticeSelect" class="table-search-input" style="background: #0f172a; color: #f8fafc; border: 1px solid rgba(56, 189, 248, 0.3); border-radius: 6px; padding: 0.35rem 0.5rem; font-size: 0.74rem;">
+                  <!-- Populated by JS -->
+                </select>
+              </div>
+            </div>
+            <div style="display: flex; gap: 0.5rem; justify-content: flex-end;">
+              <button type="button" class="btn-restore-defaults" id="cancelAddUserBtn" style="padding: 0.25rem 0.6rem; font-size: 0.7rem;">Cancel</button>
+              <button type="button" class="btn-verify-primary" id="btnSaveNewUser" style="padding: 0.25rem 0.75rem; font-size: 0.7rem;">Create User</button>
+            </div>
+          </div>
+
+          <!-- List of Users -->
+          <div id="usersListContainer" style="display: flex; flex-direction: column; gap: 0.55rem; max-height: 340px; overflow-y: auto;">
+            <!-- Populated by JS -->
+          </div>
+        </div>
+      </div>
+
+      <div class="pms-modal-footer">
+        <button type="button" class="btn-restore-defaults" id="closeClinicManagerFooterBtn">
+          Close
         </button>
       </div>
     </div>

@@ -9,7 +9,6 @@ const pool = new Pool({
 
 // Schema tables are explicitly qualified with 'dentverify.'
 
-
 // AES-256-GCM Encryption for ePHI fields
 const ENCRYPTION_KEY = Buffer.from(
   process.env.ENCRYPTION_KEY || '169bfea936320e075cfceb0d8e26941dab0790c72bf50ece5df379ac8546ea6f',
@@ -53,20 +52,107 @@ function decryptField(ciphertext) {
   }
 }
 
+// Default hierarchical payer directory with Delta Dental sub-portals (DD CA, DD FEP, etc.)
+const DEFAULT_CLINIC_PAYER_DIRECTORY = [
+  {
+    id: 'dd_ca',
+    parentCarrier: 'Delta Dental Ins',
+    carrier: 'Delta Dental of CA (DD CA)',
+    matchKeys: ['dd ca', 'delta dental of california', 'delta dental ca', 'delta ca'],
+    address: 'P.O. Box 997330, Sacramento, CA 95899-7330',
+    phone: '(888) 335-8227',
+    payorId: '94276',
+    networkStatus: 'In-Network',
+    portalUrl: 'https://www.deltadentalins.com',
+  },
+  {
+    id: 'dd_fep',
+    parentCarrier: 'Delta Dental Ins',
+    carrier: 'Delta Dental FEP (DD FEP)',
+    matchKeys: ['dd fep', 'delta dental fep', 'federal employees dental', 'fedvip delta'],
+    address: 'P.O. Box 537007, Sacramento, CA 95853-7007',
+    phone: '(855) 410-3255',
+    payorId: 'FEPDD',
+    networkStatus: 'Out-of-Network',
+    portalUrl: 'https://www.deltadentalins.com',
+  },
+  {
+    id: 'dd_ppo',
+    parentCarrier: 'Delta Dental Ins',
+    carrier: 'Delta Dental PPO / National',
+    matchKeys: ['delta dental', 'delta ppo', 'delta premier'],
+    address: 'P.O. Box 9051, Farmington Hills, MI 48333',
+    phone: '(800) 524-0149',
+    payorId: '05430',
+    networkStatus: 'In-Network',
+    portalUrl: 'https://www.deltadentalins.com',
+  },
+  {
+    id: 'cigna',
+    parentCarrier: 'Cigna Healthcare',
+    carrier: 'Cigna Dental DPPO',
+    matchKeys: ['cigna', 'cigna dental', 'cigna dppo'],
+    address: 'P.O. Box 188037, Chattanooga, TN 37422-8037',
+    phone: '(800) 244-6224',
+    payorId: '62308',
+    networkStatus: 'In-Network',
+    portalUrl: 'https://cignaforhcp.cigna.com',
+  },
+  {
+    id: 'metlife',
+    parentCarrier: 'MetLife',
+    carrier: 'MetLife Dental PDP',
+    matchKeys: ['metlife', 'metlife dental', 'metlife pdp'],
+    address: 'P.O. Box 981282, El Paso, TX 79998-1282',
+    phone: '(877) 638-3379',
+    payorId: '65978',
+    networkStatus: 'In-Network',
+    portalUrl: 'https://dental.metlife.com',
+  },
+  {
+    id: 'guardian',
+    parentCarrier: 'Guardian',
+    carrier: 'Guardian DentalGuard Preferred',
+    matchKeys: ['guardian', 'guardian dental', 'dentalguard'],
+    address: 'P.O. Box 981572, El Paso, TX 79998-1572',
+    phone: '(800) 541-7846',
+    payorId: '64246',
+    networkStatus: 'In-Network',
+    portalUrl: 'https://www.guardiananytime.com',
+  },
+  {
+    id: 'aetna',
+    parentCarrier: 'Aetna',
+    carrier: 'Aetna Dental PPO',
+    matchKeys: ['aetna', 'aetna dental'],
+    address: 'P.O. Box 14094, Lexington, KY 40512-4094',
+    phone: '(877) 238-6200',
+    payorId: '60054',
+    networkStatus: 'In-Network',
+    portalUrl: 'https://www.aetna.com',
+  },
+];
+
 async function initDb() {
   const client = await pool.connect();
   try {
     await client.query('CREATE SCHEMA IF NOT EXISTS dentverify;');
     await client.query('SET search_path TO dentverify, public;');
 
-    // 1. Practices Table (Multi-tenancy)
+    // 1. Practices Table (Multi-tenancy per Clinic)
     await client.query(`
       CREATE TABLE IF NOT EXISTS dentverify.practices (
         id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
         name VARCHAR(255) NOT NULL,
         subscription_tier VARCHAR(50) DEFAULT 'pro',
+        payer_directory_json JSONB,
         created_at TIMESTAMPTZ DEFAULT NOW()
       );
+    `);
+
+    await client.query(`
+      ALTER TABLE dentverify.practices
+      ADD COLUMN IF NOT EXISTS payer_directory_json JSONB;
     `);
 
     // 2. Users Table (Clinic Accounts)
@@ -134,36 +220,94 @@ async function initDb() {
       );
     `);
 
-    // Ensure Default Practice & Demo Staff User for Smooth Initial Access
-    const practiceRes = await client.query(`
-      INSERT INTO dentverify.practices (name, subscription_tier)
-      VALUES ('DentVerify Dental Clinic', 'enterprise')
-      ON CONFLICT DO NOTHING
-      RETURNING id;
-    `);
+    // Seed 3 Clinics & 4 Users if not yet seeded
+    const existingPractices = await client.query('SELECT id, name, payer_directory_json FROM dentverify.practices ORDER BY created_at ASC;');
+    const defaultDirJson = JSON.stringify(DEFAULT_CLINIC_PAYER_DIRECTORY);
 
-    let practiceId;
-    if (practiceRes.rows.length > 0) {
-      practiceId = practiceRes.rows[0].id;
+    let clinic1Id, clinic2Id, clinic3Id;
+
+    if (existingPractices.rows.length === 0) {
+      const c1 = await client.query(
+        `INSERT INTO dentverify.practices (name, subscription_tier, payer_directory_json) VALUES ($1, 'enterprise', $2) RETURNING id;`,
+        ['Clinic 1 (Primary Workspace)', defaultDirJson]
+      );
+      clinic1Id = c1.rows[0].id;
     } else {
-      const p = await client.query('SELECT id FROM dentverify.practices LIMIT 1;');
-      practiceId = p.rows[0]?.id;
+      clinic1Id = existingPractices.rows[0].id;
+      if (existingPractices.rows[0].name === 'DentVerify Dental Clinic') {
+        await client.query(`UPDATE dentverify.practices SET name = 'Clinic 1 (Primary Workspace)' WHERE id = $1`, [clinic1Id]);
+      }
+      if (!existingPractices.rows[0].payer_directory_json) {
+        await client.query(`UPDATE dentverify.practices SET payer_directory_json = $1 WHERE id = $2`, [defaultDirJson, clinic1Id]);
+      }
     }
 
-    if (practiceId) {
-      // Default Admin/Staff credentials: admin@dentverify.com / ClinicAdmin2026!
-      const bcrypt = require('bcryptjs');
-      const salt = bcrypt.genSaltSync(12);
-      const hash = bcrypt.hashSync('ClinicAdmin2026!', salt);
-
-      await client.query(`
-        INSERT INTO dentverify.users (practice_id, email, password_hash, full_name, role)
-        VALUES ($1, 'admin@dentverify.com', $2, 'Dr. Dental Administrator', 'admin')
-        ON CONFLICT (email) DO NOTHING;
-      `, [practiceId, hash]);
+    if (existingPractices.rows.length < 2) {
+      const c2 = await client.query(
+        `INSERT INTO dentverify.practices (name, subscription_tier, payer_directory_json) VALUES ($1, 'pro', $2) RETURNING id;`,
+        ['Clinic 2 Workspace', defaultDirJson]
+      );
+      clinic2Id = c2.rows[0].id;
+    } else {
+      clinic2Id = existingPractices.rows[1].id;
+      if (!existingPractices.rows[1].payer_directory_json) {
+        await client.query(`UPDATE dentverify.practices SET payer_directory_json = $1 WHERE id = $2`, [defaultDirJson, clinic2Id]);
+      }
     }
 
-    console.log('✅ PostgreSQL: DentVerify schema & tables initialized successfully.');
+    if (existingPractices.rows.length < 3) {
+      const c3 = await client.query(
+        `INSERT INTO dentverify.practices (name, subscription_tier, payer_directory_json) VALUES ($1, 'pro', $2) RETURNING id;`,
+        ['Clinic 3 Workspace', defaultDirJson]
+      );
+      clinic3Id = c3.rows[0].id;
+    } else {
+      clinic3Id = existingPractices.rows[2].id;
+      if (!existingPractices.rows[2].payer_directory_json) {
+        await client.query(`UPDATE dentverify.practices SET payer_directory_json = $1 WHERE id = $2`, [defaultDirJson, clinic3Id]);
+      }
+    }
+
+    const bcrypt = require('bcryptjs');
+    const salt = bcrypt.genSaltSync(12);
+
+    // 1. Owner Account (Clinic 1)
+    const ownerHash = bcrypt.hashSync('ClinicAdmin2026!', salt);
+    await client.query(
+      `INSERT INTO dentverify.users (practice_id, email, password_hash, full_name, role)
+       VALUES ($1, 'admin@dentverify.com', $2, 'System Owner (Primary)', 'owner')
+       ON CONFLICT (email) DO UPDATE SET role = 'owner';`,
+      [clinic1Id, ownerHash]
+    );
+
+    // 2. Coworker Account (Clinic 1)
+    const staff1Hash = bcrypt.hashSync('ClinicStaff2026!', salt);
+    await client.query(
+      `INSERT INTO dentverify.users (practice_id, email, password_hash, full_name, role)
+       VALUES ($1, 'staff1@dentverify.com', $2, 'Clinic 1 Coworker', 'staff')
+       ON CONFLICT (email) DO NOTHING;`,
+      [clinic1Id, staff1Hash]
+    );
+
+    // 3. User 3 Account (Clinic 2)
+    const clinic2Hash = bcrypt.hashSync('ClinicTwo2026!', salt);
+    await client.query(
+      `INSERT INTO dentverify.users (practice_id, email, password_hash, full_name, role)
+       VALUES ($1, 'clinic2@dentverify.com', $2, 'Clinic 2 Coordinator', 'staff')
+       ON CONFLICT (email) DO NOTHING;`,
+      [clinic2Id, clinic2Hash]
+    );
+
+    // 4. User 4 Account (Clinic 3)
+    const clinic3Hash = bcrypt.hashSync('ClinicThree2026!', salt);
+    await client.query(
+      `INSERT INTO dentverify.users (practice_id, email, password_hash, full_name, role)
+       VALUES ($1, 'clinic3@dentverify.com', $2, 'Clinic 3 Coordinator', 'staff')
+       ON CONFLICT (email) DO NOTHING;`,
+      [clinic3Id, clinic3Hash]
+    );
+
+    console.log('✅ PostgreSQL: DentVerify multi-clinic schema & 3 workspaces initialized.');
   } catch (err) {
     console.error('❌ Database initialization error:', err);
   } finally {
@@ -177,4 +321,5 @@ module.exports = {
   initDb,
   encryptField,
   decryptField,
+  DEFAULT_CLINIC_PAYER_DIRECTORY,
 };

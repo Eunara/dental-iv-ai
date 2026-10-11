@@ -79,7 +79,17 @@ const authMiddleware = async (req, res, next) => {
       [decoded.userId]
     );
     if (userRes.rows.length > 0) {
-      req.user = userRes.rows[0];
+      const u = userRes.rows[0];
+      // If owner switched active clinic workspace, honor decoded.activePracticeId
+      if (u.role === 'owner' && decoded.activePracticeId && decoded.activePracticeId !== u.practice_id) {
+        const pRes = await db.query('SELECT id, name FROM dentverify.practices WHERE id = $1', [decoded.activePracticeId]);
+        if (pRes.rows.length > 0) {
+          u.home_practice_id = u.practice_id;
+          u.practice_id = pRes.rows[0].id;
+          u.practice_name = pRes.rows[0].name;
+        }
+      }
+      req.user = u;
     } else {
       req.user = null;
     }
@@ -1182,31 +1192,323 @@ app.post('/api/auth/logout', async (req, res) => {
 });
 
 // ==========================================
+// CLINIC PRACTICES & MULTI-TENANT MANAGEMENT
+// ==========================================
+
+// GET /api/practices (List clinics - owner sees all with counts, staff sees assigned)
+app.get('/api/practices', async (req, res) => {
+  if (!req.user) return res.status(401).json({ error: 'Unauthorized' });
+  try {
+    if (req.user.role === 'owner') {
+      const result = await db.query(`
+        SELECT p.id, p.name, p.subscription_tier, p.created_at,
+               (SELECT count(*)::int FROM dentverify.users u WHERE u.practice_id = p.id) as user_count,
+               (SELECT count(*)::int FROM dentverify.verifications v WHERE v.practice_id = p.id) as verification_count
+        FROM dentverify.practices p
+        ORDER BY p.created_at ASC;
+      `);
+      return res.json({
+        success: true,
+        is_owner: true,
+        active_practice_id: req.user.practice_id,
+        practices: result.rows,
+      });
+    } else {
+      return res.json({
+        success: true,
+        is_owner: false,
+        active_practice_id: req.user.practice_id,
+        practices: [{
+          id: req.user.practice_id,
+          name: req.user.practice_name,
+        }],
+      });
+    }
+  } catch (err) {
+    console.error('Error listing practices:', err);
+    res.status(500).json({ error: 'Failed to retrieve practices.' });
+  }
+});
+
+// POST /api/practices (Owner creates new clinic)
+app.post('/api/practices', async (req, res) => {
+  if (!req.user || req.user.role !== 'owner') {
+    return res.status(403).json({ error: 'Only the clinic owner can create new clinic workspaces.' });
+  }
+  try {
+    const { name } = req.body;
+    if (!name || !name.trim()) {
+      return res.status(400).json({ error: 'Clinic name is required.' });
+    }
+    const defaultDir = JSON.stringify(db.DEFAULT_CLINIC_PAYER_DIRECTORY || []);
+    const insertRes = await db.query(
+      `INSERT INTO dentverify.practices (name, subscription_tier, payer_directory_json)
+       VALUES ($1, 'pro', $2)
+       RETURNING id, name, subscription_tier, created_at;`,
+      [name.trim(), defaultDir]
+    );
+    await recordAuditLog(req, 'CREATE_PRACTICE', insertRes.rows[0].id, { name: name.trim() });
+    res.json({ success: true, practice: insertRes.rows[0] });
+  } catch (err) {
+    console.error('Error creating practice:', err);
+    res.status(500).json({ error: 'Failed to create clinic workspace.' });
+  }
+});
+
+// PUT /api/practices/:id (Owner renames/updates clinic)
+app.put('/api/practices/:id', async (req, res) => {
+  if (!req.user || req.user.role !== 'owner') {
+    return res.status(403).json({ error: 'Only the clinic owner can update clinic workspaces.' });
+  }
+  try {
+    const { id } = req.params;
+    const { name } = req.body;
+    if (!name || !name.trim()) {
+      return res.status(400).json({ error: 'Clinic name is required.' });
+    }
+    const updateRes = await db.query(
+      `UPDATE dentverify.practices SET name = $1 WHERE id = $2 RETURNING id, name;`,
+      [name.trim(), id]
+    );
+    if (updateRes.rows.length === 0) {
+      return res.status(404).json({ error: 'Clinic workspace not found.' });
+    }
+    await recordAuditLog(req, 'UPDATE_PRACTICE', id, { new_name: name.trim() });
+    res.json({ success: true, practice: updateRes.rows[0] });
+  } catch (err) {
+    console.error('Error updating practice:', err);
+    res.status(500).json({ error: 'Failed to update clinic workspace.' });
+  }
+});
+
+// POST /api/practices/switch/:id (Owner switches active clinic session)
+app.post('/api/practices/switch/:id', async (req, res) => {
+  if (!req.user || req.user.role !== 'owner') {
+    return res.status(403).json({ error: 'Only the clinic owner can switch between clinic workspaces.' });
+  }
+  try {
+    const { id } = req.params;
+    const pCheck = await db.query('SELECT id, name FROM dentverify.practices WHERE id = $1', [id]);
+    if (pCheck.rows.length === 0) {
+      return res.status(404).json({ error: 'Clinic workspace not found.' });
+    }
+    const targetPractice = pCheck.rows[0];
+
+    const token = jwt.sign(
+      {
+        userId: req.user.id,
+        practiceId: req.user.home_practice_id || req.user.practice_id,
+        activePracticeId: targetPractice.id,
+        role: req.user.role,
+      },
+      JWT_SECRET,
+      { expiresIn: '12h' }
+    );
+
+    res.cookie('dentverify_token', token, {
+      httpOnly: true,
+      secure: false,
+      sameSite: 'lax',
+      maxAge: 12 * 60 * 60 * 1000,
+    });
+
+    await recordAuditLog(req, 'SWITCH_WORKSPACE', targetPractice.id, { switched_to: targetPractice.name });
+    res.json({ success: true, active_practice: targetPractice });
+  } catch (err) {
+    console.error('Error switching practice:', err);
+    res.status(500).json({ error: 'Failed to switch workspace.' });
+  }
+});
+
+// ==========================================
+// USER ACCOUNTS & ASSIGNMENT MANAGEMENT
+// ==========================================
+
+// GET /api/users (Owner lists all clinic accounts)
+app.get('/api/users', async (req, res) => {
+  if (!req.user || req.user.role !== 'owner') {
+    return res.status(403).json({ error: 'Access restricted to system owner.' });
+  }
+  try {
+    const result = await db.query(`
+      SELECT u.id, u.email, u.full_name, u.role, u.is_active, u.practice_id, p.name as practice_name, u.last_login_at, u.created_at
+      FROM dentverify.users u
+      JOIN dentverify.practices p ON u.practice_id = p.id
+      ORDER BY p.name ASC, u.email ASC;
+    `);
+    res.json({ success: true, users: result.rows });
+  } catch (err) {
+    console.error('Error listing users:', err);
+    res.status(500).json({ error: 'Failed to retrieve user accounts.' });
+  }
+});
+
+// POST /api/users (Owner creates & assigns user account)
+app.post('/api/users', async (req, res) => {
+  if (!req.user || req.user.role !== 'owner') {
+    return res.status(403).json({ error: 'Access restricted to system owner.' });
+  }
+  try {
+    const { email, password, full_name, practice_id, role } = req.body;
+    if (!email || !password || !full_name || !practice_id) {
+      return res.status(400).json({ error: 'Email, password, full name, and assigned clinic are required.' });
+    }
+    const salt = bcrypt.genSaltSync(12);
+    const hash = bcrypt.hashSync(password, salt);
+
+    const insertRes = await db.query(`
+      INSERT INTO dentverify.users (practice_id, email, password_hash, full_name, role)
+      VALUES ($1, $2, $3, $4, $5)
+      RETURNING id, email, full_name, role, practice_id;
+    `, [practice_id, email.trim().toLowerCase(), hash, full_name.trim(), role || 'staff']);
+
+    await recordAuditLog(req, 'CREATE_USER', insertRes.rows[0].id, { email: email.trim(), practice_id });
+    res.json({ success: true, user: insertRes.rows[0] });
+  } catch (err) {
+    if (err.code === '23505') {
+      return res.status(400).json({ error: 'A user with this email address already exists.' });
+    }
+    console.error('Error creating user:', err);
+    res.status(500).json({ error: 'Failed to create user account.' });
+  }
+});
+
+// PUT /api/users/:id (Owner updates user / re-assigns clinic / resets password)
+app.put('/api/users/:id', async (req, res) => {
+  if (!req.user || req.user.role !== 'owner') {
+    return res.status(403).json({ error: 'Access restricted to system owner.' });
+  }
+  try {
+    const { id } = req.params;
+    const { email, password, full_name, practice_id, role, is_active } = req.body;
+
+    let queryStr = 'UPDATE dentverify.users SET ';
+    const params = [];
+    const fields = [];
+
+    if (full_name) {
+      params.push(full_name.trim());
+      fields.push(`full_name = $${params.length}`);
+    }
+    if (practice_id) {
+      params.push(practice_id);
+      fields.push(`practice_id = $${params.length}`);
+    }
+    if (role) {
+      params.push(role);
+      fields.push(`role = $${params.length}`);
+    }
+    if (typeof is_active === 'boolean') {
+      params.push(is_active);
+      fields.push(`is_active = $${params.length}`);
+    }
+    if (password && password.trim()) {
+      const salt = bcrypt.genSaltSync(12);
+      const hash = bcrypt.hashSync(password, salt);
+      params.push(hash);
+      fields.push(`password_hash = $${params.length}`);
+    }
+
+    if (fields.length === 0) {
+      return res.status(400).json({ error: 'No fields provided for update.' });
+    }
+
+    params.push(id);
+    queryStr += fields.join(', ') + ` WHERE id = $${params.length} RETURNING id, email, full_name, role, practice_id, is_active;`;
+
+    const updateRes = await db.query(queryStr, params);
+    if (updateRes.rows.length === 0) {
+      return res.status(404).json({ error: 'User account not found.' });
+    }
+    await recordAuditLog(req, 'UPDATE_USER', id, { updated_fields: fields });
+    res.json({ success: true, user: updateRes.rows[0] });
+  } catch (err) {
+    console.error('Error updating user:', err);
+    res.status(500).json({ error: 'Failed to update user account.' });
+  }
+});
+
+// DELETE /api/users/:id (Owner deletes user)
+app.delete('/api/users/:id', async (req, res) => {
+  if (!req.user || req.user.role !== 'owner') {
+    return res.status(403).json({ error: 'Access restricted to system owner.' });
+  }
+  try {
+    const { id } = req.params;
+    if (id === req.user.id) {
+      return res.status(400).json({ error: 'You cannot delete your own active owner account.' });
+    }
+    await db.query('DELETE FROM dentverify.users WHERE id = $1', [id]);
+    await recordAuditLog(req, 'DELETE_USER', id);
+    res.json({ success: true, message: 'User deleted successfully.' });
+  } catch (err) {
+    console.error('Error deleting user:', err);
+    res.status(500).json({ error: 'Failed to delete user account.' });
+  }
+});
+
+// ==========================================
+// INSURANCE DIRECTORY & SUB-PORTALS PER CLINIC
+// ==========================================
+
+// GET /api/payers (Fetch active clinic's custom directory)
+app.get('/api/payers', async (req, res) => {
+  if (!req.user) return res.status(401).json({ error: 'Unauthorized' });
+  try {
+    const result = await db.query(
+      `SELECT payer_directory_json FROM dentverify.practices WHERE id = $1`,
+      [req.user.practice_id]
+    );
+    const directory = result.rows[0]?.payer_directory_json || db.DEFAULT_CLINIC_PAYER_DIRECTORY;
+    res.json({ success: true, payers: directory, practice_id: req.user.practice_id, practice_name: req.user.practice_name });
+  } catch (err) {
+    console.error('Error fetching payers:', err);
+    res.status(500).json({ error: 'Failed to load clinic insurance directory.' });
+  }
+});
+
+// POST /api/payers (Save active clinic's custom directory)
+app.post('/api/payers', async (req, res) => {
+  if (!req.user) return res.status(401).json({ error: 'Unauthorized' });
+  try {
+    const { payers } = req.body;
+    if (!Array.isArray(payers)) {
+      return res.status(400).json({ error: 'Payers list must be an array.' });
+    }
+    await db.query(
+      `UPDATE dentverify.practices SET payer_directory_json = $1 WHERE id = $2`,
+      [JSON.stringify(payers), req.user.practice_id]
+    );
+    await recordAuditLog(req, 'UPDATE_PAYERS_DIRECTORY', req.user.practice_id, { count: payers.length });
+    res.json({ success: true, payers });
+  } catch (err) {
+    console.error('Error saving payers:', err);
+    res.status(500).json({ error: 'Failed to save clinic insurance directory.' });
+  }
+});
+
+// ==========================================
 // PERSISTENT VERIFICATION HISTORY ENDPOINTS
 // ==========================================
 
 // GET /api/verifications (List history records)
+// GET /api/verifications (List history records strictly for active clinic)
 app.get('/api/verifications', async (req, res) => {
+  if (!req.user) {
+    return res.status(401).json({ error: 'Unauthorized: Please log in.' });
+  }
   try {
-    const practiceId = req.user?.practice_id;
-    const queryStr = practiceId
-      ? `SELECT id, carrier, patient_name_enc, patient_name_masked, member_id_enc, dob_enc, network_status, created_at,
-                breakdown_json->'insurance_details'->>'plan_benefits' as plan_benefits,
-                breakdown_json->'insurance_details'->>'effective_date' as effective_date,
-                breakdown_json->'insurance_details'->>'policy_status' as policy_status
-         FROM dentverify.verifications
-         WHERE practice_id = $1
-         ORDER BY created_at DESC
-         LIMIT 100;`
-      : `SELECT id, carrier, patient_name_enc, patient_name_masked, member_id_enc, dob_enc, network_status, created_at,
-                breakdown_json->'insurance_details'->>'plan_benefits' as plan_benefits,
-                breakdown_json->'insurance_details'->>'effective_date' as effective_date,
-                breakdown_json->'insurance_details'->>'policy_status' as policy_status
-         FROM dentverify.verifications
-         ORDER BY created_at DESC
-         LIMIT 100;`;
+    const practiceId = req.user.practice_id;
+    const queryStr = `SELECT id, carrier, patient_name_enc, patient_name_masked, member_id_enc, dob_enc, network_status, created_at,
+                             breakdown_json->'insurance_details'->>'plan_benefits' as plan_benefits,
+                             breakdown_json->'insurance_details'->>'effective_date' as effective_date,
+                             breakdown_json->'insurance_details'->>'policy_status' as policy_status
+                      FROM dentverify.verifications
+                      WHERE practice_id = $1
+                      ORDER BY created_at DESC
+                      LIMIT 100;`;
 
-    const result = practiceId ? await db.query(queryStr, [practiceId]) : await db.query(queryStr);
+    const result = await db.query(queryStr, [practiceId]);
 
     const records = result.rows.map(row => {
       const decryptedName = db.decryptField(row.patient_name_enc);
@@ -1224,7 +1526,7 @@ app.get('/api/verifications', async (req, res) => {
       };
     });
 
-    await recordAuditLog(req, 'VIEW_HISTORY_LIST', null, { count: records.length });
+    await recordAuditLog(req, 'VIEW_HISTORY_LIST', null, { count: records.length, practice_id: practiceId });
     res.json({ success: true, history: records });
   } catch (err) {
     console.error('History fetch error:', err);
@@ -1232,19 +1534,22 @@ app.get('/api/verifications', async (req, res) => {
   }
 });
 
-// GET /api/verifications/:id (Fetch full breakdown JSON)
+// GET /api/verifications/:id (Fetch full breakdown JSON isolated by practice)
 app.get('/api/verifications/:id', async (req, res) => {
+  if (!req.user) {
+    return res.status(401).json({ error: 'Unauthorized: Please log in.' });
+  }
   try {
     const { id } = req.params;
     const result = await db.query(
       `SELECT id, carrier, patient_name_enc, member_id_enc, dob_enc, network_status, breakdown_json, created_at 
        FROM dentverify.verifications 
-       WHERE id = $1`,
-      [id]
+       WHERE id = $1 AND practice_id = $2`,
+      [id, req.user.practice_id]
     );
 
     if (result.rows.length === 0) {
-      return res.status(404).json({ error: 'Verification record not found.' });
+      return res.status(404).json({ error: 'Verification record not found in active clinic workspace.' });
     }
 
     const row = result.rows[0];
@@ -1266,11 +1571,14 @@ app.get('/api/verifications/:id', async (req, res) => {
   }
 });
 
-// DELETE /api/verifications/:id (Soft-delete or purge)
+// DELETE /api/verifications/:id (Soft-delete or purge isolated by practice)
 app.delete('/api/verifications/:id', async (req, res) => {
+  if (!req.user) {
+    return res.status(401).json({ error: 'Unauthorized: Please log in.' });
+  }
   try {
     const { id } = req.params;
-    await db.query(`DELETE FROM dentverify.verifications WHERE id = $1`, [id]);
+    await db.query(`DELETE FROM dentverify.verifications WHERE id = $1 AND practice_id = $2`, [id, req.user.practice_id]);
     await recordAuditLog(req, 'DELETE_BREAKDOWN_RECORD', id);
     res.json({ success: true, message: 'Record deleted successfully.' });
   } catch (err) {
@@ -1281,6 +1589,13 @@ app.delete('/api/verifications/:id', async (req, res) => {
 
 // Verification Endpoint (Supports single or multiple files)
 app.post('/api/verify', upload.array('files', 10), async (req, res) => {
+  if (!req.user) {
+    return res.status(401).json({
+      success: false,
+      error: '🔒 Access Denied: Please sign in to your clinic workspace to run insurance verification.',
+      error_type: 'AUTH_REQUIRED',
+    });
+  }
   try {
     const uploadedFiles = req.files && req.files.length > 0 ? req.files : (req.file ? [req.file] : []);
 
