@@ -1201,7 +1201,7 @@ app.post('/api/auth/logout', async (req, res) => {
 // CLINIC PRACTICES & MULTI-TENANT MANAGEMENT
 // ==========================================
 
-// GET /api/practices (List clinics - owner sees all with counts, staff sees assigned)
+// GET /api/practices (List clinics - owner sees all with counts, clinic_admin sees own clinic with counts, staff sees assigned)
 app.get('/api/practices', async (req, res) => {
   if (!req.user) return res.status(401).json({ error: 'Unauthorized' });
   try {
@@ -1216,6 +1216,22 @@ app.get('/api/practices', async (req, res) => {
       return res.json({
         success: true,
         is_owner: true,
+        role: req.user.role,
+        active_practice_id: req.user.practice_id,
+        practices: result.rows,
+      });
+    } else if (req.user.role === 'clinic_admin' && req.user.practice_id) {
+      const result = await db.query(`
+        SELECT p.id, p.name, p.subscription_tier, p.created_at,
+               (SELECT count(*)::int FROM dentverify.users u WHERE u.practice_id = p.id AND u.role != 'owner') as user_count,
+               (SELECT count(*)::int FROM dentverify.verifications v WHERE v.practice_id = p.id) as verification_count
+        FROM dentverify.practices p
+        WHERE p.id = $1;
+      `, [req.user.practice_id]);
+      return res.json({
+        success: true,
+        is_owner: false,
+        role: req.user.role,
         active_practice_id: req.user.practice_id,
         practices: result.rows,
       });
@@ -1223,6 +1239,7 @@ app.get('/api/practices', async (req, res) => {
       return res.json({
         success: true,
         is_owner: false,
+        role: req.user.role,
         active_practice_id: req.user.practice_id,
         practices: [{
           id: req.user.practice_id,
@@ -1239,7 +1256,7 @@ app.get('/api/practices', async (req, res) => {
 // POST /api/practices (Owner creates new clinic)
 app.post('/api/practices', async (req, res) => {
   if (!req.user || req.user.role !== 'owner') {
-    return res.status(403).json({ error: 'Only the clinic owner can create new clinic workspaces.' });
+    return res.status(403).json({ error: 'Only the Website Owner can create new clinic workspaces.' });
   }
   try {
     const { name } = req.body;
@@ -1261,13 +1278,16 @@ app.post('/api/practices', async (req, res) => {
   }
 });
 
-// PUT /api/practices/:id (Owner renames/updates clinic)
+// PUT /api/practices/:id (Owner renames any clinic; Clinic Admin renames their own clinic)
 app.put('/api/practices/:id', async (req, res) => {
-  if (!req.user || req.user.role !== 'owner') {
-    return res.status(403).json({ error: 'Only the clinic owner can update clinic workspaces.' });
+  if (!req.user || (req.user.role !== 'owner' && req.user.role !== 'clinic_admin')) {
+    return res.status(403).json({ error: 'Only the Website Owner or Clinic Administrator can update clinic workspaces.' });
   }
   try {
     const { id } = req.params;
+    if (req.user.role === 'clinic_admin' && id !== req.user.practice_id) {
+      return res.status(403).json({ error: 'Clinic Administrators can only update their own assigned clinic.' });
+    }
     const { name } = req.body;
     if (!name || !name.trim()) {
       return res.status(400).json({ error: 'Clinic name is required.' });
@@ -1290,7 +1310,7 @@ app.put('/api/practices/:id', async (req, res) => {
 // DELETE /api/practices/:id (Owner deletes clinic workspace)
 app.delete('/api/practices/:id', async (req, res) => {
   if (!req.user || req.user.role !== 'owner') {
-    return res.status(403).json({ error: 'Only the clinic owner can delete clinic workspaces.' });
+    return res.status(403).json({ error: 'Only the Website Owner can delete clinic workspaces.' });
   }
   try {
     const { id } = req.params;
@@ -1309,7 +1329,7 @@ app.delete('/api/practices/:id', async (req, res) => {
 // POST /api/practices/switch/:id (Owner switches active clinic session or returns to Master Owner mode)
 app.post('/api/practices/switch/:id', async (req, res) => {
   if (!req.user || req.user.role !== 'owner') {
-    return res.status(403).json({ error: 'Only the clinic owner can switch between clinic workspaces.' });
+    return res.status(403).json({ error: 'Only the Website Owner can switch between clinic workspaces.' });
   }
   try {
     const { id } = req.params;
@@ -1378,39 +1398,62 @@ app.post('/api/practices/switch/:id', async (req, res) => {
 // USER ACCOUNTS & ASSIGNMENT MANAGEMENT
 // ==========================================
 
-// GET /api/users (Owner lists all clinic accounts)
+// GET /api/users (Owner lists all clinic accounts; Clinic Admin lists accounts in their own clinic)
 app.get('/api/users', async (req, res) => {
-  if (!req.user || req.user.role !== 'owner') {
-    return res.status(403).json({ error: 'Access restricted to system owner.' });
+  if (!req.user || (req.user.role !== 'owner' && req.user.role !== 'clinic_admin')) {
+    return res.status(403).json({ error: 'Access restricted to Website Owner or Clinic Administrator.' });
   }
   try {
-    const result = await db.query(`
-      SELECT u.id, u.email, u.full_name, u.role, u.is_active, u.practice_id, p.name as practice_name, u.last_login_at, u.created_at
-      FROM dentverify.users u
-      LEFT JOIN dentverify.practices p ON u.practice_id = p.id
-      ORDER BY CASE WHEN u.role = 'owner' THEN 0 ELSE 1 END, p.name ASC NULLS FIRST, u.email ASC;
-    `);
-    res.json({ success: true, users: result.rows });
+    if (req.user.role === 'owner') {
+      const result = await db.query(`
+        SELECT u.id, u.email, u.full_name, u.role, u.is_active, u.practice_id, p.name as practice_name, u.last_login_at, u.created_at
+        FROM dentverify.users u
+        LEFT JOIN dentverify.practices p ON u.practice_id = p.id
+        ORDER BY CASE WHEN u.role = 'owner' THEN 0 ELSE 1 END, p.name ASC NULLS FIRST,
+                 CASE WHEN u.role = 'clinic_admin' THEN 0 ELSE 1 END, u.email ASC;
+      `);
+      return res.json({ success: true, users: result.rows });
+    } else {
+      const result = await db.query(`
+        SELECT u.id, u.email, u.full_name, u.role, u.is_active, u.practice_id, p.name as practice_name, u.last_login_at, u.created_at
+        FROM dentverify.users u
+        LEFT JOIN dentverify.practices p ON u.practice_id = p.id
+        WHERE u.practice_id = $1 AND u.role != 'owner'
+        ORDER BY CASE WHEN u.role = 'clinic_admin' THEN 0 ELSE 1 END, u.email ASC;
+      `, [req.user.practice_id]);
+      return res.json({ success: true, users: result.rows });
+    }
   } catch (err) {
     console.error('Error listing users:', err);
     res.status(500).json({ error: 'Failed to retrieve user accounts.' });
   }
 });
 
-// POST /api/users (Owner creates & assigns user account)
+// POST /api/users (Owner creates & assigns any user; Clinic Admin creates users inside their own clinic)
 app.post('/api/users', async (req, res) => {
-  if (!req.user || req.user.role !== 'owner') {
-    return res.status(403).json({ error: 'Access restricted to system owner.' });
+  if (!req.user || (req.user.role !== 'owner' && req.user.role !== 'clinic_admin')) {
+    return res.status(403).json({ error: 'Access restricted to Website Owner or Clinic Administrator.' });
   }
   try {
     const { email, password, full_name, practice_id, role } = req.body;
-    const targetRole = role || 'staff';
-    if (!email || !password || !full_name || (targetRole !== 'owner' && !practice_id)) {
+    let targetRole = role || 'staff';
+    let assignedPracticeId = practice_id;
+
+    if (req.user.role === 'clinic_admin') {
+      // Clinic Admin can only create users inside their own clinic, and never Website Owner
+      assignedPracticeId = req.user.practice_id;
+      if (targetRole === 'owner') targetRole = 'staff';
+    } else {
+      if (targetRole === 'owner') {
+        assignedPracticeId = null;
+      }
+    }
+
+    if (!email || !password || !full_name || (targetRole !== 'owner' && !assignedPracticeId)) {
       return res.status(400).json({ error: 'Email, password, full name, and assigned clinic are required.' });
     }
     const salt = bcrypt.genSaltSync(12);
     const hash = bcrypt.hashSync(password, salt);
-    const assignedPracticeId = targetRole === 'owner' ? null : practice_id;
 
     const insertRes = await db.query(`
       INSERT INTO dentverify.users (practice_id, email, password_hash, full_name, role)
@@ -1418,7 +1461,7 @@ app.post('/api/users', async (req, res) => {
       RETURNING id, email, full_name, role, practice_id;
     `, [assignedPracticeId, email.trim().toLowerCase(), hash, full_name.trim(), targetRole]);
 
-    await recordAuditLog(req, 'CREATE_USER', insertRes.rows[0].id, { email: email.trim(), practice_id: assignedPracticeId });
+    await recordAuditLog(req, 'CREATE_USER', insertRes.rows[0].id, { email: email.trim(), role: targetRole, practice_id: assignedPracticeId });
     res.json({ success: true, user: insertRes.rows[0] });
   } catch (err) {
     if (err.code === '23505') {
@@ -1429,14 +1472,24 @@ app.post('/api/users', async (req, res) => {
   }
 });
 
-// PUT /api/users/:id (Owner updates user / email / name / role / re-assigns clinic / resets password)
+// PUT /api/users/:id (Owner updates any user; Clinic Admin updates users in their own clinic)
 app.put('/api/users/:id', async (req, res) => {
-  if (!req.user || req.user.role !== 'owner') {
-    return res.status(403).json({ error: 'Access restricted to system owner.' });
+  if (!req.user || (req.user.role !== 'owner' && req.user.role !== 'clinic_admin')) {
+    return res.status(403).json({ error: 'Access restricted to Website Owner or Clinic Administrator.' });
   }
   try {
     const { id } = req.params;
     const { email, password, full_name, practice_id, role, is_active } = req.body;
+
+    if (req.user.role === 'clinic_admin') {
+      const checkUser = await db.query('SELECT id, practice_id, role FROM dentverify.users WHERE id = $1', [id]);
+      if (checkUser.rows.length === 0) {
+        return res.status(404).json({ error: 'User account not found.' });
+      }
+      if (checkUser.rows[0].practice_id !== req.user.practice_id || checkUser.rows[0].role === 'owner') {
+        return res.status(403).json({ error: 'Clinic Administrators can only manage users within their own clinic.' });
+      }
+    }
 
     let queryStr = 'UPDATE dentverify.users SET ';
     const params = [];
@@ -1450,12 +1503,13 @@ app.put('/api/users/:id', async (req, res) => {
       params.push(email.trim().toLowerCase());
       fields.push(`email = $${params.length}`);
     }
-    if (practice_id !== undefined) {
+    if (req.user.role === 'owner' && practice_id !== undefined) {
       params.push(practice_id || null);
       fields.push(`practice_id = $${params.length}`);
     }
     if (role) {
-      params.push(role);
+      const allowedRole = (req.user.role === 'clinic_admin' && role === 'owner') ? 'staff' : role;
+      params.push(allowedRole);
       fields.push(`role = $${params.length}`);
     }
     if (typeof is_active === 'boolean') {
@@ -1491,17 +1545,27 @@ app.put('/api/users/:id', async (req, res) => {
   }
 });
 
-// DELETE /api/users/:id (Owner deletes user)
+// DELETE /api/users/:id (Owner deletes any user; Clinic Admin deletes user in their own clinic)
 app.delete('/api/users/:id', async (req, res) => {
-  if (!req.user || req.user.role !== 'owner') {
-    return res.status(403).json({ error: 'Access restricted to system owner.' });
+  if (!req.user || (req.user.role !== 'owner' && req.user.role !== 'clinic_admin')) {
+    return res.status(403).json({ error: 'Access restricted to Website Owner or Clinic Administrator.' });
   }
   try {
     const { id } = req.params;
     if (id === req.user.id) {
-      return res.status(400).json({ error: 'You cannot delete your own active owner account.' });
+      return res.status(400).json({ error: 'You cannot delete your own active account.' });
     }
-    await db.query('DELETE FROM dentverify.users WHERE id = $1', [id]);
+    if (req.user.role === 'clinic_admin') {
+      const delRes = await db.query(
+        `DELETE FROM dentverify.users WHERE id = $1 AND practice_id = $2 AND role != 'owner' RETURNING id`,
+        [id, req.user.practice_id]
+      );
+      if (delRes.rows.length === 0) {
+        return res.status(403).json({ error: 'Cannot delete user outside your clinic.' });
+      }
+    } else {
+      await db.query('DELETE FROM dentverify.users WHERE id = $1', [id]);
+    }
     await recordAuditLog(req, 'DELETE_USER', id);
     res.json({ success: true, message: 'User deleted successfully.' });
   } catch (err) {
@@ -1542,9 +1606,12 @@ app.get('/api/payers', async (req, res) => {
   }
 });
 
-// POST /api/payers (Save active clinic's custom directory, or broadcast to all clinics if Master Owner)
+// POST /api/payers (Save active clinic's custom directory; restricted to Website Owner and Clinic Admin)
 app.post('/api/payers', async (req, res) => {
   if (!req.user) return res.status(401).json({ error: 'Unauthorized' });
+  if (req.user.role !== 'owner' && req.user.role !== 'clinic_admin') {
+    return res.status(403).json({ error: 'Only the Website Owner or Clinic Administrator can modify the clinic insurance directory.' });
+  }
   try {
     const { payers, apply_all } = req.body;
     if (!Array.isArray(payers)) {

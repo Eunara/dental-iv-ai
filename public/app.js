@@ -2973,6 +2973,11 @@
         return;
       }
 
+      const canManageDirectory = currentUser && (currentUser.role === 'owner' || currentUser.role === 'clinic_admin');
+      if (dirToggleAddBtn) dirToggleAddBtn.style.display = canManageDirectory ? 'inline-flex' : 'none';
+      if (dirToggleBulkImportBtn) dirToggleBulkImportBtn.style.display = canManageDirectory ? 'inline-flex' : 'none';
+      if (dirResetDefaultsBtn) dirResetDefaultsBtn.style.display = canManageDirectory ? 'inline-flex' : 'none';
+
       filtered.forEach(p => {
         const card = document.createElement('div');
         card.className = 'payer-directory-card';
@@ -2989,7 +2994,7 @@
               <div class="payer-card-name" style="flex-wrap: wrap; gap: 0.45rem;">
                 <span class="payer-parent-badge ${isDelta ? 'delta' : ''}">${escapeHtml(parentGroup)}</span>
                 <span style="font-weight: 700; color: #fff;">${escapeHtml(p.name)}</span>
-                <button type="button" class="payer-network-toggle-badge ${isOut ? 'out' : 'in'}" data-id="${p.id}" title="Click to toggle In-Network / Out-of-Network for this portal">
+                <button type="button" class="payer-network-toggle-badge ${isOut ? 'out' : 'in'}" data-id="${p.id}" title="${canManageDirectory ? 'Click to toggle In-Network / Out-of-Network for this portal' : 'Network participation status'}">
                   ${netLabel}
                 </button>
               </div>
@@ -3001,17 +3006,22 @@
               </div>
             </div>
             <div style="display: flex; gap: 0.4rem; align-items: center;">
-              <button type="button" class="btn-action-ghost btn-edit-payer" style="padding: 0.28rem 0.55rem; font-size: 0.7rem;" title="Edit portal details">
-                ✏️ Edit
-              </button>
+              ${canManageDirectory ? `
+                <button type="button" class="btn-action-ghost btn-edit-payer" style="padding: 0.28rem 0.55rem; font-size: 0.7rem;" title="Edit portal details">
+                  ✏️ Edit
+                </button>
+              ` : ''}
               <button type="button" class="btn-apply-payer" data-id="${p.id || ''}" title="Apply this sub-portal address, network status, and Payor ID to the active breakdown">
                 Apply to Policy
               </button>
-              <button type="button" class="del-payer-btn" data-id="${p.id}" title="Remove from clinic directory" style="background: none; border: none; color: #ef4444; cursor: pointer; padding: 4px;">
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
-              </button>
+              ${canManageDirectory ? `
+                <button type="button" class="del-payer-btn" data-id="${p.id}" title="Remove from clinic directory" style="background: none; border: none; color: #ef4444; cursor: pointer; padding: 4px;">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                </button>
+              ` : ''}
             </div>
           </div>
+          ${canManageDirectory ? `
           <div class="payer-inline-edit-panel" style="display: none; margin-top: 0.65rem; padding-top: 0.65rem; border-top: 1px solid rgba(255,255,255,0.08);">
             <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 0.5rem; margin-bottom: 0.5rem;">
               <div>
@@ -3039,6 +3049,7 @@
               <button type="button" class="btn-verify-primary btn-save-payer-edit" style="padding: 0.35rem 0.85rem; font-size: 0.72rem;">💾 Save Portal</button>
             </div>
           </div>
+          ` : ''}
         `;
 
         const editBtn = card.querySelector('.btn-edit-payer');
@@ -3074,7 +3085,7 @@
 
         // Network toggle badge click
         const netBtn = card.querySelector('.payer-network-toggle-badge');
-        if (netBtn) {
+        if (netBtn && canManageDirectory) {
           netBtn.addEventListener('click', async (e) => {
             e.stopPropagation();
             const allPayers = getPayerDirectory();
@@ -3405,14 +3416,21 @@
       if (appBootLoader) appBootLoader.classList.add('hidden');
     }
 
+    function formatRoleLabel(role) {
+      if (role === 'owner') return 'Website Owner';
+      if (role === 'clinic_admin') return 'Clinic Admin';
+      return 'Clinic User';
+    }
+
     function applyUserHeaderUI(user) {
       if (gatekeeperScreen) gatekeeperScreen.style.display = 'none';
       if (appWorkspace) appWorkspace.style.display = 'block';
 
+      const roleDisplay = formatRoleLabel(user.role);
       if (userBadgeLabel) userBadgeLabel.textContent = user.full_name || user.email.split('@')[0];
       if (openAuthModalBtn) {
         openAuthModalBtn.classList.add('logged-in');
-        openAuthModalBtn.title = `${user.full_name} (${user.role.toUpperCase()} • ${user.practice_name || 'Clinic'})`;
+        openAuthModalBtn.title = `${user.full_name} (${roleDisplay} • ${user.practice_name || 'Clinic'})`;
       }
 
       if (activeWorkspaceLabel) {
@@ -3420,9 +3438,23 @@
       }
 
       const isOwner = user.role === 'owner';
-      if (openClinicManagerBtn) {
-        openClinicManagerBtn.style.display = isOwner ? 'inline-flex' : 'none';
+      const isClinicAdmin = user.role === 'clinic_admin';
+      const canManageClinic = isOwner || isClinicAdmin;
+
+      // Website Owner ONLY can access AI Settings (Website-level settings)
+      if (openSettingsBtn) {
+        openSettingsBtn.style.display = isOwner ? 'inline-flex' : 'none';
       }
+
+      // Website Owner & Clinic Administrator can open Clinic/User Management Modal
+      if (openClinicManagerBtn) {
+        openClinicManagerBtn.style.display = canManageClinic ? 'inline-flex' : 'none';
+        const btnLabel = document.getElementById('openClinicManagerLabel');
+        if (btnLabel) {
+          btnLabel.textContent = isOwner ? 'Manage Clinics & Users' : 'Manage Clinic Users';
+        }
+      }
+
       if (workspaceChevron) {
         workspaceChevron.style.display = isOwner ? 'inline-block' : 'none';
       }
@@ -3435,7 +3467,7 @@
 
       if (authLoggedInView) authLoggedInView.style.display = 'block';
       if (authLoginForm) authLoginForm.style.display = 'none';
-      if (authSessionUserName) authSessionUserName.textContent = `${user.full_name || 'Clinic User'} (${user.role.toUpperCase()})`;
+      if (authSessionUserName) authSessionUserName.textContent = `${user.full_name || 'Clinic User'} (${roleDisplay})`;
       if (authSessionUserEmail) authSessionUserEmail.textContent = user.email;
       if (authSessionPracticeName) authSessionPracticeName.textContent = `Active Workspace: ${user.practice_name || 'DentVerify Clinic'}`;
     }
@@ -3483,7 +3515,7 @@
         await loadClinicPayersFromServer();
         await syncHistoryFromBackend();
         renderHistoryList();
-        if (user.role === 'owner') {
+        if (user.role === 'owner' || user.role === 'clinic_admin') {
           await loadOwnerClinicsAndUsers();
         }
       } else {
@@ -3530,7 +3562,9 @@
             resetInactivityTimer();
             if (data.user.role === 'owner') {
               if (clinicManagerModal) clinicManagerModal.classList.add('active');
-              displayToast(`Welcome Master Owner! Manage your clinics and assign users.`);
+              displayToast(`Welcome Website Owner! Manage all clinics, admins, and users.`);
+            } else if (data.user.role === 'clinic_admin') {
+              displayToast(`Welcome Clinic Admin (${data.user.practice_name})! You can manage your clinic's users and settings.`);
             } else {
               displayToast(`Unlocked ${data.user.practice_name || 'Clinic Workspace'} — Welcome, ${data.user.full_name}!`);
             }
@@ -3559,9 +3593,9 @@
       });
     }
 
-    // Owner Workspace Switcher & Management Functions
+    // Owner & Clinic Admin Workspace & User Management Functions
     async function loadOwnerClinicsAndUsers() {
-      if (!currentUser || currentUser.role !== 'owner') return;
+      if (!currentUser || (currentUser.role !== 'owner' && currentUser.role !== 'clinic_admin')) return;
       try {
         const [pracRes, usrRes] = await Promise.all([
           fetch('/api/practices'),
@@ -3575,7 +3609,9 @@
           const uData = await usrRes.json();
           if (uData.success) cachedUsers = uData.users || [];
         }
-        renderWorkspaceSwitcherDropdown();
+        if (currentUser.role === 'owner') {
+          renderWorkspaceSwitcherDropdown();
+        }
         renderClinicManagerModalContent();
       } catch (e) {
         console.warn('Could not load clinics/users:', e);
@@ -3586,7 +3622,7 @@
       if (!workspaceDropdownPanel || !currentUser || currentUser.role !== 'owner') return;
       workspaceDropdownPanel.innerHTML = `
         <div style="font-size: 0.65rem; font-weight: 700; text-transform: uppercase; color: #64748b; padding: 0.25rem 0.6rem; letter-spacing: 0.05em;">
-          Master Owner Mode / Preview Clinic
+          Website Owner Mode / Preview Clinic
         </div>
       `;
 
@@ -3597,8 +3633,8 @@
       masterBtn.className = `workspace-item-btn ${isMaster ? 'active' : ''}`;
       masterBtn.innerHTML = `
         <div style="display: flex; flex-direction: column; gap: 2px;">
-          <span>👑 Master Owner (Admin Control)</span>
-          <span style="font-size: 0.65rem; color: #fbbf24; font-weight: 400;">Unassigned • Manage Clinics & Users</span>
+          <span>👑 Website Owner (Master Admin)</span>
+          <span style="font-size: 0.65rem; color: #fbbf24; font-weight: 400;">Unassigned • Manage All Clinics & Users</span>
         </div>
         ${isMaster ? '<span style="color: #34d399; font-weight: 800;">✓</span>' : ''}
       `;
@@ -3617,7 +3653,7 @@
         btn.innerHTML = `
           <div style="display: flex; flex-direction: column; gap: 2px;">
             <span>${escapeHtml(prac.name)}</span>
-            <span style="font-size: 0.65rem; color: #94a3b8; font-weight: 400;">${prac.verification_count || 0} breakdowns • ${prac.user_count || 0} assigned staff</span>
+            <span style="font-size: 0.65rem; color: #94a3b8; font-weight: 400;">${prac.verification_count || 0} breakdowns • ${prac.user_count || 0} clinic accounts</span>
           </div>
           ${isCurrent ? '<span style="color: #34d399; font-weight: 800;">✓</span>' : ''}
         `;
@@ -3682,6 +3718,24 @@
 
     // Clinic & User Management Modal Logic
     function renderClinicManagerModalContent() {
+      const isOwner = currentUser && currentUser.role === 'owner';
+      const modalTitleEl = document.getElementById('clinicManagerModalTitle');
+      if (modalTitleEl) {
+        modalTitleEl.textContent = isOwner
+          ? 'Website Owner Control — Clinics, Administrators & Users'
+          : `Clinic Administrator (${currentUser?.practice_name || 'Clinic'}) — Manage Clinic & Users`;
+      }
+
+      const addClinicFormRow = document.getElementById('addClinicFormRow');
+      if (addClinicFormRow) {
+        addClinicFormRow.style.display = isOwner ? 'flex' : 'none';
+      }
+
+      const ownerRoleOpt = document.getElementById('newUserRoleOwnerOption');
+      if (ownerRoleOpt) {
+        ownerRoleOpt.style.display = isOwner ? 'block' : 'none';
+      }
+
       if (clinicCountBadge) clinicCountBadge.textContent = cachedPractices.length;
       const staffOnlyCount = cachedUsers.filter(u => u.role !== 'owner').length;
       if (userCountBadge) userCountBadge.textContent = staffOnlyCount;
@@ -3691,6 +3745,7 @@
         newUserPracticeSelect.innerHTML = cachedPractices.map(p =>
           `<option value="${escapeHtml(p.id)}">${escapeHtml(p.name)}</option>`
         ).join('');
+        newUserPracticeSelect.disabled = !isOwner;
       }
 
       // Render Clinic Workspaces List
@@ -3710,14 +3765,16 @@
               <div class="clinic-mgmt-stats">
                 <span>📋 ${prac.verification_count || 0} Patient Breakdowns</span>
                 <span>•</span>
-                <span>👥 ${prac.user_count || 0} Assigned Staff</span>
+                <span>👥 ${prac.user_count || 0} Clinic Accounts (Admin + Users)</span>
               </div>
             </div>
             <div style="display: flex; gap: 0.4rem; align-items: center; flex-wrap: wrap;">
               <button type="button" class="btn-action-ghost btn-save-clinic-name" style="padding: 0.3rem 0.6rem; font-size: 0.7rem;" title="Save new clinic name">💾 Save Name</button>
               <button type="button" class="btn-action-ghost btn-edit-clinic-payers" style="padding: 0.3rem 0.6rem; font-size: 0.7rem;" title="Edit this clinic's Insurance Directory & Portals">🏥 Edit Payers</button>
-              <button type="button" class="btn-verify-primary btn-switch-here" style="padding: 0.3rem 0.65rem; font-size: 0.7rem;">${isCurrent ? '📂 Open Workspace' : '📂 Enter Clinic'}</button>
-              <button type="button" class="del-payer-btn btn-del-clinic" title="Delete clinic workspace" style="background: none; border: none; color: #ef4444; cursor: pointer; padding: 4px;">✕</button>
+              ${isOwner ? `
+                <button type="button" class="btn-verify-primary btn-switch-here" style="padding: 0.3rem 0.65rem; font-size: 0.7rem;">${isCurrent ? '📂 Open Workspace' : '📂 Enter Clinic'}</button>
+                <button type="button" class="del-payer-btn btn-del-clinic" title="Delete clinic workspace" style="background: none; border: none; color: #ef4444; cursor: pointer; padding: 4px;">✕</button>
+              ` : ''}
             </div>
           `;
 
@@ -3735,6 +3792,7 @@
               if (currentUser && currentUser.practice_id === prac.id) {
                 currentUser.practice_name = newName;
                 if (activeWorkspaceLabel) activeWorkspaceLabel.textContent = newName;
+                try { localStorage.setItem(CACHED_USER_KEY, JSON.stringify(currentUser)); } catch (e) {}
               }
               await loadOwnerClinicsAndUsers();
               displayToast(`Renamed clinic to "${newName}"`);
@@ -3744,7 +3802,9 @@
           const editPayersBtn = card.querySelector('.btn-edit-clinic-payers');
           if (editPayersBtn) {
             editPayersBtn.addEventListener('click', async () => {
-              await switchActiveClinicWorkspace(prac.id);
+              if (isOwner && !isCurrent) {
+                await switchActiveClinicWorkspace(prac.id);
+              }
               if (clinicManagerModal) clinicManagerModal.classList.remove('active');
               openInsuranceDirectory();
             });
@@ -3779,11 +3839,15 @@
         });
       }
 
-      // Render Users List (Inline editable Full Name, Email, Clinic Assignment, Password, Delete)
+      // Render Users List (Inline editable Full Name, Email, Role, Clinic Assignment, Password, Delete)
       if (usersListContainer) {
         usersListContainer.innerHTML = '';
         cachedUsers.forEach(u => {
           const isOwnerAccount = u.role === 'owner';
+          const isClinicAdminAccount = u.role === 'clinic_admin';
+          const badgeClass = isOwnerAccount ? 'owner' : (isClinicAdminAccount ? 'clinic_admin' : 'staff');
+          const badgeLabel = isOwnerAccount ? 'WEBSITE OWNER' : (isClinicAdminAccount ? 'CLINIC ADMIN' : 'USER / STAFF');
+
           const card = document.createElement('div');
           card.className = 'user-mgmt-card';
           card.style.flexWrap = 'wrap';
@@ -3796,17 +3860,23 @@
               <div style="display: flex; align-items: center; gap: 0.45rem; flex-wrap: wrap;">
                 <input type="text" class="table-search-input user-edit-name" value="${escapeHtml(u.full_name)}" title="Edit Full Name" placeholder="Full Name" style="font-weight: 700; color: #fff; width: 175px; padding: 0.25rem 0.5rem; font-size: 0.78rem;">
                 <input type="email" class="table-search-input user-edit-email" value="${escapeHtml(u.email)}" title="Edit Login Email" placeholder="Email Address" style="color: #38bdf8; width: 205px; padding: 0.25rem 0.5rem; font-size: 0.76rem;">
-                <span class="user-role-badge ${isOwnerAccount ? 'owner' : 'staff'}">${escapeHtml(u.role)}</span>
+                <span class="user-role-badge ${badgeClass}">${badgeLabel}</span>
               </div>
               <div class="clinic-mgmt-stats">
                 ${isOwnerAccount
-                  ? '<span style="color: #fbbf24; font-weight: 600;">👑 Master Owner • Not Assigned to a Clinic (Manages Everything)</span>'
-                  : `<span>Assigned Workspace: <strong style="color: #e2e8f0;">${escapeHtml(u.practice_name || 'Unassigned')}</strong></span>`
+                  ? '<span style="color: #fbbf24; font-weight: 600;">👑 Website Owner • Not Assigned to a Clinic (Manages All Website Settings & Clinics)</span>'
+                  : `<span>Assigned Clinic: <strong style="color: #e2e8f0;">${escapeHtml(u.practice_name || 'Unassigned')}</strong> • ${isClinicAdminAccount ? '<span style="color: #38bdf8;">Manages this clinic\'s users & directory</span>' : 'Uses verification workspace'}</span>`
                 }
               </div>
             </div>
             <div style="display: flex; gap: 0.4rem; align-items: center; flex-wrap: wrap;">
               ${!isOwnerAccount ? `
+                <select class="table-search-input user-role-select" title="Account Role in Clinic" style="background: #0f172a; color: #f8fafc; border: 1px solid rgba(56, 189, 248, 0.3); border-radius: 6px; padding: 0.28rem 0.5rem; font-size: 0.72rem;">
+                  <option value="staff" ${u.role === 'staff' ? 'selected' : ''}>Clinic User (Staff)</option>
+                  <option value="clinic_admin" ${u.role === 'clinic_admin' ? 'selected' : ''}>Clinic Admin</option>
+                </select>
+              ` : ''}
+              ${!isOwnerAccount && isOwner ? `
                 <select class="table-search-input user-clinic-select" title="Assign User to Clinic" style="background: #0f172a; color: #f8fafc; border: 1px solid rgba(56, 189, 248, 0.3); border-radius: 6px; padding: 0.28rem 0.5rem; font-size: 0.72rem;">
                   ${practiceOptions}
                 </select>
@@ -3850,7 +3920,24 @@
             });
           }
 
-          // Reassign clinic dropdown (only for clinic staff users)
+          // Role selector dropdown (Clinic User vs Clinic Admin)
+          const roleSelect = card.querySelector('.user-role-select');
+          if (roleSelect) {
+            roleSelect.addEventListener('change', async () => {
+              const newRole = roleSelect.value;
+              const res = await fetch(`/api/users/${u.id}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ role: newRole })
+              });
+              if (res.ok) {
+                await loadOwnerClinicsAndUsers();
+                displayToast(`Updated role for ${u.full_name} to ${formatRoleLabel(newRole)}!`);
+              }
+            });
+          }
+
+          // Reassign clinic dropdown (Website Owner only)
           const clinicSelect = card.querySelector('.user-clinic-select');
           if (clinicSelect) {
             clinicSelect.addEventListener('change', async () => {

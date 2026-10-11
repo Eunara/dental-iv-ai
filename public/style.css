@@ -3094,13 +3094,19 @@
 
     .user-role-badge.owner {
       background: rgba(245, 158, 11, 0.2);
-      border: 1px solid rgba(245, 158, 11, 0.4);
+      border: 1px solid rgba(245, 158, 11, 0.45);
       color: #fbbf24;
+    }
+
+    .user-role-badge.clinic_admin {
+      background: rgba(56, 189, 248, 0.2);
+      border: 1px solid rgba(56, 189, 248, 0.45);
+      color: #38bdf8;
     }
 
     .user-role-badge.staff {
       background: rgba(16, 185, 129, 0.2);
-      border: 1px solid rgba(16, 185, 129, 0.4);
+      border: 1px solid rgba(16, 185, 129, 0.45);
       color: #34d399;
     }
 

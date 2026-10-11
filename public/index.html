@@ -155,7 +155,7 @@
             <span>Insurance Directory</span>
           </button>
 
-          <!-- Manage Clinics & Users (Owner Only) -->
+          <!-- Manage Clinics & Users (Owner & Clinic Admin) -->
           <button type="button" class="btn-manage-clinics" id="openClinicManagerBtn" style="display: none;" title="Manage Clinic Workspaces & Assign Users">
             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
@@ -163,7 +163,7 @@
               <path d="M23 21v-2a4 4 0 0 0-3-3.87"></path>
               <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
             </svg>
-            <span>Manage Clinics</span>
+            <span id="openClinicManagerLabel">Manage Clinics</span>
           </button>
 
           <button type="button" class="btn-history-toggle" id="openHistoryBtn" title="View Previously Verified Patients">
@@ -174,7 +174,7 @@
             <span id="headerHistoryCount">History (0)</span>
           </button>
 
-          <button type="button" class="btn-prompt-settings" id="openSettingsBtn" title="Customize AI Role & Extraction Directives">
+          <button type="button" class="btn-prompt-settings" id="openSettingsBtn" style="display: none;" title="Website Owner AI Settings & Extraction Directives">
             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <circle cx="12" cy="12" r="3"></circle>
               <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
@@ -984,7 +984,7 @@
             <path d="M23 21v-2a4 4 0 0 0-3-3.87"></path>
             <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
           </svg>
-          Clinic Workspaces & User Assignment (Owner Control)
+          <span id="clinicManagerModalTitle">Clinic Workspaces & User Assignment (Owner Control)</span>
         </h3>
         <button type="button" class="btn-close-modal" id="closeClinicManagerModalBtn">
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -1018,11 +1018,11 @@
         <div class="clinic-mgmt-pane active" id="paneWorkspaces">
           <div class="settings-info-badge" style="margin-bottom: 0.85rem;">
             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#38bdf8" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg>
-            <span>Each clinic has isolated patient verifications, audit trails, and custom payer directories. You can rename clinics or add more.</span>
+            <span id="workspacePaneInfoText">Each clinic has isolated patient verifications, audit trails, and custom payer directories. You can rename clinics or add more.</span>
           </div>
 
-          <!-- Add Clinic Form -->
-          <div style="display: flex; gap: 0.5rem; margin-bottom: 1rem;">
+          <!-- Add Clinic Form (Website Owner Only) -->
+          <div id="addClinicFormRow" style="display: flex; gap: 0.5rem; margin-bottom: 1rem;">
             <input type="text" id="newClinicNameInput" class="table-search-input" style="flex: 1;" placeholder="New Clinic Name (e.g. Westside Dental Care)...">
             <button type="button" class="btn-verify-primary" id="btnCreateClinic" style="padding: 0.4rem 0.85rem; font-size: 0.74rem;">+ Add Clinic</button>
           </div>
@@ -1037,7 +1037,7 @@
         <div class="clinic-mgmt-pane" id="paneStaffUsers" style="display: none;">
           <div class="settings-info-badge" style="margin-bottom: 0.85rem;">
             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#38bdf8" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg>
-            <span>Assign each user to their specific clinic. When they log in on dentverify.com, they will only see their assigned clinic's records.</span>
+            <span id="usersPaneInfoText">Assign each user to their specific clinic. When they log in on dentverify.com, they will only see their assigned clinic's records.</span>
           </div>
 
           <!-- Create User Toggle & Form -->
@@ -1052,11 +1052,11 @@
             <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem; margin-bottom: 0.5rem;">
               <div>
                 <label style="display: block; font-size: 0.68rem; color: #94a3b8; margin-bottom: 0.2rem;">Full Name</label>
-                <input type="text" id="newUserName" class="table-search-input" placeholder="e.g. Maria Santos">
+                <input type="text" id="newUserName" class="table-search-input" placeholder="e.g. Clinic 1 - User 3">
               </div>
               <div>
                 <label style="display: block; font-size: 0.68rem; color: #94a3b8; margin-bottom: 0.2rem;">Email</label>
-                <input type="email" id="newUserEmail" class="table-search-input" placeholder="maria@clinic2.com">
+                <input type="email" id="newUserEmail" class="table-search-input" placeholder="user3@dentverify.com">
               </div>
             </div>
             <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 0.5rem; margin-bottom: 0.6rem;">
@@ -1067,8 +1067,9 @@
               <div>
                 <label style="display: block; font-size: 0.68rem; color: #94a3b8; margin-bottom: 0.2rem;">Role</label>
                 <select id="newUserRole" class="table-search-input" style="background: #0f172a; color: #f8fafc; border: 1px solid rgba(56, 189, 248, 0.3); border-radius: 6px; padding: 0.35rem 0.5rem; font-size: 0.74rem;">
-                  <option value="staff">Staff</option>
-                  <option value="owner">Owner</option>
+                  <option value="staff">Clinic User (Staff)</option>
+                  <option value="clinic_admin">Clinic Administrator</option>
+                  <option value="owner" id="newUserRoleOwnerOption">Website Owner</option>
                 </select>
               </div>
               <div>

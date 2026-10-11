@@ -271,49 +271,69 @@ async function initDb() {
     const bcrypt = require('bcryptjs');
     const salt = bcrypt.genSaltSync(12);
 
-    // 1. Master Owner Account (NOT assigned to any clinic — manages clinics & assigns users)
+    // 1. Website Owner Account (NOT assigned to any clinic — manages all website settings, clinics & users)
     const ownerHash = bcrypt.hashSync('ClinicAdmin2026!', salt);
     await client.query(
       `INSERT INTO dentverify.users (practice_id, email, password_hash, full_name, role)
-       VALUES (NULL, 'admin@dentverify.com', $1, 'Master Owner (Admin Control)', 'owner')
-       ON CONFLICT (email) DO UPDATE SET role = 'owner', practice_id = NULL, full_name = 'Master Owner (Admin Control)';`,
+       VALUES (NULL, 'admin@dentverify.com', $1, 'Website Owner (Master Admin)', 'owner')
+       ON CONFLICT (email) DO UPDATE SET role = 'owner', practice_id = NULL;`,
       [ownerHash]
     );
 
-    // 2. Clinic 1 - User 1 Account
+    // 2. Clinic 1: Administrator + User 1 + User 2
     const clinic1Hash = bcrypt.hashSync('ClinicOne2026!', salt);
     await client.query(
       `INSERT INTO dentverify.users (practice_id, email, password_hash, full_name, role)
-       VALUES ($1, 'clinic1@dentverify.com', $2, 'Clinic 1 User 1', 'staff')
-       ON CONFLICT (email) DO NOTHING;`,
+       VALUES ($1, 'clinic1@dentverify.com', $2, 'Clinic 1 Administrator', 'clinic_admin')
+       ON CONFLICT (email) DO UPDATE SET role = 'clinic_admin', full_name = CASE WHEN dentverify.users.full_name = 'Clinic 1 User 1' THEN 'Clinic 1 Administrator' ELSE dentverify.users.full_name END;`,
       [clinic1Id, clinic1Hash]
     );
 
-    // 3. Clinic 1 - User 2 (Coworker) Account
     const staff1Hash = bcrypt.hashSync('ClinicStaff2026!', salt);
     await client.query(
       `INSERT INTO dentverify.users (practice_id, email, password_hash, full_name, role)
-       VALUES ($1, 'staff1@dentverify.com', $2, 'Clinic 1 User 2 (Coworker)', 'staff')
+       VALUES ($1, 'staff1@dentverify.com', $2, 'Clinic 1 - User 1', 'staff')
+       ON CONFLICT (email) DO UPDATE SET full_name = CASE WHEN dentverify.users.full_name = 'Clinic 1 User 2 (Coworker)' THEN 'Clinic 1 - User 1' ELSE dentverify.users.full_name END;`,
+      [clinic1Id, staff1Hash]
+    );
+
+    await client.query(
+      `INSERT INTO dentverify.users (practice_id, email, password_hash, full_name, role)
+       VALUES ($1, 'staff2@dentverify.com', $2, 'Clinic 1 - User 2', 'staff')
        ON CONFLICT (email) DO NOTHING;`,
       [clinic1Id, staff1Hash]
     );
 
-    // 4. Clinic 2 - User 3 Account
+    // 3. Clinic 2: Administrator + User 1
     const clinic2Hash = bcrypt.hashSync('ClinicTwo2026!', salt);
     await client.query(
       `INSERT INTO dentverify.users (practice_id, email, password_hash, full_name, role)
-       VALUES ($1, 'clinic2@dentverify.com', $2, 'Clinic 2 Coordinator', 'staff')
-       ON CONFLICT (email) DO NOTHING;`,
+       VALUES ($1, 'clinic2@dentverify.com', $2, 'Clinic 2 Administrator', 'clinic_admin')
+       ON CONFLICT (email) DO UPDATE SET role = 'clinic_admin', full_name = CASE WHEN dentverify.users.full_name = 'Clinic 2 Coordinator' THEN 'Clinic 2 Administrator' ELSE dentverify.users.full_name END;`,
       [clinic2Id, clinic2Hash]
     );
 
-    // 5. Clinic 3 - User 4 Account
+    await client.query(
+      `INSERT INTO dentverify.users (practice_id, email, password_hash, full_name, role)
+       VALUES ($1, 'c2user1@dentverify.com', $2, 'Clinic 2 - User 1', 'staff')
+       ON CONFLICT (email) DO NOTHING;`,
+      [clinic2Id, staff1Hash]
+    );
+
+    // 4. Clinic 3: Administrator + User 1
     const clinic3Hash = bcrypt.hashSync('ClinicThree2026!', salt);
     await client.query(
       `INSERT INTO dentverify.users (practice_id, email, password_hash, full_name, role)
-       VALUES ($1, 'clinic3@dentverify.com', $2, 'Clinic 3 Coordinator', 'staff')
-       ON CONFLICT (email) DO NOTHING;`,
+       VALUES ($1, 'clinic3@dentverify.com', $2, 'Clinic 3 Administrator', 'clinic_admin')
+       ON CONFLICT (email) DO UPDATE SET role = 'clinic_admin', full_name = CASE WHEN dentverify.users.full_name = 'Clinic 3 Coordinator' THEN 'Clinic 3 Administrator' ELSE dentverify.users.full_name END;`,
       [clinic3Id, clinic3Hash]
+    );
+
+    await client.query(
+      `INSERT INTO dentverify.users (practice_id, email, password_hash, full_name, role)
+       VALUES ($1, 'c3user1@dentverify.com', $2, 'Clinic 3 - User 1', 'staff')
+       ON CONFLICT (email) DO NOTHING;`,
+      [clinic3Id, staff1Hash]
     );
 
     console.log('✅ PostgreSQL: DentVerify multi-clinic schema & 3 workspaces initialized.');
