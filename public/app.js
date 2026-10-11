@@ -1152,6 +1152,160 @@
       }, 3000);
     }
 
+    // ==========================================
+    // CUSTOM DENTVERIFY UI DIALOG ENGINE (100% Custom UI — No Browser prompt/confirm/alert)
+    // ==========================================
+    const customDialogModal = document.getElementById('customDialogModal');
+    const customDialogTitleText = document.getElementById('customDialogTitleText');
+    const customDialogMessage = document.getElementById('customDialogMessage');
+    const customDialogInputWrap = document.getElementById('customDialogInputWrap');
+    const customDialogInput = document.getElementById('customDialogInput');
+    const customDialogError = document.getElementById('customDialogError');
+    const customDialogCancelBtn = document.getElementById('customDialogCancelBtn');
+    const customDialogConfirmBtn = document.getElementById('customDialogConfirmBtn');
+    const customDialogCloseBtn = document.getElementById('customDialogCloseBtn');
+
+    function openCustomDialog({
+      title = 'DentVerify',
+      message = '',
+      mode = 'prompt', // 'prompt' | 'confirm' | 'notice'
+      defaultValue = '',
+      inputType = 'text',
+      placeholder = '',
+      confirmText = 'Save',
+      cancelText = 'Cancel',
+      validate = null,
+    }) {
+      return new Promise((resolve) => {
+        if (!customDialogModal) {
+          resolve(null);
+          return;
+        }
+        if (customDialogTitleText) customDialogTitleText.textContent = title;
+        if (customDialogMessage) customDialogMessage.textContent = message;
+        if (customDialogError) {
+          customDialogError.style.display = 'none';
+          customDialogError.textContent = '';
+        }
+
+        if (mode === 'prompt') {
+          if (customDialogInputWrap) customDialogInputWrap.style.display = 'block';
+          if (customDialogInput) {
+            customDialogInput.type = inputType;
+            customDialogInput.value = defaultValue ?? '';
+            customDialogInput.placeholder = placeholder || '';
+          }
+          if (customDialogCancelBtn) {
+            customDialogCancelBtn.style.display = 'inline-flex';
+            customDialogCancelBtn.textContent = cancelText;
+          }
+          if (customDialogConfirmBtn) customDialogConfirmBtn.textContent = confirmText;
+        } else if (mode === 'confirm') {
+          if (customDialogInputWrap) customDialogInputWrap.style.display = 'none';
+          if (customDialogCancelBtn) {
+            customDialogCancelBtn.style.display = 'inline-flex';
+            customDialogCancelBtn.textContent = cancelText;
+          }
+          if (customDialogConfirmBtn) customDialogConfirmBtn.textContent = confirmText || 'Confirm';
+        } else {
+          // 'notice'
+          if (customDialogInputWrap) customDialogInputWrap.style.display = 'none';
+          if (customDialogCancelBtn) customDialogCancelBtn.style.display = 'none';
+          if (customDialogConfirmBtn) customDialogConfirmBtn.textContent = confirmText || 'OK';
+        }
+
+        customDialogModal.classList.add('active');
+        if (mode === 'prompt' && customDialogInput) {
+          setTimeout(() => {
+            customDialogInput.focus();
+            customDialogInput.select();
+          }, 40);
+        }
+
+        function cleanup() {
+          customDialogModal.classList.remove('active');
+          if (customDialogConfirmBtn) customDialogConfirmBtn.onclick = null;
+          if (customDialogCancelBtn) customDialogCancelBtn.onclick = null;
+          if (customDialogCloseBtn) customDialogCloseBtn.onclick = null;
+          if (customDialogInput) customDialogInput.onkeydown = null;
+        }
+
+        function handleConfirm() {
+          if (mode === 'prompt') {
+            const val = customDialogInput ? customDialogInput.value : '';
+            if (typeof validate === 'function') {
+              const errMsg = validate(val);
+              if (errMsg) {
+                if (customDialogError) {
+                  customDialogError.textContent = errMsg;
+                  customDialogError.style.display = 'block';
+                }
+                return;
+              }
+            }
+            cleanup();
+            resolve(val);
+          } else {
+            cleanup();
+            resolve(true);
+          }
+        }
+
+        function handleCancel() {
+          cleanup();
+          resolve(mode === 'prompt' ? null : false);
+        }
+
+        if (customDialogConfirmBtn) customDialogConfirmBtn.onclick = handleConfirm;
+        if (customDialogCancelBtn) customDialogCancelBtn.onclick = handleCancel;
+        if (customDialogCloseBtn) customDialogCloseBtn.onclick = handleCancel;
+        if (customDialogInput) {
+          customDialogInput.onkeydown = (e) => {
+            if (e.key === 'Enter') {
+              e.preventDefault();
+              handleConfirm();
+            } else if (e.key === 'Escape') {
+              e.preventDefault();
+              handleCancel();
+            }
+          };
+        }
+      });
+    }
+
+    function openCustomPrompt(title, message, defaultValue = '', options = {}) {
+      return openCustomDialog({
+        title,
+        message,
+        mode: 'prompt',
+        defaultValue,
+        inputType: options.inputType || 'text',
+        placeholder: options.placeholder || '',
+        confirmText: options.confirmText || 'Save Changes',
+        cancelText: options.cancelText || 'Cancel',
+        validate: options.validate || null,
+      });
+    }
+
+    function openCustomConfirm(title, message, confirmText = 'Confirm', cancelText = 'Cancel') {
+      return openCustomDialog({
+        title,
+        message,
+        mode: 'confirm',
+        confirmText,
+        cancelText,
+      });
+    }
+
+    function openCustomNotice(title, message, confirmText = 'OK') {
+      return openCustomDialog({
+        title,
+        message,
+        mode: 'notice',
+        confirmText,
+      });
+    }
+
     // Demo Sample Trigger
     loadSampleBtn.addEventListener('click', () => {
       hideAlert();
@@ -1779,7 +1933,7 @@
           <div class="category-percentage-num">${item.val}</div>
           <div class="category-sub-note">${item.sub}</div>
         `;
-        cBox.addEventListener('click', () => {
+        cBox.addEventListener('click', async () => {
           if (!currentAuditData) return;
           if (!currentAuditData.coverage_levels) currentAuditData.coverage_levels = {};
           if (!currentAuditData.insurance_details) currentAuditData.insurance_details = {};
@@ -1790,7 +1944,11 @@
             idet.missing_tooth_clause = !idet.missing_tooth_clause;
             displayToast(`Missing Tooth Clause set to: ${idet.missing_tooth_clause ? 'Yes' : 'No'}`);
           } else if (item.code === 'WAITING PERIOD') {
-            const newWp = prompt('Enter Waiting Period details (or "No" to waive):', cl.waiting_period_details || (idet.waiting_period ? 'Yes' : 'No'));
+            const newWp = await openCustomPrompt(
+              'Edit Waiting Period',
+              'Enter Waiting Period details (or "No" to waive):',
+              cl.waiting_period_details || (idet.waiting_period ? 'Yes' : 'No')
+            );
             if (newWp === null) return;
             const trimmed = newWp.trim();
             if (/^(no|none|waived|0)$/i.test(trimmed)) {
@@ -1802,7 +1960,11 @@
             }
             displayToast('Updated Waiting Period!');
           } else {
-            const newVal = prompt(`Edit coverage for ${item.code} (${item.name}):`, item.val);
+            const newVal = await openCustomPrompt(
+              `Edit ${item.code}`,
+              `Enter coverage percentage or status for ${item.code} (${item.name}):`,
+              item.val
+            );
             if (newVal === null) return;
             const v = newVal.trim() || 'NC';
             if (item.code === 'PREVENTATIVE') cl.preventive = v;
@@ -1855,9 +2017,9 @@
         if (!el) return;
         el.style.cursor = 'pointer';
         el.title = `Click to edit ${b.label}`;
-        el.onclick = (ev) => {
+        el.onclick = async (ev) => {
           ev.stopPropagation();
-          const nextVal = prompt(`Edit ${b.label}:`, b.get());
+          const nextVal = await openCustomPrompt(`Edit ${b.label}`, `Update ${b.label}:`, b.get());
           if (nextVal === null) return;
           b.set(nextVal.trim());
           renderReportDashboard(currentAuditData);
@@ -3223,7 +3385,7 @@
         const network = dirNewNetwork?.value || 'In-Network';
 
         if (!name || !address) {
-          alert('Please enter both the Portal/Carrier Name and Claims Address.');
+          await openCustomNotice('Missing Portal Details', 'Please enter both the Portal/Carrier Name and Claims Address.');
           return;
         }
 
@@ -3275,7 +3437,7 @@
       dirProcessBulkImportBtn.addEventListener('click', async () => {
         const rawText = dirBulkImportTextarea.value.trim();
         if (!rawText) {
-          alert('Please paste your insurance carrier/portal list first.');
+          await openCustomNotice('Empty Bulk Import', 'Please paste your insurance carrier/portal list first.');
           return;
         }
 
@@ -3353,7 +3515,13 @@
 
     if (dirResetDefaultsBtn) {
       dirResetDefaultsBtn.addEventListener('click', async () => {
-        if (!confirm('Reset this clinic\'s insurance directory to default sub-portals (DD CA, DD FEP, DD PPO, MetLife, Cigna, etc.)?')) return;
+        const ok = await openCustomConfirm(
+          'Reset Insurance Directory',
+          'Reset this clinic\'s insurance directory to default sub-portals (DD CA, DD FEP, DD PPO, MetLife, Cigna, etc.)?',
+          'Reset Directory',
+          'Cancel'
+        );
+        if (!ok) return;
         await savePayerDirectory(DEFAULT_PAYER_DIRECTORY.slice());
         renderDedicatedPayerDirectory();
         displayToast('Clinic insurance directory reset to defaults.');
@@ -3823,7 +3991,13 @@
           const delClinicBtn = card.querySelector('.btn-del-clinic');
           if (delClinicBtn) {
             delClinicBtn.addEventListener('click', async () => {
-              if (!confirm(`Delete clinic workspace "${prac.name}" and its records?`)) return;
+              const ok = await openCustomConfirm(
+                'Delete Clinic Workspace',
+                `Delete clinic workspace "${prac.name}" and its records?`,
+                'Delete Clinic',
+                'Cancel'
+              );
+              if (!ok) return;
               const res = await fetch(`/api/practices/${prac.id}`, { method: 'DELETE' });
               if (res.ok) {
                 if (currentUser && currentUser.practice_id === prac.id) {
@@ -3839,7 +4013,7 @@
         });
       }
 
-      // Render Users List (Inline editable Full Name, Email, Role, Clinic Assignment, Password, Delete)
+      // Render Users List (Inline editable Full Name, Email, Role, Clinic Assignment, Inline Password Form, Delete)
       if (usersListContainer) {
         usersListContainer.innerHTML = '';
         cachedUsers.forEach(u => {
@@ -3850,40 +4024,49 @@
 
           const card = document.createElement('div');
           card.className = 'user-mgmt-card';
-          card.style.flexWrap = 'wrap';
+          card.style.flexDirection = 'column';
+          card.style.alignItems = 'stretch';
           const practiceOptions = cachedPractices.map(p =>
             `<option value="${escapeHtml(p.id)}" ${p.id === u.practice_id ? 'selected' : ''}>${escapeHtml(p.name)}</option>`
           ).join('');
 
           card.innerHTML = `
-            <div style="flex: 1; min-width: 260px; display: flex; flex-direction: column; gap: 0.35rem;">
-              <div style="display: flex; align-items: center; gap: 0.45rem; flex-wrap: wrap;">
-                <input type="text" class="table-search-input user-edit-name" value="${escapeHtml(u.full_name)}" title="Edit Full Name" placeholder="Full Name" style="font-weight: 700; color: #fff; width: 175px; padding: 0.25rem 0.5rem; font-size: 0.78rem;">
-                <input type="email" class="table-search-input user-edit-email" value="${escapeHtml(u.email)}" title="Edit Login Email" placeholder="Email Address" style="color: #38bdf8; width: 205px; padding: 0.25rem 0.5rem; font-size: 0.76rem;">
-                <span class="user-role-badge ${badgeClass}">${badgeLabel}</span>
+            <div style="display: flex; justify-content: space-between; align-items: center; gap: 0.75rem; flex-wrap: wrap; width: 100%;">
+              <div style="flex: 1; min-width: 260px; display: flex; flex-direction: column; gap: 0.35rem;">
+                <div style="display: flex; align-items: center; gap: 0.45rem; flex-wrap: wrap;">
+                  <input type="text" class="table-search-input user-edit-name" value="${escapeHtml(u.full_name)}" title="Edit Full Name" placeholder="Full Name" style="font-weight: 700; color: #fff; width: 175px; padding: 0.25rem 0.5rem; font-size: 0.78rem;">
+                  <input type="email" class="table-search-input user-edit-email" value="${escapeHtml(u.email)}" title="Edit Login Email" placeholder="Email Address" style="color: #38bdf8; width: 205px; padding: 0.25rem 0.5rem; font-size: 0.76rem;">
+                  <span class="user-role-badge ${badgeClass}">${badgeLabel}</span>
+                </div>
+                <div class="clinic-mgmt-stats">
+                  ${isOwnerAccount
+                    ? '<span style="color: #fbbf24; font-weight: 600;">👑 Website Owner • Not Assigned to a Clinic (Manages All Website Settings & Clinics)</span>'
+                    : `<span>Assigned Clinic: <strong style="color: #e2e8f0;">${escapeHtml(u.practice_name || 'Unassigned')}</strong> • ${isClinicAdminAccount ? '<span style="color: #38bdf8;">Manages this clinic\'s users & directory</span>' : 'Uses verification workspace'}</span>`
+                  }
+                </div>
               </div>
-              <div class="clinic-mgmt-stats">
-                ${isOwnerAccount
-                  ? '<span style="color: #fbbf24; font-weight: 600;">👑 Website Owner • Not Assigned to a Clinic (Manages All Website Settings & Clinics)</span>'
-                  : `<span>Assigned Clinic: <strong style="color: #e2e8f0;">${escapeHtml(u.practice_name || 'Unassigned')}</strong> • ${isClinicAdminAccount ? '<span style="color: #38bdf8;">Manages this clinic\'s users & directory</span>' : 'Uses verification workspace'}</span>`
-                }
+              <div style="display: flex; gap: 0.4rem; align-items: center; flex-wrap: wrap;">
+                ${!isOwnerAccount ? `
+                  <select class="table-search-input user-role-select" title="Account Role in Clinic" style="background: #0f172a; color: #f8fafc; border: 1px solid rgba(56, 189, 248, 0.3); border-radius: 6px; padding: 0.28rem 0.5rem; font-size: 0.72rem;">
+                    <option value="staff" ${u.role === 'staff' ? 'selected' : ''}>Clinic User (Staff)</option>
+                    <option value="clinic_admin" ${u.role === 'clinic_admin' ? 'selected' : ''}>Clinic Admin</option>
+                  </select>
+                ` : ''}
+                ${!isOwnerAccount && isOwner ? `
+                  <select class="table-search-input user-clinic-select" title="Assign User to Clinic" style="background: #0f172a; color: #f8fafc; border: 1px solid rgba(56, 189, 248, 0.3); border-radius: 6px; padding: 0.28rem 0.5rem; font-size: 0.72rem;">
+                    ${practiceOptions}
+                  </select>
+                ` : ''}
+                <button type="button" class="btn-action-ghost btn-save-user-info" style="padding: 0.28rem 0.55rem; font-size: 0.68rem;" title="Save edited name & email">💾 Save</button>
+                <button type="button" class="btn-action-ghost btn-reset-user-pw" style="padding: 0.28rem 0.55rem; font-size: 0.68rem;" title="Set new password">🔑 Password</button>
+                ${!isOwnerAccount && u.id !== currentUser?.id ? `<button type="button" class="del-payer-btn btn-del-user" title="Delete user" style="background: none; border: none; color: #ef4444; cursor: pointer; padding: 4px;">✕</button>` : ''}
               </div>
             </div>
-            <div style="display: flex; gap: 0.4rem; align-items: center; flex-wrap: wrap;">
-              ${!isOwnerAccount ? `
-                <select class="table-search-input user-role-select" title="Account Role in Clinic" style="background: #0f172a; color: #f8fafc; border: 1px solid rgba(56, 189, 248, 0.3); border-radius: 6px; padding: 0.28rem 0.5rem; font-size: 0.72rem;">
-                  <option value="staff" ${u.role === 'staff' ? 'selected' : ''}>Clinic User (Staff)</option>
-                  <option value="clinic_admin" ${u.role === 'clinic_admin' ? 'selected' : ''}>Clinic Admin</option>
-                </select>
-              ` : ''}
-              ${!isOwnerAccount && isOwner ? `
-                <select class="table-search-input user-clinic-select" title="Assign User to Clinic" style="background: #0f172a; color: #f8fafc; border: 1px solid rgba(56, 189, 248, 0.3); border-radius: 6px; padding: 0.28rem 0.5rem; font-size: 0.72rem;">
-                  ${practiceOptions}
-                </select>
-              ` : ''}
-              <button type="button" class="btn-action-ghost btn-save-user-info" style="padding: 0.28rem 0.55rem; font-size: 0.68rem;" title="Save edited name & email">💾 Save</button>
-              <button type="button" class="btn-action-ghost btn-reset-user-pw" style="padding: 0.28rem 0.55rem; font-size: 0.68rem;" title="Set new password">🔑 Password</button>
-              ${!isOwnerAccount && u.id !== currentUser?.id ? `<button type="button" class="del-payer-btn btn-del-user" title="Delete user" style="background: none; border: none; color: #ef4444; cursor: pointer; padding: 4px;">✕</button>` : ''}
+            <div class="user-inline-pw-panel" style="display: none; margin-top: 0.6rem; padding-top: 0.6rem; border-top: 1px dashed rgba(56, 189, 248, 0.3); align-items: center; gap: 0.5rem; flex-wrap: wrap;">
+              <span style="font-size: 0.72rem; color: #94a3b8; font-weight: 600;">New Password for ${escapeHtml(u.email)}:</span>
+              <input type="password" class="table-search-input user-new-pw-input" placeholder="Min 8 characters..." style="flex: 1; min-width: 180px; padding: 0.32rem 0.6rem; font-size: 0.76rem; color: #fff;">
+              <button type="button" class="btn-verify-primary btn-confirm-new-pw" style="padding: 0.3rem 0.75rem; font-size: 0.72rem;">💾 Update Password</button>
+              <button type="button" class="btn-restore-defaults btn-cancel-new-pw" style="padding: 0.3rem 0.65rem; font-size: 0.72rem;">Cancel</button>
             </div>
           `;
 
@@ -3896,7 +4079,7 @@
               const newFullName = nameInput.value.trim();
               const newEmail = emailInput.value.trim().toLowerCase();
               if (!newFullName || !newEmail) {
-                alert('Name and Email cannot be empty.');
+                await openCustomNotice('Validation Notice', 'Name and Email cannot be empty.');
                 return;
               }
               const res = await fetch(`/api/users/${u.id}`, {
@@ -3915,7 +4098,7 @@
                 await loadOwnerClinicsAndUsers();
                 displayToast(`Saved changes for ${newEmail}!`);
               } else {
-                alert(data.error || 'Failed to update user.');
+                await openCustomNotice('Update Failed', data.error || 'Failed to update user.');
               }
             });
           }
@@ -3954,30 +4137,65 @@
             });
           }
 
-          // Reset password button
+          // Inline Reset Password Panel
           const pwBtn = card.querySelector('.btn-reset-user-pw');
-          pwBtn.addEventListener('click', async () => {
-            const newPassword = prompt(`Enter new password for ${u.full_name} (${u.email}):`);
-            if (!newPassword) return;
-            if (newPassword.length < 8) {
-              alert('Password must be at least 8 characters.');
-              return;
-            }
-            const res = await fetch(`/api/users/${u.id}`, {
-              method: 'PUT',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ password: newPassword })
+          const pwPanel = card.querySelector('.user-inline-pw-panel');
+          const pwInput = card.querySelector('.user-new-pw-input');
+          const pwConfirmBtn = card.querySelector('.btn-confirm-new-pw');
+          const pwCancelBtn = card.querySelector('.btn-cancel-new-pw');
+
+          if (pwBtn && pwPanel) {
+            pwBtn.addEventListener('click', () => {
+              const isHidden = pwPanel.style.display === 'none';
+              pwPanel.style.display = isHidden ? 'flex' : 'none';
+              if (isHidden && pwInput) {
+                pwInput.value = '';
+                pwInput.focus();
+              }
             });
-            if (res.ok) {
-              displayToast(`Password updated for ${u.email}!`);
-            }
-          });
+          }
+
+          if (pwCancelBtn && pwPanel) {
+            pwCancelBtn.addEventListener('click', () => {
+              pwPanel.style.display = 'none';
+              if (pwInput) pwInput.value = '';
+            });
+          }
+
+          if (pwConfirmBtn && pwInput && pwPanel) {
+            pwConfirmBtn.addEventListener('click', async () => {
+              const newPassword = pwInput.value;
+              if (!newPassword || newPassword.length < 8) {
+                await openCustomNotice('Password Too Short', 'Password must be at least 8 characters.');
+                return;
+              }
+              const res = await fetch(`/api/users/${u.id}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ password: newPassword })
+              });
+              if (res.ok) {
+                pwPanel.style.display = 'none';
+                pwInput.value = '';
+                displayToast(`Password updated for ${u.email}!`);
+              } else {
+                const errData = await res.json().catch(() => ({}));
+                await openCustomNotice('Password Update Failed', errData.error || 'Could not update password.');
+              }
+            });
+          }
 
           // Delete user button
           const delBtn = card.querySelector('.btn-del-user');
           if (delBtn) {
             delBtn.addEventListener('click', async () => {
-              if (!confirm(`Delete user account ${u.email}?`)) return;
+              const ok = await openCustomConfirm(
+                'Delete User Account',
+                `Delete user account "${u.full_name}" (${u.email})?`,
+                'Delete Account',
+                'Cancel'
+              );
+              if (!ok) return;
               const res = await fetch(`/api/users/${u.id}`, { method: 'DELETE' });
               if (res.ok) {
                 await loadOwnerClinicsAndUsers();
@@ -4034,7 +4252,7 @@
       btnCreateClinic.addEventListener('click', async () => {
         const name = newClinicNameInput.value.trim();
         if (!name) {
-          alert('Please enter a clinic workspace name.');
+          await openCustomNotice('Clinic Name Required', 'Please enter a clinic workspace name.');
           return;
         }
         const res = await fetch('/api/practices', {
@@ -4073,7 +4291,7 @@
         const practice_id = newUserPracticeSelect?.value;
 
         if (!full_name || !email || !password || !practice_id) {
-          alert('Please fill in Full Name, Email, Password, and Assigned Clinic.');
+          await openCustomNotice('Missing Fields', 'Please fill in Full Name, Email, Password, and Assigned Clinic.');
           return;
         }
 
@@ -4091,7 +4309,7 @@
           await loadOwnerClinicsAndUsers();
           displayToast(`Created & assigned user: ${email}`);
         } else {
-          alert(data.error || 'Could not create user.');
+          await openCustomNotice('Could Not Create User', data.error || 'Could not create user.');
         }
       });
     }
@@ -4361,7 +4579,13 @@
     }
 
     async function clearAllHistory() {
-      if (!confirm('Are you sure you want to clear all patient verification history?')) return;
+      const ok = await openCustomConfirm(
+        'Clear Verification History',
+        'Are you sure you want to clear all patient verification history?',
+        'Clear History',
+        'Cancel'
+      );
+      if (!ok) return;
       localStorage.removeItem(HISTORY_STORAGE_KEY);
       cachedServerHistory = [];
       renderHistoryList();
