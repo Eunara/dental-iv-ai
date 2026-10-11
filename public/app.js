@@ -3226,7 +3226,56 @@
     const btnSaveNewUser = document.getElementById('btnSaveNewUser');
     const usersListContainer = document.getElementById('usersListContainer');
 
+    const CACHED_USER_KEY = 'dv_cached_user';
+
+    function applyUserHeaderUI(user) {
+      if (gatekeeperScreen) gatekeeperScreen.style.display = 'none';
+      if (appWorkspace) appWorkspace.style.display = 'block';
+
+      if (userBadgeLabel) userBadgeLabel.textContent = user.full_name || user.email.split('@')[0];
+      if (openAuthModalBtn) {
+        openAuthModalBtn.classList.add('logged-in');
+        openAuthModalBtn.title = `${user.full_name} (${user.role.toUpperCase()} • ${user.practice_name || 'Clinic'})`;
+      }
+
+      if (activeWorkspaceLabel) {
+        activeWorkspaceLabel.textContent = user.practice_name || 'Clinic Workspace';
+      }
+
+      const isOwner = user.role === 'owner';
+      if (openClinicManagerBtn) {
+        openClinicManagerBtn.style.display = isOwner ? 'inline-flex' : 'none';
+      }
+      if (workspaceChevron) {
+        workspaceChevron.style.display = isOwner ? 'inline-block' : 'none';
+      }
+      if (btnWorkspaceSwitcher) {
+        btnWorkspaceSwitcher.style.cursor = isOwner ? 'pointer' : 'default';
+        btnWorkspaceSwitcher.title = isOwner
+          ? 'Click to switch between Clinic 1, Clinic 2, and Clinic 3'
+          : `Assigned Workspace: ${user.practice_name}`;
+      }
+
+      if (authLoggedInView) authLoggedInView.style.display = 'block';
+      if (authLoginForm) authLoginForm.style.display = 'none';
+      if (authSessionUserName) authSessionUserName.textContent = `${user.full_name || 'Clinic User'} (${user.role.toUpperCase()})`;
+      if (authSessionUserEmail) authSessionUserEmail.textContent = user.email;
+      if (authSessionPracticeName) authSessionPracticeName.textContent = `Active Workspace: ${user.practice_name || 'DentVerify Clinic'}`;
+    }
+
     async function checkUserAuth() {
+      // Instantly restore workspace UI on reload if user session is cached locally (prevents login flash)
+      try {
+        const cachedRaw = localStorage.getItem(CACHED_USER_KEY);
+        if (cachedRaw) {
+          const cachedUser = JSON.parse(cachedRaw);
+          if (cachedUser && cachedUser.email) {
+            currentUser = cachedUser;
+            applyUserHeaderUI(cachedUser);
+          }
+        }
+      } catch (e) {}
+
       try {
         const res = await fetch('/api/auth/me');
         if (res.ok) {
@@ -3245,52 +3294,22 @@
     async function setCurrentUser(user) {
       currentUser = user;
       if (user) {
-        // Hide Gatekeeper, unlock Main Workspace
-        if (gatekeeperScreen) gatekeeperScreen.style.display = 'none';
-        if (appWorkspace) appWorkspace.style.display = 'block';
-
-        // Header User Badge
-        if (userBadgeLabel) userBadgeLabel.textContent = user.full_name || user.email.split('@')[0];
-        if (openAuthModalBtn) {
-          openAuthModalBtn.classList.add('logged-in');
-          openAuthModalBtn.title = `${user.full_name} (${user.role.toUpperCase()} • ${user.practice_name || 'Clinic'})`;
-        }
-
-        // Active Workspace Pill
-        if (activeWorkspaceLabel) {
-          activeWorkspaceLabel.textContent = user.practice_name || 'Clinic Workspace';
-        }
-
-        // Owner vs Staff Controls
-        const isOwner = user.role === 'owner';
-        if (openClinicManagerBtn) {
-          openClinicManagerBtn.style.display = isOwner ? 'inline-flex' : 'none';
-        }
-        if (workspaceChevron) {
-          workspaceChevron.style.display = isOwner ? 'inline-block' : 'none';
-        }
-        if (btnWorkspaceSwitcher) {
-          btnWorkspaceSwitcher.style.cursor = isOwner ? 'pointer' : 'default';
-          btnWorkspaceSwitcher.title = isOwner
-            ? 'Click to switch between Clinic 1, Clinic 2, and Clinic 3'
-            : `Assigned Workspace: ${user.practice_name}`;
-        }
-
-        // Auth Modal Details
-        if (authLoggedInView) authLoggedInView.style.display = 'block';
-        if (authLoginForm) authLoginForm.style.display = 'none';
-        if (authSessionUserName) authSessionUserName.textContent = `${user.full_name || 'Clinic User'} (${user.role.toUpperCase()})`;
-        if (authSessionUserEmail) authSessionUserEmail.textContent = user.email;
-        if (authSessionPracticeName) authSessionPracticeName.textContent = `Active Workspace: ${user.practice_name || 'DentVerify Clinic'}`;
+        try {
+          localStorage.setItem(CACHED_USER_KEY, JSON.stringify(user));
+        } catch (e) {}
+        applyUserHeaderUI(user);
 
         // Load isolated clinic data
         await loadClinicPayersFromServer();
         await syncHistoryFromBackend();
         renderHistoryList();
-        if (isOwner) {
+        if (user.role === 'owner') {
           await loadOwnerClinicsAndUsers();
         }
       } else {
+        try {
+          localStorage.removeItem(CACHED_USER_KEY);
+        } catch (e) {}
         // Lock Workspace, Show Gatekeeper Login Screen
         if (appWorkspace) appWorkspace.style.display = 'none';
         if (gatekeeperScreen) gatekeeperScreen.style.display = 'flex';
@@ -3438,6 +3457,9 @@
         if (res.ok && data.success) {
           currentUser.practice_id = data.practice_id;
           currentUser.practice_name = data.practice_name;
+          try {
+            localStorage.setItem(CACHED_USER_KEY, JSON.stringify(currentUser));
+          } catch (e) {}
           if (activeWorkspaceLabel) activeWorkspaceLabel.textContent = data.practice_name;
           if (authSessionPracticeName) authSessionPracticeName.textContent = `Active Workspace: ${data.practice_name}`;
 
