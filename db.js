@@ -228,14 +228,14 @@ async function initDb() {
 
     if (existingPractices.rows.length === 0) {
       const c1 = await client.query(
-        `INSERT INTO dentverify.practices (name, subscription_tier, payer_directory_json) VALUES ($1, 'enterprise', $2) RETURNING id;`,
-        ['Clinic 1 (Primary Workspace)', defaultDirJson]
+        `INSERT INTO dentverify.practices (name, subscription_tier, payer_directory_json) VALUES ($1, 'pro', $2) RETURNING id;`,
+        ['Clinic 1', defaultDirJson]
       );
       clinic1Id = c1.rows[0].id;
     } else {
       clinic1Id = existingPractices.rows[0].id;
-      if (existingPractices.rows[0].name === 'DentVerify Dental Clinic') {
-        await client.query(`UPDATE dentverify.practices SET name = 'Clinic 1 (Primary Workspace)' WHERE id = $1`, [clinic1Id]);
+      if (existingPractices.rows[0].name === 'DentVerify Dental Clinic' || existingPractices.rows[0].name === 'Clinic 1 (Primary Workspace)') {
+        await client.query(`UPDATE dentverify.practices SET name = 'Clinic 1' WHERE id = $1`, [clinic1Id]);
       }
       if (!existingPractices.rows[0].payer_directory_json) {
         await client.query(`UPDATE dentverify.practices SET payer_directory_json = $1 WHERE id = $2`, [defaultDirJson, clinic1Id]);
@@ -245,11 +245,14 @@ async function initDb() {
     if (existingPractices.rows.length < 2) {
       const c2 = await client.query(
         `INSERT INTO dentverify.practices (name, subscription_tier, payer_directory_json) VALUES ($1, 'pro', $2) RETURNING id;`,
-        ['Clinic 2 Workspace', defaultDirJson]
+        ['Clinic 2', defaultDirJson]
       );
       clinic2Id = c2.rows[0].id;
     } else {
       clinic2Id = existingPractices.rows[1].id;
+      if (existingPractices.rows[1].name === 'Clinic 2 Workspace' || existingPractices.rows[1].name === 'Clinic 2 (Branch Workspace)') {
+        await client.query(`UPDATE dentverify.practices SET name = 'Clinic 2' WHERE id = $1`, [clinic2Id]);
+      }
       if (!existingPractices.rows[1].payer_directory_json) {
         await client.query(`UPDATE dentverify.practices SET payer_directory_json = $1 WHERE id = $2`, [defaultDirJson, clinic2Id]);
       }
@@ -258,11 +261,14 @@ async function initDb() {
     if (existingPractices.rows.length < 3) {
       const c3 = await client.query(
         `INSERT INTO dentverify.practices (name, subscription_tier, payer_directory_json) VALUES ($1, 'pro', $2) RETURNING id;`,
-        ['Clinic 3 Workspace', defaultDirJson]
+        ['Clinic 3', defaultDirJson]
       );
       clinic3Id = c3.rows[0].id;
     } else {
       clinic3Id = existingPractices.rows[2].id;
+      if (existingPractices.rows[2].name === 'Clinic 3 Workspace' || existingPractices.rows[2].name === 'Clinic 3 (Partner Workspace)') {
+        await client.query(`UPDATE dentverify.practices SET name = 'Clinic 3' WHERE id = $1`, [clinic3Id]);
+      }
       if (!existingPractices.rows[2].payer_directory_json) {
         await client.query(`UPDATE dentverify.practices SET payer_directory_json = $1 WHERE id = $2`, [defaultDirJson, clinic3Id]);
       }
