@@ -1771,13 +1771,99 @@
       catMatrix.forEach(item => {
         const cBox = document.createElement('div');
         cBox.className = `category-box cat-card-${item.color}`;
+        cBox.style.cursor = 'pointer';
+        cBox.title = `Click to edit ${item.code} value`;
         cBox.innerHTML = `
           <div class="category-code-tag">${item.code}</div>
           <div class="category-name-text">${item.name}</div>
           <div class="category-percentage-num">${item.val}</div>
           <div class="category-sub-note">${item.sub}</div>
         `;
+        cBox.addEventListener('click', () => {
+          if (!currentAuditData) return;
+          if (!currentAuditData.coverage_levels) currentAuditData.coverage_levels = {};
+          if (!currentAuditData.insurance_details) currentAuditData.insurance_details = {};
+          const cl = currentAuditData.coverage_levels;
+          const idet = currentAuditData.insurance_details;
+
+          if (item.code === 'MISSING TOOTH') {
+            idet.missing_tooth_clause = !idet.missing_tooth_clause;
+            displayToast(`Missing Tooth Clause set to: ${idet.missing_tooth_clause ? 'Yes' : 'No'}`);
+          } else if (item.code === 'WAITING PERIOD') {
+            const newWp = prompt('Enter Waiting Period details (or "No" to waive):', cl.waiting_period_details || (idet.waiting_period ? 'Yes' : 'No'));
+            if (newWp === null) return;
+            const trimmed = newWp.trim();
+            if (/^(no|none|waived|0)$/i.test(trimmed)) {
+              idet.waiting_period = false;
+              cl.waiting_period_details = 'None';
+            } else {
+              idet.waiting_period = true;
+              cl.waiting_period_details = trimmed;
+            }
+            displayToast('Updated Waiting Period!');
+          } else {
+            const newVal = prompt(`Edit coverage for ${item.code} (${item.name}):`, item.val);
+            if (newVal === null) return;
+            const v = newVal.trim() || 'NC';
+            if (item.code === 'PREVENTATIVE') cl.preventive = v;
+            else if (item.code === 'BASIC') cl.basic = v;
+            else if (item.code === 'MAJOR') cl.major = v;
+            else if (item.code === 'ENDO') cl.endo = v;
+            else if (item.code === 'ORAL SURGERY') cl.oral_surgery = v;
+            else if (item.code === 'IMPLANTS D6010') {
+              cl.implants = v;
+              if (d6010Code) d6010Code.coverage_percentage = v;
+            } else if (item.code === 'NIGHT GUARD') {
+              cl.night_guard = v;
+              if (d9944Code) d9944Code.coverage_percentage = v;
+            }
+            displayToast(`Updated ${item.code} to ${v}`);
+          }
+          renderReportDashboard(currentAuditData);
+          persistActiveBreakdownToDb();
+        });
         categoryCardsGrid.appendChild(cBox);
+      });
+
+      // Make all top Policy Hero Card fields click-to-edit
+      const heroEditBindings = [
+        { id: 'heroPatientNameDisplay', label: 'Patient Name', get: () => details.patient_name || '', set: (v) => { details.patient_name = v; } },
+        { id: 'heroPatientDobDisplay', label: 'Patient DOB (MM/DD/YYYY)', get: () => details.dob || '', set: (v) => { details.dob = v; } },
+        { id: 'heroGroupNameDisplay', label: 'Employer / Group Name', get: () => details.group_name || '', set: (v) => { details.group_name = v; } },
+        { id: 'heroGroupNumberDisplay', label: 'Group Number', get: () => details.group_number || '', set: (v) => { details.group_number = v; } },
+        { id: 'carrierNameDisplay', label: 'Insurance Carrier Name', get: () => details.carrier || '', set: (v) => { details.carrier = v; } },
+        { id: 'heroEffectiveDateDisplay', label: 'Effective Date', get: () => details.effective_date || '', set: (v) => { details.effective_date = v; } },
+        { id: 'heroTermedDateDisplay', label: 'Termed Date (or "Active (None)")', get: () => details.termed_date || 'Active (None)', set: (v) => { details.termed_date = v; } },
+        { id: 'heroPlanBenefitsDisplay', label: 'Plan Benefits Period (e.g. Calendar Year)', get: () => details.plan_benefits || 'Calendar Year', set: (v) => { details.plan_benefits = v; } },
+        { id: 'heroFeeScheduleDisplay', label: 'Fee Schedule / Tier', get: () => details.fee_schedule || '', set: (v) => { details.fee_schedule = v; } },
+        { id: 'heroPaymentToDisplay', label: 'Insurance Payment Goes To (Patient / Office)', get: () => details.payment_recipient || 'Office', set: (v) => { details.payment_recipient = v; } },
+        { id: 'heroClaimsAddressDisplay', label: 'Insurance Claims Mailing Address', get: () => details.insurance_address || '', set: (v) => { details.insurance_address = v; } },
+        { id: 'heroPayorIdDisplay', label: 'Electronic Payor ID', get: () => details.payor_id || '', set: (v) => { details.payor_id = v; } },
+        { id: 'hudAnnualMax', label: 'Annual Maximum ($)', get: () => details.annual_maximum ?? '', set: (v) => { const n = parseFloat(String(v).replace(/[^0-9.]/g, '')); details.annual_maximum = isNaN(n) ? null : n; } },
+        { id: 'hudRemainingMax', label: 'Remaining Annual Maximum ($)', get: () => details.remaining_maximum ?? '', set: (v) => { const n = parseFloat(String(v).replace(/[^0-9.]/g, '')); details.remaining_maximum = isNaN(n) ? null : n; } },
+        { id: 'hudDeductible', label: 'Individual Deductible ($)', get: () => details.deductible_individual ?? '', set: (v) => { const n = parseFloat(String(v).replace(/[^0-9.]/g, '')); details.deductible_individual = isNaN(n) ? null : n; } },
+        { id: 'hudRemainingDed', label: 'Remaining Deductible ($)', get: () => details.deductible_remaining ?? '', set: (v) => { const n = parseFloat(String(v).replace(/[^0-9.]/g, '')); details.deductible_remaining = isNaN(n) ? null : n; } },
+        { id: 'hudDedApplies', label: 'Deductible Applies To', get: () => details.deductible_applies_to || '', set: (v) => { details.deductible_applies_to = v; } },
+        { id: 'hudOrthoMax', label: 'Ortho Maximum (e.g. $1,000)', get: () => levels.ortho_max || '$1,000', set: (v) => { levels.ortho_max = v; } },
+        { id: 'hudOrthoRem', label: 'Remaining Ortho (e.g. $999)', get: () => levels.ortho_remaining || '$999', set: (v) => { levels.ortho_remaining = v; } },
+        { id: 'hudOrthoAgeLimit', label: 'Ortho Age Limit', get: () => levels.ortho_age_limit || '26', set: (v) => { levels.ortho_age_limit = v; } },
+        { id: 'hudOrthoCoveragePill', label: 'Ortho Coverage %', get: () => levels.ortho || '50%', set: (v) => { levels.ortho = v; } },
+      ];
+
+      heroEditBindings.forEach(b => {
+        const el = document.getElementById(b.id);
+        if (!el) return;
+        el.style.cursor = 'pointer';
+        el.title = `Click to edit ${b.label}`;
+        el.onclick = (ev) => {
+          ev.stopPropagation();
+          const nextVal = prompt(`Edit ${b.label}:`, b.get());
+          if (nextVal === null) return;
+          b.set(nextVal.trim());
+          renderReportDashboard(currentAuditData);
+          persistActiveBreakdownToDb();
+          displayToast(`Updated ${b.label}!`);
+        };
       });
 
       // Render Clean Bordered Excel Breakdown Sheet (Option 4)
@@ -1795,7 +1881,6 @@
       // Show Report Dashboard
       reportDashboard.classList.add('active');
       reportDashboard.style.display = 'block';
-      window.scrollTo({ top: 0, behavior: 'smooth' });
     }
 
     // Render CDT Table
@@ -1897,7 +1982,7 @@
 
           tr.innerHTML = `
             <td><span class="cdt-badge">${escapeHtml(p.code || 'CDT')}</span></td>
-            <td class="desc-text">${escapeHtml(p.description || '-')}</td>
+            <td class="desc-text"><span class="editable-cell" data-code="${escapeHtml(p.code)}" data-field="description" title="Click to edit Description">${escapeHtml(p.description || '-')}${editIcon}</span></td>
             <td style="text-align: center;"><span class="editable-cell" data-code="${escapeHtml(p.code)}" data-field="coverage_percentage" title="Click to edit Benefit %"><span class="pct-badge-num" style="color: #38bdf8;">${escapeHtml(p.coverage_percentage || '0%')}</span>${editIcon}</span></td>
             <td style="text-align: center;"><span class="clickable-toggle-pill" data-code="${escapeHtml(p.code)}" data-field="deductible_applied" title="Click to toggle Deductible">${dedCell}</span></td>
             <td><span class="editable-cell" data-code="${escapeHtml(p.code)}" data-field="frequency_limitation" title="Click to edit Frequency">${escapeHtml(p.frequency_limitation || '-')}${editIcon}</span></td>
@@ -1905,12 +1990,26 @@
             <td style="text-align: center;"><span class="clickable-toggle-pill" data-code="${escapeHtml(p.code)}" data-field="is_eligible" title="Click to toggle Eligibility">${statusBadge}</span></td>
             <td><span class="editable-cell history-text" data-code="${escapeHtml(p.code)}" data-field="history_dates" title="Click to edit History on File">${escapeHtml(p.history_dates || 'None')}${editIcon}</span></td>
             <td><span class="editable-cell" data-code="${escapeHtml(p.code)}" data-field="downgrade_rule" title="Click to edit Downgrade Clause">${downgradeCell}${editIcon}</span></td>
-            <td class="notes-snippet">${escapeHtml(p.notes || '-')}</td>
+            <td class="notes-snippet"><span class="editable-cell" data-code="${escapeHtml(p.code)}" data-field="notes" title="Click to edit Notes">${escapeHtml(p.notes || '-')}${editIcon}</span></td>
           `;
 
           cdtTableBody.appendChild(tr);
         });
       });
+    }
+
+    async function persistActiveBreakdownToDb() {
+      if (!currentAuditData || currentAuditData.is_sample || !currentAuditData.verification_id) return;
+      try {
+        await fetch(`/api/verifications/${currentAuditData.verification_id}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ breakdown: currentAuditData }),
+        });
+        await syncHistoryFromBackend();
+      } catch (e) {
+        console.warn('Could not persist breakdown edit:', e);
+      }
     }
 
     // CDT Table Inline Editing & Toggles Event Delegation
@@ -1934,6 +2033,7 @@
         renderCdtTable();
         renderExcelBreakdownSheet(currentAuditData);
         if (pmsModal && pmsModal.classList.contains('active')) buildPmsNote();
+        persistActiveBreakdownToDb();
         return;
       }
 
@@ -1970,6 +2070,7 @@
             if (field === 'coverage_percentage' && !val) val = '0%';
             p[field] = val;
             displayToast(`Updated ${code} ${field.replace('_', ' ')}`);
+            persistActiveBreakdownToDb();
           }
           renderCdtTable();
           renderExcelBreakdownSheet(currentAuditData);
@@ -2875,36 +2976,101 @@
       filtered.forEach(p => {
         const card = document.createElement('div');
         card.className = 'payer-directory-card';
+        card.style.flexDirection = 'column';
+        card.style.alignItems = 'stretch';
         const isOut = (p.network || 'In-Network').toLowerCase().includes('out');
         const netLabel = isOut ? 'Out-of-Network' : 'In-Network';
         const parentGroup = p.parentCarrier || 'Standard Carrier';
         const isDelta = parentGroup.toLowerCase().includes('delta') || (p.name || '').toLowerCase().includes('delta');
 
         card.innerHTML = `
-          <div class="payer-card-info">
-            <div class="payer-card-name" style="flex-wrap: wrap; gap: 0.45rem;">
-              <span class="payer-parent-badge ${isDelta ? 'delta' : ''}">${escapeHtml(parentGroup)}</span>
-              <span style="font-weight: 700; color: #fff;">${escapeHtml(p.name)}</span>
-              <button type="button" class="payer-network-toggle-badge ${isOut ? 'out' : 'in'}" data-id="${p.id}" title="Click to toggle In-Network / Out-of-Network for this portal">
-                ${netLabel}
+          <div style="display: flex; justify-content: space-between; align-items: center; gap: 0.75rem; width: 100%; flex-wrap: wrap;">
+            <div class="payer-card-info" style="flex: 1;">
+              <div class="payer-card-name" style="flex-wrap: wrap; gap: 0.45rem;">
+                <span class="payer-parent-badge ${isDelta ? 'delta' : ''}">${escapeHtml(parentGroup)}</span>
+                <span style="font-weight: 700; color: #fff;">${escapeHtml(p.name)}</span>
+                <button type="button" class="payer-network-toggle-badge ${isOut ? 'out' : 'in'}" data-id="${p.id}" title="Click to toggle In-Network / Out-of-Network for this portal">
+                  ${netLabel}
+                </button>
+              </div>
+              <div class="payer-card-addr">${escapeHtml(p.address)}</div>
+              <div class="payer-card-meta">
+                <span>Ph: ${escapeHtml(p.phone || 'N/A')}</span>
+                <span>•</span>
+                <span>Payor ID: <strong style="color: #38bdf8;">${escapeHtml(p.payorId || 'N/A')}</strong></span>
+              </div>
+            </div>
+            <div style="display: flex; gap: 0.4rem; align-items: center;">
+              <button type="button" class="btn-action-ghost btn-edit-payer" style="padding: 0.28rem 0.55rem; font-size: 0.7rem;" title="Edit portal details">
+                ✏️ Edit
+              </button>
+              <button type="button" class="btn-apply-payer" data-id="${p.id || ''}" title="Apply this sub-portal address, network status, and Payor ID to the active breakdown">
+                Apply to Policy
+              </button>
+              <button type="button" class="del-payer-btn" data-id="${p.id}" title="Remove from clinic directory" style="background: none; border: none; color: #ef4444; cursor: pointer; padding: 4px;">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
               </button>
             </div>
-            <div class="payer-card-addr">${escapeHtml(p.address)}</div>
-            <div class="payer-card-meta">
-              <span>Ph: ${escapeHtml(p.phone || 'N/A')}</span>
-              <span>•</span>
-              <span>Payor ID: <strong style="color: #38bdf8;">${escapeHtml(p.payorId || 'N/A')}</strong></span>
+          </div>
+          <div class="payer-inline-edit-panel" style="display: none; margin-top: 0.65rem; padding-top: 0.65rem; border-top: 1px solid rgba(255,255,255,0.08);">
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 0.5rem; margin-bottom: 0.5rem;">
+              <div>
+                <label style="font-size: 0.66rem; color: #94a3b8; display: block; margin-bottom: 2px;">Parent Group</label>
+                <input type="text" class="table-search-input edit-p-parent" value="${escapeHtml(parentGroup)}" style="width: 100%; font-size: 0.74rem; padding: 0.3rem 0.5rem;">
+              </div>
+              <div>
+                <label style="font-size: 0.66rem; color: #94a3b8; display: block; margin-bottom: 2px;">Portal / Carrier Name</label>
+                <input type="text" class="table-search-input edit-p-name" value="${escapeHtml(p.name)}" style="width: 100%; font-size: 0.74rem; padding: 0.3rem 0.5rem;">
+              </div>
+              <div>
+                <label style="font-size: 0.66rem; color: #94a3b8; display: block; margin-bottom: 2px;">Payor ID</label>
+                <input type="text" class="table-search-input edit-p-payorid" value="${escapeHtml(p.payorId || '')}" style="width: 100%; font-size: 0.74rem; padding: 0.3rem 0.5rem;">
+              </div>
+              <div>
+                <label style="font-size: 0.66rem; color: #94a3b8; display: block; margin-bottom: 2px;">Phone Number</label>
+                <input type="text" class="table-search-input edit-p-phone" value="${escapeHtml(p.phone || '')}" style="width: 100%; font-size: 0.74rem; padding: 0.3rem 0.5rem;">
+              </div>
+            </div>
+            <div style="display: flex; gap: 0.5rem; align-items: flex-end; flex-wrap: wrap;">
+              <div style="flex: 1; min-width: 220px;">
+                <label style="font-size: 0.66rem; color: #94a3b8; display: block; margin-bottom: 2px;">Claims Mailing Address</label>
+                <input type="text" class="table-search-input edit-p-addr" value="${escapeHtml(p.address || '')}" style="width: 100%; font-size: 0.74rem; padding: 0.3rem 0.5rem;">
+              </div>
+              <button type="button" class="btn-verify-primary btn-save-payer-edit" style="padding: 0.35rem 0.85rem; font-size: 0.72rem;">💾 Save Portal</button>
             </div>
           </div>
-          <div style="display: flex; gap: 0.4rem; align-items: center;">
-            <button type="button" class="btn-apply-payer" data-id="${p.id || ''}" title="Apply this sub-portal address, network status, and Payor ID to the active breakdown">
-              Apply to Policy
-            </button>
-            <button type="button" class="del-payer-btn" data-id="${p.id}" title="Remove from clinic directory" style="background: none; border: none; color: #ef4444; cursor: pointer; padding: 4px;">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
-            </button>
-          </div>
         `;
+
+        const editBtn = card.querySelector('.btn-edit-payer');
+        const editPanel = card.querySelector('.payer-inline-edit-panel');
+        if (editBtn && editPanel) {
+          editBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            const isHidden = editPanel.style.display === 'none';
+            editPanel.style.display = isHidden ? 'block' : 'none';
+            editBtn.textContent = isHidden ? '✕ Close' : '✏️ Edit';
+          });
+        }
+
+        const saveEditBtn = card.querySelector('.btn-save-payer-edit');
+        if (saveEditBtn) {
+          saveEditBtn.addEventListener('click', async (e) => {
+            e.stopPropagation();
+            const allPayers = getPayerDirectory();
+            const targetPayer = allPayers.find(item => item.id === p.id);
+            if (targetPayer) {
+              targetPayer.parentCarrier = card.querySelector('.edit-p-parent').value.trim() || 'Standard Carrier';
+              targetPayer.name = card.querySelector('.edit-p-name').value.trim() || targetPayer.name;
+              targetPayer.carrier = targetPayer.name;
+              targetPayer.payorId = card.querySelector('.edit-p-payorid').value.trim() || 'N/A';
+              targetPayer.phone = card.querySelector('.edit-p-phone').value.trim() || 'N/A';
+              targetPayer.address = card.querySelector('.edit-p-addr').value.trim() || 'N/A';
+              await savePayerDirectory(allPayers);
+              renderDedicatedPayerDirectory();
+              displayToast(`Updated ${targetPayer.name}!`);
+            }
+          });
+        }
 
         // Network toggle badge click
         const netBtn = card.querySelector('.payer-network-toggle-badge');
@@ -3534,11 +3700,12 @@
           const isCurrent = currentUser && prac.id === currentUser.practice_id;
           const card = document.createElement('div');
           card.className = 'clinic-mgmt-card';
+          card.style.flexWrap = 'wrap';
           card.innerHTML = `
-            <div style="flex: 1;">
-              <div class="clinic-mgmt-title">
-                <input type="text" class="table-search-input clinic-rename-input" value="${escapeHtml(prac.name)}" style="font-weight: 700; color: #fff; max-width: 280px; padding: 0.25rem 0.5rem; font-size: 0.8rem;">
-                ${isCurrent ? '<span class="user-role-badge staff">Previewing</span>' : ''}
+            <div style="flex: 1; min-width: 240px;">
+              <div class="clinic-mgmt-title" style="flex-wrap: wrap;">
+                <input type="text" class="table-search-input clinic-rename-input" value="${escapeHtml(prac.name)}" style="font-weight: 700; color: #fff; max-width: 280px; padding: 0.28rem 0.55rem; font-size: 0.8rem;">
+                ${isCurrent ? '<span class="user-role-badge staff">Active</span>' : ''}
               </div>
               <div class="clinic-mgmt-stats">
                 <span>📋 ${prac.verification_count || 0} Patient Breakdowns</span>
@@ -3546,9 +3713,11 @@
                 <span>👥 ${prac.user_count || 0} Assigned Staff</span>
               </div>
             </div>
-            <div style="display: flex; gap: 0.4rem; align-items: center;">
-              <button type="button" class="btn-action-ghost btn-save-clinic-name" style="padding: 0.3rem 0.6rem; font-size: 0.7rem;">Save Name</button>
-              ${!isCurrent ? `<button type="button" class="btn-verify-primary btn-switch-here" style="padding: 0.3rem 0.65rem; font-size: 0.7rem;">Preview Clinic</button>` : ''}
+            <div style="display: flex; gap: 0.4rem; align-items: center; flex-wrap: wrap;">
+              <button type="button" class="btn-action-ghost btn-save-clinic-name" style="padding: 0.3rem 0.6rem; font-size: 0.7rem;" title="Save new clinic name">💾 Save Name</button>
+              <button type="button" class="btn-action-ghost btn-edit-clinic-payers" style="padding: 0.3rem 0.6rem; font-size: 0.7rem;" title="Edit this clinic's Insurance Directory & Portals">🏥 Edit Payers</button>
+              <button type="button" class="btn-verify-primary btn-switch-here" style="padding: 0.3rem 0.65rem; font-size: 0.7rem;">${isCurrent ? '📂 Open Workspace' : '📂 Enter Clinic'}</button>
+              <button type="button" class="del-payer-btn btn-del-clinic" title="Delete clinic workspace" style="background: none; border: none; color: #ef4444; cursor: pointer; padding: 4px;">✕</button>
             </div>
           `;
 
@@ -3572,10 +3741,37 @@
             }
           });
 
+          const editPayersBtn = card.querySelector('.btn-edit-clinic-payers');
+          if (editPayersBtn) {
+            editPayersBtn.addEventListener('click', async () => {
+              await switchActiveClinicWorkspace(prac.id);
+              if (clinicManagerModal) clinicManagerModal.classList.remove('active');
+              openInsuranceDirectory();
+            });
+          }
+
           const switchBtn = card.querySelector('.btn-switch-here');
           if (switchBtn) {
             switchBtn.addEventListener('click', async () => {
-              await switchActiveClinicWorkspace(prac.id);
+              if (!isCurrent) {
+                await switchActiveClinicWorkspace(prac.id);
+              }
+              if (clinicManagerModal) clinicManagerModal.classList.remove('active');
+            });
+          }
+
+          const delClinicBtn = card.querySelector('.btn-del-clinic');
+          if (delClinicBtn) {
+            delClinicBtn.addEventListener('click', async () => {
+              if (!confirm(`Delete clinic workspace "${prac.name}" and its records?`)) return;
+              const res = await fetch(`/api/practices/${prac.id}`, { method: 'DELETE' });
+              if (res.ok) {
+                if (currentUser && currentUser.practice_id === prac.id) {
+                  await switchActiveClinicWorkspace('none');
+                }
+                await loadOwnerClinicsAndUsers();
+                displayToast(`Deleted clinic workspace "${prac.name}".`);
+              }
             });
           }
 
@@ -3583,38 +3779,76 @@
         });
       }
 
-      // Render Users List
+      // Render Users List (Inline editable Full Name, Email, Clinic Assignment, Password, Delete)
       if (usersListContainer) {
         usersListContainer.innerHTML = '';
         cachedUsers.forEach(u => {
           const isOwnerAccount = u.role === 'owner';
           const card = document.createElement('div');
           card.className = 'user-mgmt-card';
+          card.style.flexWrap = 'wrap';
           const practiceOptions = cachedPractices.map(p =>
             `<option value="${escapeHtml(p.id)}" ${p.id === u.practice_id ? 'selected' : ''}>${escapeHtml(p.name)}</option>`
           ).join('');
 
           card.innerHTML = `
-            <div style="flex: 1;">
-              <div class="clinic-mgmt-title">
-                <span>${escapeHtml(u.full_name)}</span>
+            <div style="flex: 1; min-width: 260px; display: flex; flex-direction: column; gap: 0.35rem;">
+              <div style="display: flex; align-items: center; gap: 0.45rem; flex-wrap: wrap;">
+                <input type="text" class="table-search-input user-edit-name" value="${escapeHtml(u.full_name)}" title="Edit Full Name" placeholder="Full Name" style="font-weight: 700; color: #fff; width: 175px; padding: 0.25rem 0.5rem; font-size: 0.78rem;">
+                <input type="email" class="table-search-input user-edit-email" value="${escapeHtml(u.email)}" title="Edit Login Email" placeholder="Email Address" style="color: #38bdf8; width: 205px; padding: 0.25rem 0.5rem; font-size: 0.76rem;">
                 <span class="user-role-badge ${isOwnerAccount ? 'owner' : 'staff'}">${escapeHtml(u.role)}</span>
               </div>
               <div class="clinic-mgmt-stats">
-                <span style="color: #38bdf8;">${escapeHtml(u.email)}</span>
-                ${isOwnerAccount ? '<span>• <strong style="color: #fbbf24;">Not Assigned to a Clinic (Manages All Workspaces)</strong></span>' : ''}
+                ${isOwnerAccount
+                  ? '<span style="color: #fbbf24; font-weight: 600;">👑 Master Owner • Not Assigned to a Clinic (Manages Everything)</span>'
+                  : `<span>Assigned Workspace: <strong style="color: #e2e8f0;">${escapeHtml(u.practice_name || 'Unassigned')}</strong></span>`
+                }
               </div>
             </div>
-            <div style="display: flex; gap: 0.45rem; align-items: center; flex-wrap: wrap;">
+            <div style="display: flex; gap: 0.4rem; align-items: center; flex-wrap: wrap;">
               ${!isOwnerAccount ? `
-                <select class="table-search-input user-clinic-select" style="background: #0f172a; color: #f8fafc; border: 1px solid rgba(56, 189, 248, 0.3); border-radius: 6px; padding: 0.28rem 0.5rem; font-size: 0.72rem;">
+                <select class="table-search-input user-clinic-select" title="Assign User to Clinic" style="background: #0f172a; color: #f8fafc; border: 1px solid rgba(56, 189, 248, 0.3); border-radius: 6px; padding: 0.28rem 0.5rem; font-size: 0.72rem;">
                   ${practiceOptions}
                 </select>
               ` : ''}
+              <button type="button" class="btn-action-ghost btn-save-user-info" style="padding: 0.28rem 0.55rem; font-size: 0.68rem;" title="Save edited name & email">💾 Save</button>
               <button type="button" class="btn-action-ghost btn-reset-user-pw" style="padding: 0.28rem 0.55rem; font-size: 0.68rem;" title="Set new password">🔑 Password</button>
               ${!isOwnerAccount && u.id !== currentUser?.id ? `<button type="button" class="del-payer-btn btn-del-user" title="Delete user" style="background: none; border: none; color: #ef4444; cursor: pointer; padding: 4px;">✕</button>` : ''}
             </div>
           `;
+
+          // Save Name & Email button
+          const saveUserBtn = card.querySelector('.btn-save-user-info');
+          const nameInput = card.querySelector('.user-edit-name');
+          const emailInput = card.querySelector('.user-edit-email');
+          if (saveUserBtn && nameInput && emailInput) {
+            saveUserBtn.addEventListener('click', async () => {
+              const newFullName = nameInput.value.trim();
+              const newEmail = emailInput.value.trim().toLowerCase();
+              if (!newFullName || !newEmail) {
+                alert('Name and Email cannot be empty.');
+                return;
+              }
+              const res = await fetch(`/api/users/${u.id}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ full_name: newFullName, email: newEmail })
+              });
+              const data = await res.json();
+              if (res.ok && data.success) {
+                if (currentUser && currentUser.id === u.id) {
+                  currentUser.full_name = newFullName;
+                  currentUser.email = newEmail;
+                  applyUserHeaderUI(currentUser);
+                  try { localStorage.setItem(CACHED_USER_KEY, JSON.stringify(currentUser)); } catch (e) {}
+                }
+                await loadOwnerClinicsAndUsers();
+                displayToast(`Saved changes for ${newEmail}!`);
+              } else {
+                alert(data.error || 'Failed to update user.');
+              }
+            });
+          }
 
           // Reassign clinic dropdown (only for clinic staff users)
           const clinicSelect = card.querySelector('.user-clinic-select');
@@ -3949,6 +4183,8 @@
           if (json.success && Array.isArray(json.history)) {
             cachedServerHistory = json.history.map(row => ({
               id: row.id,
+              practiceId: row.practice_id,
+              practiceName: row.practice_name || '',
               isDbRecord: true,
               timestamp: row.created_at,
               displayDate: new Date(row.created_at).toLocaleDateString('en-US', {
@@ -3994,6 +4230,7 @@
 
         const historyRecord = {
           id: auditData.verification_id || ('hist_' + Date.now() + '_' + Math.random().toString(36).substr(2, 5)),
+          practiceName: currentUser?.practice_name || 'Clinic Workspace',
           timestamp: new Date().toISOString(),
           displayDate: new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit' }),
           patientName: pName,
@@ -4059,6 +4296,7 @@
         list = list.filter(item =>
           (item.patientName && item.patientName.toLowerCase().includes(searchTerm)) ||
           (item.carrier && item.carrier.toLowerCase().includes(searchTerm)) ||
+          (item.practiceName && item.practiceName.toLowerCase().includes(searchTerm)) ||
           (item.networkStatus && item.networkStatus.toLowerCase().includes(searchTerm)) ||
           (item.displayDate && item.displayDate.toLowerCase().includes(searchTerm))
         );
@@ -4088,12 +4326,13 @@
         card.className = 'history-card-item';
         card.innerHTML = `
           <div class="history-card-left">
-            <div class="history-patient-row">
+            <div class="history-patient-row" style="flex-wrap: wrap;">
               <span class="patient-hero-badge" style="padding: 0.15rem 0.6rem; font-size: 0.775rem;">
                 <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
                 ${escapeHtml(item.patientName)}
               </span>
               <span class="history-patient-title">${escapeHtml(item.carrier)}</span>
+              ${item.practiceName ? `<span class="user-role-badge staff" style="font-size: 0.62rem;">🏥 ${escapeHtml(item.practiceName)}</span>` : ''}
             </div>
             <div class="history-meta-info">
               <span>Verified: ${escapeHtml(item.displayDate)}</span>
@@ -4104,8 +4343,8 @@
             </div>
           </div>
           <div class="history-actions-row">
-            <button type="button" class="btn-history-load load-hist-btn" title="View Patient Breakdown">
-              Load Audit
+            <button type="button" class="btn-history-load load-hist-btn" title="View & Edit Patient Breakdown">
+              Load / Edit
             </button>
             <button type="button" class="btn-history-delete del-hist-btn" title="Delete record">
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
