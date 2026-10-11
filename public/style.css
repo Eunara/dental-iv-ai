@@ -3104,6 +3104,104 @@
       color: #34d399;
     }
 
+    /* Full-Page Boot / Reload Loading Spinner Overlay */
+    .app-boot-loader {
+      position: fixed;
+      inset: 0;
+      z-index: 10000;
+      background: radial-gradient(circle at 50% 35%, rgba(15, 23, 42, 0.96) 0%, rgba(2, 6, 23, 0.99) 100%);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      opacity: 1;
+      transition: opacity 0.28s ease, visibility 0.28s ease;
+    }
 
+    .app-boot-loader.hidden {
+      opacity: 0;
+      visibility: hidden;
+      pointer-events: none;
+    }
 
+    .boot-loader-content {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 0.85rem;
+      text-align: center;
+    }
+
+    .boot-spinner-wrapper {
+      position: relative;
+      width: 76px;
+      height: 76px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .boot-spinner-ring {
+      position: absolute;
+      inset: 0;
+      border-radius: 50%;
+      border: 3px solid rgba(56, 189, 248, 0.14);
+      border-top-color: #38bdf8;
+      border-right-color: #06b6d4;
+      animation: bootSpin 0.9s cubic-bezier(0.5, 0.15, 0.5, 0.85) infinite;
+      box-shadow: 0 0 24px rgba(56, 189, 248, 0.22);
+    }
+
+    .boot-spinner-ring-inner {
+      position: absolute;
+      inset: 9px;
+      border-radius: 50%;
+      border: 2px solid rgba(16, 185, 129, 0.12);
+      border-bottom-color: #34d399;
+      animation: bootSpinReverse 1.35s linear infinite;
+    }
+
+    .boot-spinner-logo {
+      position: relative;
+      z-index: 2;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      animation: bootPulse 1.8s ease-in-out infinite;
+    }
+
+    .boot-loader-title {
+      font-size: 1.25rem;
+      font-weight: 800;
+      letter-spacing: -0.02em;
+      color: #f8fafc;
+      margin-top: 0.2rem;
+    }
+
+    .boot-loader-title .highlight {
+      background: linear-gradient(135deg, #38bdf8, #34d399);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    .boot-loader-sub {
+      font-size: 0.8rem;
+      font-weight: 500;
+      color: #94a3b8;
+      letter-spacing: 0.01em;
+    }
+
+    @keyframes bootSpin {
+      to { transform: rotate(360deg); }
+    }
+
+    @keyframes bootSpinReverse {
+      to { transform: rotate(-360deg); }
+    }
+
+    @keyframes bootPulse {
+      0%, 100% { transform: scale(0.95); opacity: 0.85; }
+      50% { transform: scale(1.06); opacity: 1; }
+    }
 

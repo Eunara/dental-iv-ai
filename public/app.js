@@ -3226,7 +3226,18 @@
     const btnSaveNewUser = document.getElementById('btnSaveNewUser');
     const usersListContainer = document.getElementById('usersListContainer');
 
+    const appBootLoader = document.getElementById('appBootLoader');
+    const bootLoaderSubtext = document.getElementById('bootLoaderSubtext');
     const CACHED_USER_KEY = 'dv_cached_user';
+
+    function showBootLoader(message = 'Verifying clinic session & loading workspace...') {
+      if (bootLoaderSubtext) bootLoaderSubtext.textContent = message;
+      if (appBootLoader) appBootLoader.classList.remove('hidden');
+    }
+
+    function hideBootLoader() {
+      if (appBootLoader) appBootLoader.classList.add('hidden');
+    }
 
     function applyUserHeaderUI(user) {
       if (gatekeeperScreen) gatekeeperScreen.style.display = 'none';
@@ -3264,7 +3275,8 @@
     }
 
     async function checkUserAuth() {
-      // Instantly restore workspace UI on reload if user session is cached locally (prevents login flash)
+      showBootLoader('Verifying clinic session & loading workspace...');
+      // Instantly restore workspace UI behind the spinner if user session is cached locally
       try {
         const cachedRaw = localStorage.getItem(CACHED_USER_KEY);
         if (cachedRaw) {
@@ -3282,6 +3294,7 @@
           const data = await res.json();
           if (data.authenticated && data.user) {
             await setCurrentUser(data.user);
+            hideBootLoader();
             return;
           }
         }
@@ -3289,6 +3302,7 @@
         console.warn('Auth check skipped:', err);
       }
       await setCurrentUser(null);
+      hideBootLoader();
     }
 
     async function setCurrentUser(user) {
