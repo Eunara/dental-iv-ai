@@ -3329,7 +3329,12 @@
             gatePassword.value = '';
             await setCurrentUser(data.user);
             resetInactivityTimer();
-            displayToast(`Unlocked ${data.user.practice_name || 'Clinic Workspace'} — Welcome, ${data.user.full_name}!`);
+            if (data.user.role === 'owner') {
+              if (clinicManagerModal) clinicManagerModal.classList.add('active');
+              displayToast(`Welcome Master Owner! Manage your clinics and assign users.`);
+            } else {
+              displayToast(`Unlocked ${data.user.practice_name || 'Clinic Workspace'} — Welcome, ${data.user.full_name}!`);
+            }
           } else {
             if (gateErrorMsg) {
               gateErrorMsg.textContent = data.error || 'Invalid clinic email or password.';
@@ -3382,9 +3387,28 @@
       if (!workspaceDropdownPanel || !currentUser || currentUser.role !== 'owner') return;
       workspaceDropdownPanel.innerHTML = `
         <div style="font-size: 0.65rem; font-weight: 700; text-transform: uppercase; color: #64748b; padding: 0.25rem 0.6rem; letter-spacing: 0.05em;">
-          Switch Active Clinic Workspace
+          Master Owner Mode / Preview Clinic
         </div>
       `;
+
+      // Top option: Master Owner Mode (No Clinic Assigned)
+      const isMaster = !currentUser.practice_id;
+      const masterBtn = document.createElement('button');
+      masterBtn.type = 'button';
+      masterBtn.className = `workspace-item-btn ${isMaster ? 'active' : ''}`;
+      masterBtn.innerHTML = `
+        <div style="display: flex; flex-direction: column; gap: 2px;">
+          <span>👑 Master Owner (Admin Control)</span>
+          <span style="font-size: 0.65rem; color: #fbbf24; font-weight: 400;">Unassigned • Manage Clinics & Users</span>
+        </div>
+        ${isMaster ? '<span style="color: #34d399; font-weight: 800;">✓</span>' : ''}
+      `;
+      masterBtn.addEventListener('click', async () => {
+        workspaceDropdownPanel.style.display = 'none';
+        if (isMaster) return;
+        await switchActiveClinicWorkspace('none');
+      });
+      workspaceDropdownPanel.appendChild(masterBtn);
 
       cachedPractices.forEach(prac => {
         const isCurrent = prac.id === currentUser.practice_id;
@@ -3394,7 +3418,7 @@
         btn.innerHTML = `
           <div style="display: flex; flex-direction: column; gap: 2px;">
             <span>${escapeHtml(prac.name)}</span>
-            <span style="font-size: 0.65rem; color: #94a3b8; font-weight: 400;">${prac.verification_count || 0} breakdowns • ${prac.user_count || 0} staff</span>
+            <span style="font-size: 0.65rem; color: #94a3b8; font-weight: 400;">${prac.verification_count || 0} breakdowns • ${prac.user_count || 0} assigned staff</span>
           </div>
           ${isCurrent ? '<span style="color: #34d399; font-weight: 800;">✓</span>' : ''}
         `;
@@ -3417,13 +3441,13 @@
           if (activeWorkspaceLabel) activeWorkspaceLabel.textContent = data.practice_name;
           if (authSessionPracticeName) authSessionPracticeName.textContent = `Active Workspace: ${data.practice_name}`;
 
-          // Clear current audit screen if open and reload isolated clinic data
+          // Reload isolated clinic data
           await loadClinicPayersFromServer();
           await syncHistoryFromBackend();
           renderHistoryList();
           renderWorkspaceSwitcherDropdown();
           renderClinicManagerModalContent();
-          displayToast(`Switched active workspace to: ${data.practice_name}`);
+          displayToast(`Active mode: ${data.practice_name}`);
         } else {
           displayToast(data.error || 'Failed to switch clinic workspace.');
         }
@@ -3457,7 +3481,8 @@
     // Clinic & User Management Modal Logic
     function renderClinicManagerModalContent() {
       if (clinicCountBadge) clinicCountBadge.textContent = cachedPractices.length;
-      if (userCountBadge) userCountBadge.textContent = cachedUsers.length;
+      const staffOnlyCount = cachedUsers.filter(u => u.role !== 'owner').length;
+      if (userCountBadge) userCountBadge.textContent = staffOnlyCount;
 
       // Populate Practice Select in Add User Form
       if (newUserPracticeSelect) {
@@ -3477,17 +3502,17 @@
             <div style="flex: 1;">
               <div class="clinic-mgmt-title">
                 <input type="text" class="table-search-input clinic-rename-input" value="${escapeHtml(prac.name)}" style="font-weight: 700; color: #fff; max-width: 280px; padding: 0.25rem 0.5rem; font-size: 0.8rem;">
-                ${isCurrent ? '<span class="user-role-badge staff">Active</span>' : ''}
+                ${isCurrent ? '<span class="user-role-badge staff">Previewing</span>' : ''}
               </div>
               <div class="clinic-mgmt-stats">
                 <span>📋 ${prac.verification_count || 0} Patient Breakdowns</span>
                 <span>•</span>
-                <span>👥 ${prac.user_count || 0} Assigned Users</span>
+                <span>👥 ${prac.user_count || 0} Assigned Staff</span>
               </div>
             </div>
             <div style="display: flex; gap: 0.4rem; align-items: center;">
               <button type="button" class="btn-action-ghost btn-save-clinic-name" style="padding: 0.3rem 0.6rem; font-size: 0.7rem;">Save Name</button>
-              ${!isCurrent ? `<button type="button" class="btn-verify-primary btn-switch-here" style="padding: 0.3rem 0.65rem; font-size: 0.7rem;">Switch Here</button>` : ''}
+              ${!isCurrent ? `<button type="button" class="btn-verify-primary btn-switch-here" style="padding: 0.3rem 0.65rem; font-size: 0.7rem;">Preview Clinic</button>` : ''}
             </div>
           `;
 
@@ -3526,6 +3551,7 @@
       if (usersListContainer) {
         usersListContainer.innerHTML = '';
         cachedUsers.forEach(u => {
+          const isOwnerAccount = u.role === 'owner';
           const card = document.createElement('div');
           card.className = 'user-mgmt-card';
           const practiceOptions = cachedPractices.map(p =>
@@ -3536,35 +3562,40 @@
             <div style="flex: 1;">
               <div class="clinic-mgmt-title">
                 <span>${escapeHtml(u.full_name)}</span>
-                <span class="user-role-badge ${u.role === 'owner' ? 'owner' : 'staff'}">${escapeHtml(u.role)}</span>
+                <span class="user-role-badge ${isOwnerAccount ? 'owner' : 'staff'}">${escapeHtml(u.role)}</span>
               </div>
               <div class="clinic-mgmt-stats">
                 <span style="color: #38bdf8;">${escapeHtml(u.email)}</span>
+                ${isOwnerAccount ? '<span>• <strong style="color: #fbbf24;">Not Assigned to a Clinic (Manages All Workspaces)</strong></span>' : ''}
               </div>
             </div>
             <div style="display: flex; gap: 0.45rem; align-items: center; flex-wrap: wrap;">
-              <select class="table-search-input user-clinic-select" style="background: #0f172a; color: #f8fafc; border: 1px solid rgba(56, 189, 248, 0.3); border-radius: 6px; padding: 0.28rem 0.5rem; font-size: 0.72rem;">
-                ${practiceOptions}
-              </select>
+              ${!isOwnerAccount ? `
+                <select class="table-search-input user-clinic-select" style="background: #0f172a; color: #f8fafc; border: 1px solid rgba(56, 189, 248, 0.3); border-radius: 6px; padding: 0.28rem 0.5rem; font-size: 0.72rem;">
+                  ${practiceOptions}
+                </select>
+              ` : ''}
               <button type="button" class="btn-action-ghost btn-reset-user-pw" style="padding: 0.28rem 0.55rem; font-size: 0.68rem;" title="Set new password">🔑 Password</button>
-              ${u.id !== currentUser?.id ? `<button type="button" class="del-payer-btn btn-del-user" title="Delete user" style="background: none; border: none; color: #ef4444; cursor: pointer; padding: 4px;">✕</button>` : ''}
+              ${!isOwnerAccount && u.id !== currentUser?.id ? `<button type="button" class="del-payer-btn btn-del-user" title="Delete user" style="background: none; border: none; color: #ef4444; cursor: pointer; padding: 4px;">✕</button>` : ''}
             </div>
           `;
 
-          // Reassign clinic dropdown
+          // Reassign clinic dropdown (only for clinic staff users)
           const clinicSelect = card.querySelector('.user-clinic-select');
-          clinicSelect.addEventListener('change', async () => {
-            const newPracticeId = clinicSelect.value;
-            const res = await fetch(`/api/users/${u.id}`, {
-              method: 'PUT',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ practice_id: newPracticeId })
+          if (clinicSelect) {
+            clinicSelect.addEventListener('change', async () => {
+              const newPracticeId = clinicSelect.value;
+              const res = await fetch(`/api/users/${u.id}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ practice_id: newPracticeId })
+              });
+              if (res.ok) {
+                await loadOwnerClinicsAndUsers();
+                displayToast(`Assigned ${u.full_name} to new clinic workspace!`);
+              }
             });
-            if (res.ok) {
-              await loadOwnerClinicsAndUsers();
-              displayToast(`Assigned ${u.full_name} to new clinic workspace!`);
-            }
-          });
+          }
 
           // Reset password button
           const pwBtn = card.querySelector('.btn-reset-user-pw');

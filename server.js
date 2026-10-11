@@ -74,20 +74,22 @@ const authMiddleware = async (req, res, next) => {
     const userRes = await db.query(
       `SELECT u.id, u.email, u.full_name, u.role, u.practice_id, p.name as practice_name 
        FROM dentverify.users u 
-       JOIN dentverify.practices p ON u.practice_id = p.id 
+       LEFT JOIN dentverify.practices p ON u.practice_id = p.id 
        WHERE u.id = $1 AND u.is_active = true`,
       [decoded.userId]
     );
     if (userRes.rows.length > 0) {
       const u = userRes.rows[0];
       // If owner switched active clinic workspace, honor decoded.activePracticeId
-      if (u.role === 'owner' && decoded.activePracticeId && decoded.activePracticeId !== u.practice_id) {
+      if (u.role === 'owner' && decoded.activePracticeId) {
         const pRes = await db.query('SELECT id, name FROM dentverify.practices WHERE id = $1', [decoded.activePracticeId]);
         if (pRes.rows.length > 0) {
           u.home_practice_id = u.practice_id;
           u.practice_id = pRes.rows[0].id;
           u.practice_name = pRes.rows[0].name;
         }
+      } else if (u.role === 'owner' && !u.practice_id) {
+        u.practice_name = 'Master Owner (Admin Control)';
       }
       req.user = u;
     } else {
@@ -1107,7 +1109,7 @@ app.post('/api/auth/login', loginLimiter, async (req, res) => {
     const userRes = await db.query(
       `SELECT u.id, u.email, u.password_hash, u.full_name, u.role, u.practice_id, u.is_active, p.name as practice_name 
        FROM dentverify.users u 
-       JOIN dentverify.practices p ON u.practice_id = p.id 
+       LEFT JOIN dentverify.practices p ON u.practice_id = p.id 
        WHERE LOWER(u.email) = LOWER($1)`,
       [email.trim()]
     );
@@ -1126,6 +1128,10 @@ app.post('/api/auth/login', loginLimiter, async (req, res) => {
     if (!isMatch) {
       await recordAuditLog(req, 'LOGIN_FAILED', user.id, { reason: 'Password mismatch' });
       return res.status(401).json({ error: 'Invalid email or password.' });
+    }
+
+    if (user.role === 'owner' && !user.practice_id) {
+      user.practice_name = 'Master Owner (Admin Control)';
     }
 
     // Generate JWT (12 hours expiration with rolling session)
@@ -1202,7 +1208,7 @@ app.get('/api/practices', async (req, res) => {
     if (req.user.role === 'owner') {
       const result = await db.query(`
         SELECT p.id, p.name, p.subscription_tier, p.created_at,
-               (SELECT count(*)::int FROM dentverify.users u WHERE u.practice_id = p.id) as user_count,
+               (SELECT count(*)::int FROM dentverify.users u WHERE u.practice_id = p.id AND u.role != 'owner') as user_count,
                (SELECT count(*)::int FROM dentverify.verifications v WHERE v.practice_id = p.id) as verification_count
         FROM dentverify.practices p
         ORDER BY p.created_at ASC;
@@ -1281,13 +1287,37 @@ app.put('/api/practices/:id', async (req, res) => {
   }
 });
 
-// POST /api/practices/switch/:id (Owner switches active clinic session)
+// POST /api/practices/switch/:id (Owner switches active clinic session or returns to Master Owner mode)
 app.post('/api/practices/switch/:id', async (req, res) => {
   if (!req.user || req.user.role !== 'owner') {
     return res.status(403).json({ error: 'Only the clinic owner can switch between clinic workspaces.' });
   }
   try {
     const { id } = req.params;
+    if (id === 'none') {
+      const token = jwt.sign(
+        {
+          userId: req.user.id,
+          practiceId: null,
+          activePracticeId: null,
+          role: req.user.role,
+        },
+        JWT_SECRET,
+        { expiresIn: '12h' }
+      );
+      res.cookie('dentverify_token', token, {
+        httpOnly: true,
+        secure: false,
+        sameSite: 'lax',
+        maxAge: 12 * 60 * 60 * 1000,
+      });
+      return res.json({
+        success: true,
+        practice_id: null,
+        practice_name: 'Master Owner (Admin Control)',
+      });
+    }
+
     const pCheck = await db.query('SELECT id, name FROM dentverify.practices WHERE id = $1', [id]);
     if (pCheck.rows.length === 0) {
       return res.status(404).json({ error: 'Clinic workspace not found.' });
@@ -1297,7 +1327,7 @@ app.post('/api/practices/switch/:id', async (req, res) => {
     const token = jwt.sign(
       {
         userId: req.user.id,
-        practiceId: req.user.home_practice_id || req.user.practice_id,
+        practiceId: null,
         activePracticeId: targetPractice.id,
         role: req.user.role,
       },
@@ -1313,7 +1343,12 @@ app.post('/api/practices/switch/:id', async (req, res) => {
     });
 
     await recordAuditLog(req, 'SWITCH_WORKSPACE', targetPractice.id, { switched_to: targetPractice.name });
-    res.json({ success: true, active_practice: targetPractice });
+    res.json({
+      success: true,
+      practice_id: targetPractice.id,
+      practice_name: targetPractice.name,
+      active_practice: targetPractice,
+    });
   } catch (err) {
     console.error('Error switching practice:', err);
     res.status(500).json({ error: 'Failed to switch workspace.' });
@@ -1333,8 +1368,8 @@ app.get('/api/users', async (req, res) => {
     const result = await db.query(`
       SELECT u.id, u.email, u.full_name, u.role, u.is_active, u.practice_id, p.name as practice_name, u.last_login_at, u.created_at
       FROM dentverify.users u
-      JOIN dentverify.practices p ON u.practice_id = p.id
-      ORDER BY p.name ASC, u.email ASC;
+      LEFT JOIN dentverify.practices p ON u.practice_id = p.id
+      ORDER BY CASE WHEN u.role = 'owner' THEN 0 ELSE 1 END, p.name ASC NULLS FIRST, u.email ASC;
     `);
     res.json({ success: true, users: result.rows });
   } catch (err) {
@@ -1350,19 +1385,21 @@ app.post('/api/users', async (req, res) => {
   }
   try {
     const { email, password, full_name, practice_id, role } = req.body;
-    if (!email || !password || !full_name || !practice_id) {
+    const targetRole = role || 'staff';
+    if (!email || !password || !full_name || (targetRole !== 'owner' && !practice_id)) {
       return res.status(400).json({ error: 'Email, password, full name, and assigned clinic are required.' });
     }
     const salt = bcrypt.genSaltSync(12);
     const hash = bcrypt.hashSync(password, salt);
+    const assignedPracticeId = targetRole === 'owner' ? null : practice_id;
 
     const insertRes = await db.query(`
       INSERT INTO dentverify.users (practice_id, email, password_hash, full_name, role)
       VALUES ($1, $2, $3, $4, $5)
       RETURNING id, email, full_name, role, practice_id;
-    `, [practice_id, email.trim().toLowerCase(), hash, full_name.trim(), role || 'staff']);
+    `, [assignedPracticeId, email.trim().toLowerCase(), hash, full_name.trim(), targetRole]);
 
-    await recordAuditLog(req, 'CREATE_USER', insertRes.rows[0].id, { email: email.trim(), practice_id });
+    await recordAuditLog(req, 'CREATE_USER', insertRes.rows[0].id, { email: email.trim(), practice_id: assignedPracticeId });
     res.json({ success: true, user: insertRes.rows[0] });
   } catch (err) {
     if (err.code === '23505') {
@@ -1390,8 +1427,8 @@ app.put('/api/users/:id', async (req, res) => {
       params.push(full_name.trim());
       fields.push(`full_name = $${params.length}`);
     }
-    if (practice_id) {
-      params.push(practice_id);
+    if (practice_id !== undefined) {
+      params.push(practice_id || null);
       fields.push(`practice_id = $${params.length}`);
     }
     if (role) {
@@ -1455,6 +1492,14 @@ app.delete('/api/users/:id', async (req, res) => {
 app.get('/api/payers', async (req, res) => {
   if (!req.user) return res.status(401).json({ error: 'Unauthorized' });
   try {
+    if (!req.user.practice_id) {
+      return res.json({
+        success: true,
+        payers: db.DEFAULT_CLINIC_PAYER_DIRECTORY,
+        practice_id: null,
+        practice_name: 'Master Owner (Admin Control)',
+      });
+    }
     const result = await db.query(
       `SELECT payer_directory_json FROM dentverify.practices WHERE id = $1`,
       [req.user.practice_id]
@@ -1475,6 +1520,9 @@ app.post('/api/payers', async (req, res) => {
     if (!Array.isArray(payers)) {
       return res.status(400).json({ error: 'Payers list must be an array.' });
     }
+    if (!req.user.practice_id) {
+      return res.json({ success: true, payers });
+    }
     await db.query(
       `UPDATE dentverify.practices SET payer_directory_json = $1 WHERE id = $2`,
       [JSON.stringify(payers), req.user.practice_id]
@@ -1491,7 +1539,6 @@ app.post('/api/payers', async (req, res) => {
 // PERSISTENT VERIFICATION HISTORY ENDPOINTS
 // ==========================================
 
-// GET /api/verifications (List history records)
 // GET /api/verifications (List history records strictly for active clinic)
 app.get('/api/verifications', async (req, res) => {
   if (!req.user) {
@@ -1499,6 +1546,9 @@ app.get('/api/verifications', async (req, res) => {
   }
   try {
     const practiceId = req.user.practice_id;
+    if (!practiceId) {
+      return res.json({ success: true, history: [] });
+    }
     const queryStr = `SELECT id, carrier, patient_name_enc, patient_name_masked, member_id_enc, dob_enc, network_status, created_at,
                              breakdown_json->'insurance_details'->>'plan_benefits' as plan_benefits,
                              breakdown_json->'insurance_details'->>'effective_date' as effective_date,

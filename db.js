@@ -271,25 +271,34 @@ async function initDb() {
     const bcrypt = require('bcryptjs');
     const salt = bcrypt.genSaltSync(12);
 
-    // 1. Owner Account (Clinic 1)
+    // 1. Master Owner Account (NOT assigned to any clinic — manages clinics & assigns users)
     const ownerHash = bcrypt.hashSync('ClinicAdmin2026!', salt);
     await client.query(
       `INSERT INTO dentverify.users (practice_id, email, password_hash, full_name, role)
-       VALUES ($1, 'admin@dentverify.com', $2, 'System Owner (Primary)', 'owner')
-       ON CONFLICT (email) DO UPDATE SET role = 'owner';`,
-      [clinic1Id, ownerHash]
+       VALUES (NULL, 'admin@dentverify.com', $1, 'Master Owner (Admin Control)', 'owner')
+       ON CONFLICT (email) DO UPDATE SET role = 'owner', practice_id = NULL, full_name = 'Master Owner (Admin Control)';`,
+      [ownerHash]
     );
 
-    // 2. Coworker Account (Clinic 1)
+    // 2. Clinic 1 - User 1 Account
+    const clinic1Hash = bcrypt.hashSync('ClinicOne2026!', salt);
+    await client.query(
+      `INSERT INTO dentverify.users (practice_id, email, password_hash, full_name, role)
+       VALUES ($1, 'clinic1@dentverify.com', $2, 'Clinic 1 User 1', 'staff')
+       ON CONFLICT (email) DO NOTHING;`,
+      [clinic1Id, clinic1Hash]
+    );
+
+    // 3. Clinic 1 - User 2 (Coworker) Account
     const staff1Hash = bcrypt.hashSync('ClinicStaff2026!', salt);
     await client.query(
       `INSERT INTO dentverify.users (practice_id, email, password_hash, full_name, role)
-       VALUES ($1, 'staff1@dentverify.com', $2, 'Clinic 1 Coworker', 'staff')
+       VALUES ($1, 'staff1@dentverify.com', $2, 'Clinic 1 User 2 (Coworker)', 'staff')
        ON CONFLICT (email) DO NOTHING;`,
       [clinic1Id, staff1Hash]
     );
 
-    // 3. User 3 Account (Clinic 2)
+    // 4. Clinic 2 - User 3 Account
     const clinic2Hash = bcrypt.hashSync('ClinicTwo2026!', salt);
     await client.query(
       `INSERT INTO dentverify.users (practice_id, email, password_hash, full_name, role)
@@ -298,7 +307,7 @@ async function initDb() {
       [clinic2Id, clinic2Hash]
     );
 
-    // 4. User 4 Account (Clinic 3)
+    // 5. Clinic 3 - User 4 Account
     const clinic3Hash = bcrypt.hashSync('ClinicThree2026!', salt);
     await client.query(
       `INSERT INTO dentverify.users (practice_id, email, password_hash, full_name, role)
