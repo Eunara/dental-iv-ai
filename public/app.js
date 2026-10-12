@@ -3291,8 +3291,7 @@
       }
     });
 
-    // Initialize prompt values on page load
-    loadPromptSettings();
+    // Prompt values are loaded on-demand when an authenticated Owner opens Settings
 
     // ==========================================
     // DEDICATED INSURANCE DIRECTORY & SUB-PORTALS UI
@@ -3904,6 +3903,7 @@
       if (user) {
         try {
           localStorage.setItem(CACHED_USER_KEY, JSON.stringify(user));
+          localStorage.removeItem(HISTORY_STORAGE_KEY);
         } catch (e) {}
         applyUserHeaderUI(user);
 
@@ -3911,13 +3911,23 @@
         await loadClinicPayersFromServer();
         await syncHistoryFromBackend();
         renderHistoryList();
+        if (user.role === 'owner') {
+          loadPromptSettings();
+        }
         if (user.role === 'owner' || user.role === 'clinic_admin') {
           await loadOwnerClinicsAndUsers();
         }
       } else {
         try {
           localStorage.removeItem(CACHED_USER_KEY);
+          localStorage.removeItem(HISTORY_STORAGE_KEY);
+          localStorage.removeItem(PAYER_DIRECTORY_STORAGE_KEY);
         } catch (e) {}
+        cachedServerHistory = [];
+        cachedPractices = [];
+        cachedUsers = [];
+        resetVerificationState();
+        updateHistoryCountUI();
         // Lock Workspace, Show Gatekeeper Login Screen
         if (appWorkspace) appWorkspace.style.display = 'none';
         if (gatekeeperScreen) gatekeeperScreen.style.display = 'flex';

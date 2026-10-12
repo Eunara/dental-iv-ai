@@ -10,14 +10,21 @@ const { GoogleGenAI, Type } = require('@google/genai');
 const db = require('./db');
 
 const app = express();
+app.set('trust proxy', 1);
+app.disable('x-powered-by');
+
 const PORT = process.env.PORT || 3000;
-const JWT_SECRET = process.env.JWT_SECRET || 'f9f25bef7e2851f7f9e4860182e5d2138931b1d42d7fbf34430115661edc656a';
+if (!process.env.JWT_SECRET || process.env.JWT_SECRET.length < 32) {
+  console.error('❌ CRITICAL SECURITY ERROR: Valid JWT_SECRET is required in .env');
+  process.exit(1);
+}
+const JWT_SECRET = process.env.JWT_SECRET;
 
 // Configure Multer for memory buffer storage (up to 25MB)
 const storage = multer.memoryStorage();
 const upload = multer({
   storage,
-  limits: { fileSize: 25 * 1024 * 1024 }, // 25 MB max file size
+  limits: { fileSize: 25 * 1024 * 1024, files: 10 }, // 25 MB max file size, max 10 files
   fileFilter: (req, file, cb) => {
     const allowedMimeTypes = [
       'application/pdf',
@@ -38,11 +45,22 @@ const upload = multer({
   },
 });
 
-// Disable client caching for fast updates
+// Strict HTTP Security Headers & Anti-Scraping / Anti-Caching Directives
 app.use((req, res, next) => {
   res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
   res.setHeader('Pragma', 'no-cache');
   res.setHeader('Expires', '0');
+  res.setHeader('X-Content-Type-Options', 'nosniff');
+  res.setHeader('X-Frame-Options', 'DENY');
+  res.setHeader('X-XSS-Protection', '1; mode=block');
+  res.setHeader('Referrer-Policy', 'no-referrer');
+  res.setHeader('Permissions-Policy', 'camera=(), microphone=(), geolocation=(), payment=()');
+  res.setHeader('X-Robots-Tag', 'noindex, nofollow, noarchive, nosnippet');
+  res.setHeader('Strict-Transport-Security', 'max-age=31536000; includeSubDomains');
+  res.setHeader(
+    'Content-Security-Policy',
+    "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com data:; img-src 'self' data: blob:; connect-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'self';"
+  );
   next();
 });
 
@@ -50,14 +68,30 @@ app.use((req, res, next) => {
 app.use(express.static(path.join(__dirname, 'public'), {
   etag: false,
   lastModified: false,
+  dotfiles: 'deny',
   setHeaders: (res) => {
     res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
     res.setHeader('Pragma', 'no-cache');
     res.setHeader('Expires', '0');
   }
 }));
-app.use(express.json());
+app.use(express.json({ limit: '2mb' }));
 app.use(cookieParser());
+
+// Helper: Redact plaintext PHI (patient_name, dob, member_id) inside breakdown_json before storing in PostgreSQL
+// (Encrypted versions are stored in patient_name_enc, dob_enc, member_id_enc and decrypted only for authorized clinic sessions)
+function sanitizeBreakdownForStorage(breakdown) {
+  if (!breakdown || typeof breakdown !== 'object') return breakdown;
+  const copy = JSON.parse(JSON.stringify(breakdown));
+  if (copy.insurance_details && typeof copy.insurance_details === 'object') {
+    copy.insurance_details.patient_name = '[ENCRYPTED_AES256]';
+    copy.insurance_details.dob = '[ENCRYPTED_AES256]';
+    delete copy.insurance_details.member_id;
+    delete copy.insurance_details.subscriber_id;
+    delete copy.insurance_details.ssn;
+  }
+  return copy;
+}
 
 // Auth Extraction Middleware (Attaches req.user if valid token provided)
 const authMiddleware = async (req, res, next) => {
@@ -120,12 +154,23 @@ async function recordAuditLog(req, action, targetId = null, metadata = {}) {
   }
 }
 
-// Rate Limiter for Login
+// Rate Limiters for Brute-Force & Scraping Protection
 const loginLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 10, // 10 attempts
-  message: { error: 'Too many login attempts. Please try again in 15 minutes.' },
+  max: 10, // 10 attempts per IP
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: 'Too many login attempts from this IP. Please try again in 15 minutes.' },
 });
+
+const apiLimiter = rateLimit({
+  windowMs: 5 * 60 * 1000, // 5 minutes
+  max: 150, // 150 API requests per 5 minutes per IP
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: 'Too many requests. Please slow down and try again shortly.' },
+});
+app.use('/api/', apiLimiter);
 
 // Strict Response Schema for Gemini
 const dentalBreakdownSchema = {
@@ -690,8 +735,9 @@ function enforceCanonicalCdtMeanings(procedureCodes) {
   return procedureCodes;
 }
 
-// Endpoint to provide default prompts and built-in CDT dictionary to frontend
+// Endpoint to provide default prompts and built-in CDT dictionary to authenticated users only
 app.get('/api/prompts/default', (req, res) => {
+  if (!req.user) return res.status(401).json({ error: 'Unauthorized' });
   res.json({
     systemInstruction: DEFAULT_SYSTEM_INSTRUCTION,
     customPrompt: DEFAULT_CDT_CODES_PROMPT,
@@ -700,6 +746,7 @@ app.get('/api/prompts/default', (req, res) => {
 });
 
 app.get('/api/cdt-dictionary', (req, res) => {
+  if (!req.user) return res.status(401).json({ error: 'Unauthorized' });
   res.json({
     success: true,
     locked: true,
@@ -707,13 +754,11 @@ app.get('/api/cdt-dictionary', (req, res) => {
   });
 });
 
-// Health Check
+// Minimal Health Check (No internal config or model names exposed)
 app.get('/api/health', (req, res) => {
   res.json({
     status: 'ok',
     timestamp: new Date().toISOString(),
-    apiKeyConfigured: Boolean(process.env.GEMINI_API_KEY),
-    model: process.env.GEMINI_MODEL || 'gemini-3.8-flash',
   });
 });
 
@@ -1261,10 +1306,12 @@ app.post('/api/auth/login', loginLimiter, async (req, res) => {
     await db.query('UPDATE dentverify.users SET last_login_at = NOW() WHERE id = $1', [user.id]);
 
     // Set secure HttpOnly cookie
+    const isSecureCookie = req.secure || req.headers['x-forwarded-proto'] === 'https';
     res.cookie('dentverify_token', token, {
       httpOnly: true,
-      secure: false, // set true in strict SSL production
-      sameSite: 'lax',
+      secure: isSecureCookie,
+      sameSite: 'strict',
+      path: '/',
       maxAge: 12 * 60 * 60 * 1000,
     });
 
@@ -1309,7 +1356,13 @@ app.get('/api/auth/me', async (req, res) => {
 // 3. POST /api/auth/logout
 app.post('/api/auth/logout', async (req, res) => {
   await recordAuditLog(req, 'LOGOUT', req.user?.id);
-  res.clearCookie('dentverify_token');
+  const isSecureCookie = req.secure || req.headers['x-forwarded-proto'] === 'https';
+  res.clearCookie('dentverify_token', {
+    httpOnly: true,
+    secure: isSecureCookie,
+    sameSite: 'strict',
+    path: '/',
+  });
   res.json({ success: true, message: 'Logged out successfully.' });
 });
 
@@ -1460,10 +1513,12 @@ app.post('/api/practices/switch/:id', async (req, res) => {
         JWT_SECRET,
         { expiresIn: '12h' }
       );
+      const isSecureCookie = req.secure || req.headers['x-forwarded-proto'] === 'https';
       res.cookie('dentverify_token', token, {
         httpOnly: true,
-        secure: false,
-        sameSite: 'lax',
+        secure: isSecureCookie,
+        sameSite: 'strict',
+        path: '/',
         maxAge: 12 * 60 * 60 * 1000,
       });
       return res.json({
@@ -1490,10 +1545,12 @@ app.post('/api/practices/switch/:id', async (req, res) => {
       { expiresIn: '12h' }
     );
 
+    const isSecureCookie = req.secure || req.headers['x-forwarded-proto'] === 'https';
     res.cookie('dentverify_token', token, {
       httpOnly: true,
-      secure: false,
-      sameSite: 'lax',
+      secure: isSecureCookie,
+      sameSite: 'strict',
+      path: '/',
       maxAge: 12 * 60 * 60 * 1000,
     });
 
@@ -1952,9 +2009,15 @@ app.get('/api/verifications/:id', async (req, res) => {
 
     // Decrypt patient details in returned JSON
     if (breakdown.insurance_details) {
-      breakdown.insurance_details.patient_name = db.decryptField(row.patient_name_enc) || breakdown.insurance_details.patient_name;
-      if (row.dob_enc) {
-        breakdown.insurance_details.dob = db.decryptField(row.dob_enc) || breakdown.insurance_details.dob;
+      const decName = db.decryptField(row.patient_name_enc);
+      breakdown.insurance_details.patient_name = decName || (breakdown.insurance_details.patient_name !== '[ENCRYPTED_AES256]' ? breakdown.insurance_details.patient_name : 'N/A');
+      const decDob = row.dob_enc ? db.decryptField(row.dob_enc) : '';
+      breakdown.insurance_details.dob = decDob || (breakdown.insurance_details.dob !== '[ENCRYPTED_AES256]' ? breakdown.insurance_details.dob : 'N/A');
+      if (row.member_id_enc) {
+        const decMember = db.decryptField(row.member_id_enc);
+        if (decMember && breakdown.insurance_details.member_id === '[ENCRYPTED_AES256]') {
+          breakdown.insurance_details.member_id = decMember;
+        }
       }
     }
 
@@ -1987,6 +2050,7 @@ app.put('/api/verifications/:id', async (req, res) => {
     const dobEnc = db.encryptField(ins.dob || '');
     const carrier = ins.carrier || 'Dental Insurance';
     const networkStatus = ins.network_status || 'In-Network';
+    const sanitizedBreakdown = sanitizeBreakdownForStorage(breakdown);
 
     const isOwner = req.user.role === 'owner';
     const updateRes = isOwner
@@ -1994,13 +2058,13 @@ app.put('/api/verifications/:id', async (req, res) => {
           `UPDATE dentverify.verifications
            SET carrier = $1, patient_name_enc = $2, patient_name_masked = $3, dob_enc = $4, network_status = $5, breakdown_json = $6
            WHERE id = $7 RETURNING id, practice_id;`,
-          [carrier, patientNameEnc, maskedName, dobEnc, networkStatus, JSON.stringify(breakdown), id]
+          [carrier, patientNameEnc, maskedName, dobEnc, networkStatus, JSON.stringify(sanitizedBreakdown), id]
         )
       : await db.query(
           `UPDATE dentverify.verifications
            SET carrier = $1, patient_name_enc = $2, patient_name_masked = $3, dob_enc = $4, network_status = $5, breakdown_json = $6
            WHERE id = $7 AND practice_id = $8 RETURNING id, practice_id;`,
-          [carrier, patientNameEnc, maskedName, dobEnc, networkStatus, JSON.stringify(breakdown), id, req.user.practice_id]
+          [carrier, patientNameEnc, maskedName, dobEnc, networkStatus, JSON.stringify(sanitizedBreakdown), id, req.user.practice_id]
         );
 
     if (updateRes.rows.length === 0) {
@@ -2277,6 +2341,7 @@ app.post('/api/verify', upload.array('files', 10), async (req, res) => {
         : rawPatientName;
       const dobEnc = db.encryptField(ins.dob || '');
       const memberIdEnc = db.encryptField(ins.member_id || ins.subscriber_id || '');
+      const sanitizedBreakdown = sanitizeBreakdownForStorage(parsedResult);
 
       const insertRes = await db.query(
         `INSERT INTO dentverify.verifications (
@@ -2294,7 +2359,7 @@ app.post('/api/verify', upload.array('files', 10), async (req, res) => {
           memberIdEnc,
           dobEnc,
           ins.network_status || 'In-Network',
-          JSON.stringify(parsedResult),
+          JSON.stringify(sanitizedBreakdown),
         ]
       );
 
@@ -2330,7 +2395,7 @@ app.post('/api/verify', upload.array('files', 10), async (req, res) => {
     console.error('Error during dental breakdown verification:', error);
     const rawMsg = (error.message || error.toString() || '').toLowerCase();
     const errStatus = error.status || error.code || null;
-    let userMessage = error.message || 'An unexpected error occurred during analysis.';
+    let userMessage = 'An unexpected error occurred during analysis. Please try again.';
     let errorType = 'SERVER_ERROR';
 
     if (errStatus === 503 || rawMsg.includes('503') || rawMsg.includes('high demand') || rawMsg.includes('unavailable') || rawMsg.includes('overload')) {
@@ -2351,7 +2416,6 @@ app.post('/api/verify', upload.array('files', 10), async (req, res) => {
       success: false,
       error: userMessage,
       error_type: errorType,
-      raw_error: error.message || String(error),
       status_code: errStatus,
     });
   }

@@ -9,11 +9,11 @@ const pool = new Pool({
 
 // Schema tables are explicitly qualified with 'dentverify.'
 
-// AES-256-GCM Encryption for ePHI fields
-const ENCRYPTION_KEY = Buffer.from(
-  process.env.ENCRYPTION_KEY || '169bfea936320e075cfceb0d8e26941dab0790c72bf50ece5df379ac8546ea6f',
-  'hex'
-);
+// AES-256-GCM Encryption for ePHI fields (Strictly loaded from environment)
+if (!process.env.ENCRYPTION_KEY || process.env.ENCRYPTION_KEY.length !== 64) {
+  console.error('❌ CRITICAL SECURITY ERROR: Valid 64-hex-char ENCRYPTION_KEY is required in .env');
+}
+const ENCRYPTION_KEY = Buffer.from(process.env.ENCRYPTION_KEY, 'hex');
 
 function encryptField(text) {
   if (!text || typeof text !== 'string') return text;
@@ -274,83 +274,27 @@ async function initDb() {
       }
     }
 
-    const bcrypt = require('bcryptjs');
-    const salt = bcrypt.genSaltSync(12);
-
     // Fix any accidental double-@ typo in user emails (e.g. admin@@dentverify.com -> admin@dentverify.com)
     await client.query(`UPDATE dentverify.users SET email = REGEXP_REPLACE(email, '@+', '@', 'g') WHERE email LIKE '%@@%';`);
 
-    // 1. Website Owner Account (NOT assigned to any clinic — manages all website settings, clinics & users)
-    const existingOwner = await client.query(`SELECT id FROM dentverify.users WHERE role = 'owner' LIMIT 1;`);
-    if (existingOwner.rows.length === 0) {
-      const ownerHash = bcrypt.hashSync('ClinicAdmin2026!', salt);
-      await client.query(
-        `INSERT INTO dentverify.users (practice_id, email, password_hash, full_name, role)
-         VALUES (NULL, 'admin@dentverify.com', $1, 'Website Owner (Master Admin)', 'owner')
-         ON CONFLICT (email) DO UPDATE SET role = 'owner', practice_id = NULL;`,
-        [ownerHash]
-      );
-    } else {
-      await client.query(`UPDATE dentverify.users SET practice_id = NULL WHERE role = 'owner';`);
-    }
+    // Ensure Website Owner role is unassigned to any single clinic so Master Owner mode works
+    await client.query(`UPDATE dentverify.users SET practice_id = NULL WHERE role = 'owner';`);
 
-    // 2. Clinic 1: Administrator + User 1 + User 2
-    const clinic1Hash = bcrypt.hashSync('ClinicOne2026!', salt);
-    await client.query(
-      `INSERT INTO dentverify.users (practice_id, email, password_hash, full_name, role)
-       VALUES ($1, 'clinic1@dentverify.com', $2, 'Clinic 1 Administrator', 'clinic_admin')
-       ON CONFLICT (email) DO UPDATE SET role = 'clinic_admin', full_name = CASE WHEN dentverify.users.full_name = 'Clinic 1 User 1' THEN 'Clinic 1 Administrator' ELSE dentverify.users.full_name END;`,
-      [clinic1Id, clinic1Hash]
-    );
+    // Purge any unused default demo/seed accounts that had public passwords in legacy builds
+    await client.query(`
+      DELETE FROM dentverify.users
+      WHERE email IN (
+        'clinic1@dentverify.com',
+        'staff1@dentverify.com',
+        'staff2@dentverify.com',
+        'clinic2@dentverify.com',
+        'c2user1@dentverify.com',
+        'clinic3@dentverify.com',
+        'c3user1@dentverify.com'
+      ) AND last_login_at IS NULL;
+    `);
 
-    const staff1Hash = bcrypt.hashSync('ClinicStaff2026!', salt);
-    await client.query(
-      `INSERT INTO dentverify.users (practice_id, email, password_hash, full_name, role)
-       VALUES ($1, 'staff1@dentverify.com', $2, 'Clinic 1 - User 1', 'staff')
-       ON CONFLICT (email) DO UPDATE SET full_name = CASE WHEN dentverify.users.full_name = 'Clinic 1 User 2 (Coworker)' THEN 'Clinic 1 - User 1' ELSE dentverify.users.full_name END;`,
-      [clinic1Id, staff1Hash]
-    );
-
-    await client.query(
-      `INSERT INTO dentverify.users (practice_id, email, password_hash, full_name, role)
-       VALUES ($1, 'staff2@dentverify.com', $2, 'Clinic 1 - User 2', 'staff')
-       ON CONFLICT (email) DO NOTHING;`,
-      [clinic1Id, staff1Hash]
-    );
-
-    // 3. Clinic 2: Administrator + User 1
-    const clinic2Hash = bcrypt.hashSync('ClinicTwo2026!', salt);
-    await client.query(
-      `INSERT INTO dentverify.users (practice_id, email, password_hash, full_name, role)
-       VALUES ($1, 'clinic2@dentverify.com', $2, 'Clinic 2 Administrator', 'clinic_admin')
-       ON CONFLICT (email) DO UPDATE SET role = 'clinic_admin', full_name = CASE WHEN dentverify.users.full_name = 'Clinic 2 Coordinator' THEN 'Clinic 2 Administrator' ELSE dentverify.users.full_name END;`,
-      [clinic2Id, clinic2Hash]
-    );
-
-    await client.query(
-      `INSERT INTO dentverify.users (practice_id, email, password_hash, full_name, role)
-       VALUES ($1, 'c2user1@dentverify.com', $2, 'Clinic 2 - User 1', 'staff')
-       ON CONFLICT (email) DO NOTHING;`,
-      [clinic2Id, staff1Hash]
-    );
-
-    // 4. Clinic 3: Administrator + User 1
-    const clinic3Hash = bcrypt.hashSync('ClinicThree2026!', salt);
-    await client.query(
-      `INSERT INTO dentverify.users (practice_id, email, password_hash, full_name, role)
-       VALUES ($1, 'clinic3@dentverify.com', $2, 'Clinic 3 Administrator', 'clinic_admin')
-       ON CONFLICT (email) DO UPDATE SET role = 'clinic_admin', full_name = CASE WHEN dentverify.users.full_name = 'Clinic 3 Coordinator' THEN 'Clinic 3 Administrator' ELSE dentverify.users.full_name END;`,
-      [clinic3Id, clinic3Hash]
-    );
-
-    await client.query(
-      `INSERT INTO dentverify.users (practice_id, email, password_hash, full_name, role)
-       VALUES ($1, 'c3user1@dentverify.com', $2, 'Clinic 3 - User 1', 'staff')
-       ON CONFLICT (email) DO NOTHING;`,
-      [clinic3Id, staff1Hash]
-    );
-
-    console.log('✅ PostgreSQL: DentVerify multi-clinic schema & 3 workspaces initialized.');
+    console.log('✅ PostgreSQL: DentVerify multi-clinic schema & security checks initialized.');
   } catch (err) {
     console.error('❌ Database initialization error:', err);
   } finally {
