@@ -587,11 +587,123 @@ For each code in this exact order, strictly extract:
 Also extract any additional CDT procedure codes found in the breakdown sheet.
 Return clean, structured JSON adhering strictly to the response schema.`;
 
-// Endpoint to provide default prompts to the frontend settings modal
+// ==========================================
+// BUILT-IN CDT CODE MEMORY DICTIONARY (LOCKED MEANINGS)
+// ==========================================
+const CDT_CODE_DICTIONARY = Object.freeze({
+  'D4346': 'Scaling in presence of gingival inflammation',
+  'D1110': 'Prophy (Adult Cleaning)',
+  'D1120': 'Prophy (Child Cleaning)',
+  'D0274': 'BTW (Bitewings - Four Radiographic Images)',
+  'D0272': 'BTW (Bitewings - Two Radiographic Images)',
+  'D0210 / D0330': 'FMX (Complete Series) / Pano (Panoramic Image)',
+  'D0210': 'FMX (Intraoral - Complete Series of Radiographic Images)',
+  'D0330': 'Pano (Panoramic Radiographic Image)',
+  'D0220': "PA's (Intraoral - Periapical First Radiographic Image)",
+  'D0230': "PA's (Intraoral - Periapical Each Additional Image)",
+  'D9110': 'Palliative (Emergency Treatment of Dental Pain)',
+  'D0120': 'Exam (Periodic Oral Evaluation)',
+  'D0140': 'Limited Exam (Problem Focused Oral Evaluation)',
+  'D0150': 'Comprehensive Oral Evaluation (New or Established Patient)',
+  'D0180': 'Comprehensive Periodontal Evaluation',
+  'D1351': 'Sealant (Per Tooth)',
+  'D1354': 'Interim Caries Arresting Medicament Application (SDF)',
+  'D1206': 'Fluoride (Topical Application of Fluoride Varnish)',
+  'D1208': 'Topical Application of Fluoride (Excluding Varnish)',
+  'D1510': 'Space Maintainer (Fixed, Unilateral)',
+  'D4341': 'SRP (Periodontal Scaling & Root Planing - 4+ Teeth per Quad)',
+  'D4342': 'SRP (Periodontal Scaling & Root Planing - 1 to 3 Teeth per Quad)',
+  'D4910': 'Perio Maint (Periodontal Maintenance)',
+  'D4355': 'Full Mouth Debridement',
+  'D4381': 'Localized Delivery of Antimicrobial Agents (Arestin)',
+  'D2391': 'Filling / Composite (Resin-Based Composite - 1 Surface, Posterior)',
+  'D2392': 'Filling / Composite (Resin-Based Composite - 2 Surfaces, Posterior)',
+  'D2393': 'Filling / Composite (Resin-Based Composite - 3 Surfaces, Posterior)',
+  'D2394': 'Filling / Composite (Resin-Based Composite - 4+ Surfaces, Posterior)',
+  'D2330': 'Filling / Composite (Resin-Based Composite - 1 Surface, Anterior)',
+  'D2331': 'Filling / Composite (Resin-Based Composite - 2 Surfaces, Anterior)',
+  'D2332': 'Filling / Composite (Resin-Based Composite - 3 Surfaces, Anterior)',
+  'D2335': 'Filling / Composite (Resin-Based Composite - 4+ Surfaces / Incisal, Anterior)',
+  'D2140': 'Amalgam - One Surface, Primary or Permanent',
+  'D2150': 'Amalgam - Two Surfaces, Primary or Permanent',
+  'D2160': 'Amalgam - Three Surfaces, Primary or Permanent',
+  'D2740': 'Crown (Porcelain / Ceramic Substrate)',
+  'D2750': 'Crown (Porcelain Fused to High Noble Metal)',
+  'D2751': 'Crown (Porcelain Fused to Predominantly Base Metal)',
+  'D2752': 'Crown (Porcelain Fused to Noble Metal)',
+  'D2790': 'Crown (Full Cast High Noble Metal)',
+  'D2920': 'Crown Recement (Re-cement or Re-bond Crown)',
+  'D2950': 'Core Buildup, Including Any Pins When Required',
+  'D2954': 'Prefabricated Post and Core in Addition to Crown',
+  'D3310': 'Endodontic Therapy, Anterior Tooth (Excluding Final Restoration)',
+  'D3320': 'Endodontic Therapy, Premolar Tooth (Excluding Final Restoration)',
+  'D3330': 'Endodontic Therapy, Molar Tooth (Excluding Final Restoration)',
+  'D3220': 'Therapeutic Pulpotomy',
+  'D5110': 'Complete Denture - Maxillary',
+  'D5120': 'Complete Denture - Mandibular',
+  'D5213': 'Maxillary Partial Denture - Cast Metal Framework',
+  'D5214': 'Mandibular Partial Denture - Cast Metal Framework',
+  'D6010': 'Implants (Surgical Placement of Implant Body: Endosteal Implant)',
+  'D6058': 'Abutment Supported Porcelain/Ceramic Crown',
+  'D6065': 'Implant Supported Porcelain/Ceramic Crown',
+  'D6240': 'Pontic - Porcelain Fused to High Noble Metal (Bridge)',
+  'D6740': 'Retainer Crown - Porcelain/Ceramic (Bridge)',
+  'D7140': 'Simple Ext (Extraction, Erupted Tooth or Exposed Root)',
+  'D7210': 'Surgical Ext (Extraction, Erupted Tooth Requiring Bone Removal)',
+  'D7220': 'Removal of Impacted Tooth - Soft Tissue',
+  'D7230': 'Removal of Impacted Tooth - Partially Bony',
+  'D7240': 'Removal of Impacted Tooth - Completely Bony',
+  'D7953': 'Bone Replacement Graft for Ridge Preservation - Per Site',
+  'D8080': 'Comprehensive Orthodontic Treatment of the Adolescent Dentition',
+  'D8090': 'Comprehensive Orthodontic Treatment of the Adult Dentition',
+  'D9222 / D9223': 'Sedation / Anesthesia (Deep Sedation / General Anesthesia)',
+  'D9222': 'Deep Sedation / General Anesthesia - First 15 Minutes',
+  'D9223': 'Deep Sedation / General Anesthesia - Each Subsequent 15 Minutes',
+  'D9230': 'Inhalation of Nitrous Oxide / Analgesia, Anxiolysis',
+  'D9248': 'Non-Intravenous Conscious Sedation',
+  'D9310': 'Consultation - Diagnostic Service',
+  'D9944': 'Night Guard (Occlusal Guard - Hard Appliance, Full Arch)',
+  'D9945': 'Night Guard (Occlusal Guard - Soft Appliance, Full Arch)',
+  'D9946': 'Night Guard (Occlusal Guard - Hard Appliance, Partial Arch)',
+  'D9940': 'Occlusal Guard, by Report',
+});
+
+function getCanonicalCdtMeaning(rawCode, fallbackDesc = '') {
+  if (!rawCode) return fallbackDesc || '-';
+  const upper = String(rawCode).trim().toUpperCase();
+  if (CDT_CODE_DICTIONARY[upper]) return CDT_CODE_DICTIONARY[upper];
+  if (upper.includes('D0210') && upper.includes('D0330')) return CDT_CODE_DICTIONARY['D0210 / D0330'];
+  if (upper.includes('D9222') && upper.includes('D9223')) return CDT_CODE_DICTIONARY['D9222 / D9223'];
+  const singleMatch = upper.match(/D\d{4}/);
+  if (singleMatch && CDT_CODE_DICTIONARY[singleMatch[0]]) {
+    return CDT_CODE_DICTIONARY[singleMatch[0]];
+  }
+  return fallbackDesc || '-';
+}
+
+function enforceCanonicalCdtMeanings(procedureCodes) {
+  if (!Array.isArray(procedureCodes)) return procedureCodes;
+  procedureCodes.forEach(item => {
+    if (!item) return;
+    item.description = getCanonicalCdtMeaning(item.code, item.description);
+  });
+  return procedureCodes;
+}
+
+// Endpoint to provide default prompts and built-in CDT dictionary to frontend
 app.get('/api/prompts/default', (req, res) => {
   res.json({
     systemInstruction: DEFAULT_SYSTEM_INSTRUCTION,
     customPrompt: DEFAULT_CDT_CODES_PROMPT,
+    cdtDictionary: CDT_CODE_DICTIONARY,
+  });
+});
+
+app.get('/api/cdt-dictionary', (req, res) => {
+  res.json({
+    success: true,
+    locked: true,
+    dictionary: CDT_CODE_DICTIONARY,
   });
 });
 
@@ -2007,8 +2119,9 @@ app.post('/api/verify', upload.array('files', 10), async (req, res) => {
       parsedResult.insurance_details = enforcePolicyTermedRules(parsedResult.insurance_details);
     }
 
-    // Deterministic validation 2: CDT D0210 & D0330 shared frequency & history eligibility
+    // Deterministic validation 2: CDT D0210 & D0330 shared frequency, age limits & locked CDT meanings
     if (parsedResult && Array.isArray(parsedResult.procedure_codes)) {
+      parsedResult.procedure_codes = enforceCanonicalCdtMeanings(parsedResult.procedure_codes);
       parsedResult.procedure_codes = enforceSharedFmxPanoRules(parsedResult.procedure_codes);
       parsedResult.procedure_codes = enforceAgeLimitAndFrequencyRules(parsedResult.procedure_codes, parsedResult.insurance_details || {});
     }

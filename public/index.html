@@ -820,6 +820,13 @@
           </svg>
           Required CDT Codes & Directives
         </button>
+        <button type="button" class="settings-tab-btn" data-tab="tabCdtMemory">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
+            <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+          </svg>
+          CDT - Meaning Memory (Locked)
+        </button>
       </div>
 
       <div class="pms-modal-body" style="padding-top: 1.25rem;">
@@ -839,6 +846,15 @@
             <span>Add or customize CDT codes (D0120, D1110, D4341, D2740, etc.) and category extraction instructions.</span>
           </div>
           <textarea id="settingCustomPrompt" class="prompt-editor-textarea" spellcheck="false" placeholder="Enter CDT Codes Directives..."></textarea>
+        </div>
+
+        <!-- Tab 3: Built-in Locked CDT - Meaning Memory Dictionary -->
+        <div class="settings-tab-pane" id="tabCdtMemory">
+          <div class="settings-info-badge" style="margin-bottom: 0.75rem;">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#10b981" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
+            <span><strong>Permanent Built-In Memory (Read-Only):</strong> Standard ADA <strong>CDT Code — Meaning</strong> definitions are permanently stored in website memory and locked from editing.</span>
+          </div>
+          <div id="cdtMemoryDictionaryList" style="max-height: 340px; overflow-y: auto; border: 1px solid rgba(56, 189, 248, 0.2); border-radius: 8px; background: rgba(15, 23, 42, 0.65); padding: 0.5rem;"></div>
         </div>
       </div>
 

@@ -34,6 +34,16 @@ NEXT UP: BACKGROUND HEADLESS BROWSER VERIFICATION (PLAYWRIGHT AUTOMATION)
        "2FA Code Required: Enter code sent to clinic [phone/email]: [ _____ ] [Verify]"
      * Staff enters code -> runner resumes session and completes patient eligibility retrieval.
 
+--------------------------------------------------------------------------------
+COMPLETED & LOCKED IN WEBSITE MEMORY:
+--------------------------------------------------------------------------------
+* Built-in ADA CDT Code Dictionary (CDT - Meaning):
+  - All standard CDT codes and their clinical meanings (e.g. D0120, D1110, D4346,
+    D0274, D0210/D0330, D4341, D4910, D2391, D2740, D7140, D7210, D9944, D6010, etc.)
+    are permanently stored in the website's memory (`CDT_CODE_DICTIONARY`).
+  - Read-only / Non-Editable: The CDT Code and Clinical Description (Meaning)
+    columns are locked so their standard meanings can never be accidentally altered.
+
 ================================================================================
 END OF ACTIVE ROADMAP
 ================================================================================
