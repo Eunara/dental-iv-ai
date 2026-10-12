@@ -1597,22 +1597,27 @@
       const details = data.insurance_details || {};
       const levels = data.coverage_levels || {};
 
-      // Auto-populate Claims Address, Payor ID, and pre-configured Network Status from Directory
+      // Auto-populate & enforce Claims Address, Payor ID, Phone, and pre-configured Network Status from Directory
       if (details.carrier) {
         const matchedPayer = matchPayerDirectory(details.carrier);
         if (matchedPayer) {
-          if (!details.insurance_address || /^(none|n\/a|na|-)$/i.test(details.insurance_address.trim())) {
+          if (matchedPayer.address && !/^(none|n\/a|na|-)$/i.test(matchedPayer.address.trim())) {
             details.insurance_address = matchedPayer.address;
           }
-          if (!details.insurance_phone || /^(none|n\/a|na|-)$/i.test(details.insurance_phone.trim())) {
+          if (matchedPayer.phone && !/^(none|n\/a|na|-)$/i.test(matchedPayer.phone.trim())) {
             details.insurance_phone = matchedPayer.phone;
           }
-          if (!details.payor_id || /^(none|n\/a|na|-)$/i.test(details.payor_id.trim())) {
+          if (matchedPayer.payorId && !/^(none|n\/a|na|-)$/i.test(matchedPayer.payorId.trim())) {
             details.payor_id = matchedPayer.payorId;
           }
           // Pre-configured clinic network participation
           if (matchedPayer.network) {
             details.network_status = matchedPayer.network;
+          }
+        } else if (details.insurance_address && details.insurance_address !== 'N/A') {
+          // Reject patient residential street addresses (e.g. MetLife bug) that lack P.O. Box / Claims keywords
+          if (!/\b(p\.?\s*o\.?\s*box|box\s+\d+|claims|dept|department)\b/i.test(details.insurance_address)) {
+            details.insurance_address = 'N/A';
           }
         }
       }
@@ -1664,22 +1669,14 @@
         heroGroupNumberDisplay.textContent = `Group #: ${grpNum}`;
       }
 
-      // Carrier Name & Claims Mailing Address in Top Banner
+      // Carrier Name in Top Banner (No redundant Claims Address here — shown only in Card #8)
       const carrierNameDisplay = document.getElementById('carrierNameDisplay');
       if (carrierNameDisplay) carrierNameDisplay.textContent = details.carrier || 'Dental Insurance';
 
       const carrierAddressDisplay = document.getElementById('carrierAddressDisplay');
       if (carrierAddressDisplay) {
-        const addr = (details.insurance_address && !/^(none|n\/a|na|-)$/i.test(details.insurance_address.trim())) ? details.insurance_address.trim() : '';
-        const ph = (details.insurance_phone && !/^(none|n\/a|na|-)$/i.test(details.insurance_phone.trim())) ? details.insurance_phone.trim() : '';
-        let addrParts = [];
-        if (addr) addrParts.push(`Claims Address: ${addr}`);
-        if (ph) addrParts.push(`Ph: ${ph}`);
-        if (addrParts.length > 0) {
-          carrierAddressDisplay.textContent = addrParts.join(' • ');
-        } else {
-          carrierAddressDisplay.textContent = 'Claims Address: N/A';
-        }
+        carrierAddressDisplay.textContent = '';
+        carrierAddressDisplay.style.display = 'none';
       }
 
       const planEffectiveDateDisplay = document.getElementById('planEffectiveDateDisplay');
@@ -1727,12 +1724,7 @@
 
       const heroCarrierSubDisplay = document.getElementById('heroCarrierSubDisplay');
       if (heroCarrierSubDisplay) {
-        const addr = (details.insurance_address && !/^(none|n\/a|na|-)$/i.test(details.insurance_address.trim())) ? details.insurance_address.trim() : '';
-        let sub = details.carrier || 'Dental Insurance';
-        if (addr) {
-          sub += ` • ${addr}`;
-        }
-        heroCarrierSubDisplay.textContent = sub;
+        heroCarrierSubDisplay.textContent = details.carrier || 'Carrier Verified';
       }
 
       // Effective & Termed Dates with Status Validation

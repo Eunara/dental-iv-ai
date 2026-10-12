@@ -150,7 +150,7 @@ const dentalBreakdownSchema = {
         },
         insurance_address: {
           type: Type.STRING,
-          description: 'Dental Insurance Claims Mailing Address if found on the document (e.g. P.O. Box 981282 El Paso, TX - 79998, N/A if not found)',
+          description: 'Dental Insurance Company Claims Submission Mailing Address ONLY (typically a P.O. Box, e.g. P.O. Box 981282, El Paso, TX 79998). CRITICAL: NEVER extract the patient, subscriber, employer, or dentist physical street/home address (such as on MetLife portal printouts where the subscriber home address is listed near the top). If no insurance P.O. Box / Claims Address is explicitly labeled, return "N/A".',
           nullable: true,
         },
         insurance_phone: {
@@ -412,7 +412,7 @@ Your mission is to audit dental breakdown sheets, fee schedules, or insurance we
 
 2. Policy, Carrier, Claims Address, Employer/Group & Termed Date Validation:
    - Extract Dental Insurance Company / Carrier Name accurately (Ins Company, e.g. METLIFE, Delta Dental, Ameritas, Cigna, Guardian, Blue Cross Blue Shield).
-   - Extract Insurance Claims Mailing Address (Ins Address, e.g. P.O. Box 981282 El Paso, TX - 79998). If not found, return "N/A".
+   - Extract Insurance Claims Mailing Address (Ins Address, e.g. P.O. Box 981282, El Paso, TX 79998-1282). CRITICAL BUG PREVENTION (METLIFE & PORTALS): NEVER extract the Patient's, Subscriber's, Employer's, or Dentist's physical/residential street address! On MetLife printouts, the street address near the patient/subscriber name is the patient's home address — DO NOT extract it! Only extract an institutional Insurance Claims P.O. Box / Claims Department address, or return "N/A".
    - Extract Insurance Phone Number (Ins Ph #, e.g. (877) 638-3379) and Electronic Payor ID (PayorID). If not found, return "N/A".
    - Extract Employer Name / Group Name (e.g. American Airlines, Boeing). If labeled as "Employer Name" or "Group Name", map to group_name. If not found, strictly return "N/A". Never invent dummy names (e.g. Acme Corp).
    - Extract Group Policy Number (Group #, e.g. 316130). If not found, return "N/A".
@@ -2114,6 +2114,45 @@ app.post('/api/verify', upload.array('files', 10), async (req, res) => {
       }
       if (!ins.carrier || /^(none|na|null|undefined|-)$/i.test(String(ins.carrier).trim())) {
         ins.carrier = 'Dental Insurance';
+      }
+
+      // Guard against AI extracting a patient/subscriber street address (e.g. MetLife portal bug)
+      // and wire directly to the clinic's Payer Directory Claims Address, Phone & Payor ID
+      let directoryList = db.DEFAULT_CLINIC_PAYER_DIRECTORY || [];
+      if (req.user?.practice_id) {
+        try {
+          const dirRes = await db.query('SELECT payer_directory_json FROM dentverify.practices WHERE id = $1', [req.user.practice_id]);
+          if (dirRes.rows.length > 0 && Array.isArray(dirRes.rows[0].payer_directory_json) && dirRes.rows[0].payer_directory_json.length > 0) {
+            directoryList = dirRes.rows[0].payer_directory_json;
+          }
+        } catch (e) {}
+      }
+      const carrierLower = String(ins.carrier || '').toLowerCase();
+      const matchedDirPayer = directoryList.find(p => {
+        const pName = String(p.name || p.carrier || '').toLowerCase();
+        if (pName && carrierLower.includes(pName)) return true;
+        if (Array.isArray(p.matchKeys)) {
+          return p.matchKeys.some(k => k && carrierLower.includes(String(k).toLowerCase()));
+        }
+        return false;
+      });
+
+      if (matchedDirPayer) {
+        if (matchedDirPayer.address && matchedDirPayer.address !== 'N/A') {
+          ins.insurance_address = matchedDirPayer.address;
+        }
+        if (matchedDirPayer.phone && matchedDirPayer.phone !== 'N/A') {
+          ins.insurance_phone = matchedDirPayer.phone;
+        }
+        if (matchedDirPayer.payorId && matchedDirPayer.payorId !== 'N/A') {
+          ins.payor_id = matchedDirPayer.payorId;
+        }
+      } else if (ins.insurance_address && ins.insurance_address !== 'N/A') {
+        // If no directory match, reject obvious residential street addresses that lack PO Box / Claims keywords
+        const addrStr = String(ins.insurance_address);
+        if (!/\b(p\.?\s*o\.?\s*box|box\s+\d+|claims|dept|department)\b/i.test(addrStr)) {
+          ins.insurance_address = 'N/A';
+        }
       }
 
       parsedResult.insurance_details = enforcePolicyTermedRules(parsedResult.insurance_details);
