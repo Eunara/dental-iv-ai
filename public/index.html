@@ -193,7 +193,151 @@
       </div>
     </header>
 
-  <main>
+  <!-- WEBSITE OWNER DEDICATED FULL-PAGE SETTINGS & CONTROL DASHBOARD (Shown when Owner is in Master Mode) -->
+  <section id="ownerMasterDashboard" style="display: none; max-width: 1440px; margin: 0 auto; padding: 1.5rem 2rem 3rem;">
+    <!-- Owner Hero Banner -->
+    <div style="background: linear-gradient(135deg, rgba(15, 23, 42, 0.95), rgba(30, 41, 59, 0.92)); border: 1px solid rgba(251, 191, 36, 0.35); border-radius: 14px; padding: 1.35rem 1.6rem; margin-bottom: 1.25rem; box-shadow: 0 12px 32px rgba(0, 0, 0, 0.35);">
+      <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem;">
+        <div>
+          <div style="display: inline-flex; align-items: center; gap: 0.45rem; background: rgba(251, 191, 36, 0.14); color: #fbbf24; border: 1px solid rgba(251, 191, 36, 0.35); padding: 0.22rem 0.7rem; border-radius: 999px; font-size: 0.7rem; font-weight: 800; letter-spacing: 0.05em; text-transform: uppercase; margin-bottom: 0.5rem;">
+            <span>👑 Website Owner Master Control</span>
+          </div>
+          <h2 style="color: #fff; font-size: 1.45rem; font-weight: 800; margin: 0 0 0.3rem 0; letter-spacing: -0.02em;">DentVerify.com — Global Website Settings & Multi-Clinic Administration</h2>
+          <p style="color: #94a3b8; font-size: 0.84rem; margin: 0;">Manage all dental clinic workspaces, assign Clinic Admins & Staff users, configure global AI extraction rules & CDT checklists, and maintain Master Insurance Hubs.</p>
+        </div>
+        <div style="display: flex; gap: 0.75rem; flex-wrap: wrap;">
+          <div style="background: rgba(15, 23, 42, 0.85); border: 1px solid rgba(56, 189, 248, 0.25); border-radius: 10px; padding: 0.6rem 1rem; text-align: center; min-width: 110px;">
+            <div style="font-size: 1.25rem; font-weight: 800; color: #38bdf8;" id="ownerDashClinicCount">0</div>
+            <div style="font-size: 0.68rem; color: #94a3b8; font-weight: 600; text-transform: uppercase;">Clinics</div>
+          </div>
+          <div style="background: rgba(15, 23, 42, 0.85); border: 1px solid rgba(16, 185, 129, 0.25); border-radius: 10px; padding: 0.6rem 1rem; text-align: center; min-width: 110px;">
+            <div style="font-size: 1.25rem; font-weight: 800; color: #34d399;" id="ownerDashUserCount">0</div>
+            <div style="font-size: 0.68rem; color: #94a3b8; font-weight: 600; text-transform: uppercase;">Clinic Accounts</div>
+          </div>
+          <div style="background: rgba(15, 23, 42, 0.85); border: 1px solid rgba(251, 191, 36, 0.25); border-radius: 10px; padding: 0.6rem 1rem; text-align: center; min-width: 110px;">
+            <div style="font-size: 1.25rem; font-weight: 800; color: #fbbf24;" id="ownerDashVerificationCount">0</div>
+            <div style="font-size: 0.68rem; color: #94a3b8; font-weight: 600; text-transform: uppercase;">Total Breakdowns</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Quick Website Settings Cards Row -->
+      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 0.85rem; margin-top: 1.15rem; padding-top: 1.15rem; border-top: 1px solid rgba(148, 163, 184, 0.15);">
+        <div style="background: rgba(15, 23, 42, 0.75); border: 1px solid rgba(56, 189, 248, 0.28); border-radius: 10px; padding: 0.9rem 1.05rem; display: flex; justify-content: space-between; align-items: center; gap: 0.75rem;">
+          <div>
+            <div style="font-size: 0.84rem; font-weight: 700; color: #fff; margin-bottom: 0.2rem;">⚙️ AI Prompt, Persona & CDT Checklist</div>
+            <div style="font-size: 0.72rem; color: #94a3b8;">Configure built-in CDT code sequence, AI extraction rules & system persona.</div>
+          </div>
+          <button type="button" class="btn-verify-primary" id="ownerOpenAiSettingsBtn" style="padding: 0.42rem 0.85rem; font-size: 0.74rem; white-space: nowrap;">Open AI Settings</button>
+        </div>
+
+        <div style="background: rgba(15, 23, 42, 0.75); border: 1px solid rgba(16, 185, 129, 0.28); border-radius: 10px; padding: 0.9rem 1.05rem; display: flex; justify-content: space-between; align-items: center; gap: 0.75rem;">
+          <div>
+            <div style="font-size: 0.84rem; font-weight: 700; color: #fff; margin-bottom: 0.2rem;">🏥 Master Insurance Hub Directory</div>
+            <div style="font-size: 0.72rem; color: #94a3b8;">Manage locked Claims Addresses, Payor IDs, Phone #s & multi-state wiring.</div>
+          </div>
+          <button type="button" class="btn-verify-primary" id="ownerOpenPayerDirBtn" style="padding: 0.42rem 0.85rem; font-size: 0.74rem; white-space: nowrap;">Manage Payer Hubs</button>
+        </div>
+
+        <div style="background: rgba(15, 23, 42, 0.75); border: 1px solid rgba(168, 85, 247, 0.28); border-radius: 10px; padding: 0.9rem 1.05rem; display: flex; justify-content: space-between; align-items: center; gap: 0.75rem;">
+          <div>
+            <div style="font-size: 0.84rem; font-weight: 700; color: #fff; margin-bottom: 0.2rem;">🕒 All-Clinic Verification Audit Log</div>
+            <div style="font-size: 0.72rem; color: #94a3b8;">Inspect verified breakdowns & staff audit stamps across all clinics.</div>
+          </div>
+          <button type="button" class="btn-action-ghost" id="ownerOpenHistoryBtn" style="padding: 0.42rem 0.85rem; font-size: 0.74rem; white-space: nowrap; border-color: rgba(168, 85, 247, 0.45); color: #c084fc;">View Audit History</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Main 2-Column Owner Management Grid: Clinics (Left) + Users & Roles (Right) -->
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(460px, 1fr)); gap: 1.25rem; align-items: start;">
+      <!-- Column 1: Dental Clinic Workspaces -->
+      <div class="ui-panel" style="padding: 1.25rem;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.85rem; flex-wrap: wrap; gap: 0.5rem;">
+          <div>
+            <h3 style="color: #fff; font-size: 1rem; font-weight: 800; margin: 0;">🏥 Dental Clinic Workspaces</h3>
+            <p style="color: #94a3b8; font-size: 0.74rem; margin: 0.15rem 0 0 0;">Each clinic has isolated patient verifications, custom Insurance Hub settings, and CDT checklists.</p>
+          </div>
+        </div>
+
+        <div style="display: flex; gap: 0.5rem; margin-bottom: 1rem;">
+          <input type="text" id="ownerDashNewClinicInput" class="table-search-input" style="flex: 1;" placeholder="New Clinic Name (e.g. Clinic 4 - Downtown Dental)...">
+          <button type="button" class="btn-verify-primary" id="ownerDashCreateClinicBtn" style="padding: 0.42rem 0.9rem; font-size: 0.75rem; white-space: nowrap;">+ Add Clinic</button>
+        </div>
+
+        <div id="ownerDashClinicsList" style="display: flex; flex-direction: column; gap: 0.65rem;">
+          <!-- Populated dynamically by JS -->
+        </div>
+      </div>
+
+      <!-- Column 2: Website Users, Clinic Admins & Assignments -->
+      <div class="ui-panel" style="padding: 1.25rem;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.85rem; flex-wrap: wrap; gap: 0.5rem;">
+          <div>
+            <h3 style="color: #fff; font-size: 1rem; font-weight: 800; margin: 0;">👥 Clinic Administrators & Staff Accounts</h3>
+            <p style="color: #94a3b8; font-size: 0.74rem; margin: 0.15rem 0 0 0;">Create accounts, assign users to clinics, set Clinic Admin roles, and reset passwords.</p>
+          </div>
+          <button type="button" class="btn-verify-primary" id="ownerDashToggleAddUserBtn" style="padding: 0.38rem 0.8rem; font-size: 0.73rem;">
+            + Create & Assign User
+          </button>
+        </div>
+
+        <div id="ownerDashAddUserPanel" style="display: none; background: rgba(15, 23, 42, 0.85); border: 1px dashed rgba(56, 189, 248, 0.45); border-radius: 8px; padding: 0.9rem; margin-bottom: 1rem;">
+          <h5 style="color: #38bdf8; font-size: 0.78rem; font-weight: 700; margin: 0 0 0.55rem 0;">New Account Credentials & Clinic Assignment</h5>
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem; margin-bottom: 0.5rem;">
+            <div>
+              <label style="display: block; font-size: 0.68rem; color: #94a3b8; margin-bottom: 0.2rem;">Full Name</label>
+              <input type="text" id="ownerDashNewUserName" class="table-search-input" placeholder="e.g. Dr. Maria Santos">
+            </div>
+            <div>
+              <label style="display: block; font-size: 0.68rem; color: #94a3b8; margin-bottom: 0.2rem;">Login Email</label>
+              <input type="email" id="ownerDashNewUserEmail" class="table-search-input" placeholder="user@dentverify.com">
+            </div>
+          </div>
+          <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 0.5rem; margin-bottom: 0.65rem;">
+            <div>
+              <label style="display: block; font-size: 0.68rem; color: #94a3b8; margin-bottom: 0.2rem;">Password</label>
+              <input type="password" id="ownerDashNewUserPassword" class="table-search-input" placeholder="Min 8 characters">
+            </div>
+            <div>
+              <label style="display: block; font-size: 0.68rem; color: #94a3b8; margin-bottom: 0.2rem;">Account Role</label>
+              <select id="ownerDashNewUserRole" class="table-search-input" style="background: #0f172a; color: #f8fafc; border: 1px solid rgba(56, 189, 248, 0.3); border-radius: 6px; padding: 0.35rem 0.5rem; font-size: 0.74rem;">
+                <option value="staff">Clinic User (Staff)</option>
+                <option value="clinic_admin">Clinic Administrator</option>
+                <option value="owner">Website Owner</option>
+              </select>
+            </div>
+            <div>
+              <label style="display: block; font-size: 0.68rem; color: #94a3b8; margin-bottom: 0.2rem;">Assigned Clinic</label>
+              <select id="ownerDashNewUserPracticeSelect" class="table-search-input" style="background: #0f172a; color: #f8fafc; border: 1px solid rgba(56, 189, 248, 0.3); border-radius: 6px; padding: 0.35rem 0.5rem; font-size: 0.74rem;">
+                <!-- Populated by JS -->
+              </select>
+            </div>
+          </div>
+          <div style="display: flex; gap: 0.5rem; justify-content: flex-end;">
+            <button type="button" class="btn-restore-defaults" id="ownerDashCancelAddUserBtn" style="padding: 0.28rem 0.65rem; font-size: 0.72rem;">Cancel</button>
+            <button type="button" class="btn-verify-primary" id="ownerDashSaveNewUserBtn" style="padding: 0.28rem 0.8rem; font-size: 0.72rem;">Save & Assign Account</button>
+          </div>
+        </div>
+
+        <div id="ownerDashUsersList" style="display: flex; flex-direction: column; gap: 0.65rem;">
+          <!-- Populated dynamically by JS -->
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <main id="clinicVerificationMain">
+    <!-- Owner Clinic Preview Banner (Shown only when Website Owner is previewing a specific clinic) -->
+    <div id="ownerPreviewBanner" style="display: none; background: rgba(251, 191, 36, 0.12); border: 1px solid rgba(251, 191, 36, 0.4); border-radius: 10px; padding: 0.65rem 1rem; margin-bottom: 1rem; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 0.75rem;">
+      <div style="display: flex; align-items: center; gap: 0.55rem; font-size: 0.8rem; color: #fde68a; font-weight: 600;">
+        <span>👑 <strong>Website Owner Preview Mode:</strong> You are currently viewing the clinic workspace for <strong id="ownerPreviewClinicName" style="color: #fff; text-decoration: underline;">Clinic</strong>.</span>
+      </div>
+      <button type="button" class="btn-verify-primary" id="btnReturnToOwnerDashboard" style="padding: 0.35rem 0.85rem; font-size: 0.73rem; background: linear-gradient(135deg, #f59e0b, #d97706); border-color: #fbbf24; color: #0f172a; font-weight: 800;">
+        ⬅ Back to Website Owner Settings Dashboard
+      </button>
+    </div>
+
     <!-- Hero / Verification Kicker -->
     <div class="hero-section">
       <div class="hero-lead">

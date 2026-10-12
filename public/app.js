@@ -4479,6 +4479,34 @@
     const btnSaveNewUser = document.getElementById('btnSaveNewUser');
     const usersListContainer = document.getElementById('usersListContainer');
 
+    // Dedicated Full-Page Website Owner Settings Dashboard Elements
+    const ownerMasterDashboard = document.getElementById('ownerMasterDashboard');
+    const clinicVerificationMain = document.getElementById('clinicVerificationMain');
+    const ownerPreviewBanner = document.getElementById('ownerPreviewBanner');
+    const ownerPreviewClinicName = document.getElementById('ownerPreviewClinicName');
+    const btnReturnToOwnerDashboard = document.getElementById('btnReturnToOwnerDashboard');
+    const ownerDashClinicCount = document.getElementById('ownerDashClinicCount');
+    const ownerDashUserCount = document.getElementById('ownerDashUserCount');
+    const ownerDashVerificationCount = document.getElementById('ownerDashVerificationCount');
+    const ownerOpenAiSettingsBtn = document.getElementById('ownerOpenAiSettingsBtn');
+    const ownerOpenPayerDirBtn = document.getElementById('ownerOpenPayerDirBtn');
+    const ownerOpenHistoryBtn = document.getElementById('ownerOpenHistoryBtn');
+    const ownerDashNewClinicInput = document.getElementById('ownerDashNewClinicInput');
+    const ownerDashCreateClinicBtn = document.getElementById('ownerDashCreateClinicBtn');
+    const ownerDashClinicsList = document.getElementById('ownerDashClinicsList');
+    const ownerDashToggleAddUserBtn = document.getElementById('ownerDashToggleAddUserBtn');
+    const ownerDashAddUserPanel = document.getElementById('ownerDashAddUserPanel');
+    const ownerDashNewUserName = document.getElementById('ownerDashNewUserName');
+    const ownerDashNewUserEmail = document.getElementById('ownerDashNewUserEmail');
+    const ownerDashNewUserPassword = document.getElementById('ownerDashNewUserPassword');
+    const ownerDashNewUserRole = document.getElementById('ownerDashNewUserRole');
+    const ownerDashNewUserPracticeSelect = document.getElementById('ownerDashNewUserPracticeSelect');
+    const ownerDashCancelAddUserBtn = document.getElementById('ownerDashCancelAddUserBtn');
+    const ownerDashSaveNewUserBtn = document.getElementById('ownerDashSaveNewUserBtn');
+    const ownerDashUsersList = document.getElementById('ownerDashUsersList');
+
+    let ownerPreviewingClinic = false;
+
     const appBootLoader = document.getElementById('appBootLoader');
     const bootLoaderSubtext = document.getElementById('bootLoaderSubtext');
     const CACHED_USER_KEY = 'dv_cached_user';
@@ -4509,13 +4537,30 @@
         openAuthModalBtn.title = `${user.full_name} (${roleDisplay} • ${user.practice_name || 'Clinic'})`;
       }
 
-      if (activeWorkspaceLabel) {
-        activeWorkspaceLabel.textContent = user.practice_name || 'Clinic Workspace';
-      }
-
       const isOwner = user.role === 'owner';
       const isClinicAdmin = user.role === 'clinic_admin';
       const canManageClinic = isOwner || isClinicAdmin;
+
+      // Determine whether Website Owner is on the Full-Page Settings Dashboard or Previewing a Clinic
+      const showOwnerMasterScreen = isOwner && !ownerPreviewingClinic;
+      if (ownerMasterDashboard) {
+        ownerMasterDashboard.style.display = showOwnerMasterScreen ? 'block' : 'none';
+      }
+      if (clinicVerificationMain) {
+        clinicVerificationMain.style.display = showOwnerMasterScreen ? 'none' : 'block';
+      }
+      if (ownerPreviewBanner) {
+        ownerPreviewBanner.style.display = (isOwner && ownerPreviewingClinic) ? 'flex' : 'none';
+      }
+      if (ownerPreviewClinicName) {
+        ownerPreviewClinicName.textContent = user.practice_name || 'Selected Clinic';
+      }
+
+      if (activeWorkspaceLabel) {
+        activeWorkspaceLabel.textContent = showOwnerMasterScreen
+          ? '👑 Website Owner Settings'
+          : (user.practice_name || 'Clinic Workspace');
+      }
 
       // Website Owner & Clinic Administrator can access Per-Clinic CDT Checklist & AI Prompt Settings
       if (openSettingsBtn) {
@@ -4532,7 +4577,7 @@
         openClinicManagerBtn.style.display = canManageClinic ? 'inline-flex' : 'none';
         const btnLabel = document.getElementById('openClinicManagerLabel');
         if (btnLabel) {
-          btnLabel.textContent = isOwner ? 'Manage Clinics & Users' : 'Manage Clinic Users';
+          btnLabel.textContent = isOwner ? 'Owner Settings Home' : 'Manage Clinic Users';
         }
       }
 
@@ -4542,7 +4587,7 @@
       if (btnWorkspaceSwitcher) {
         btnWorkspaceSwitcher.style.cursor = isOwner ? 'pointer' : 'default';
         btnWorkspaceSwitcher.title = isOwner
-          ? 'Click to switch between Clinic 1, Clinic 2, and Clinic 3'
+          ? 'Switch between Website Owner Settings Dashboard and Previewing a Clinic'
           : `Assigned Workspace: ${user.practice_name}`;
       }
 
@@ -4550,7 +4595,7 @@
       if (authLoginForm) authLoginForm.style.display = 'none';
       if (authSessionUserName) authSessionUserName.textContent = `${user.full_name || 'Clinic User'} (${roleDisplay})`;
       if (authSessionUserEmail) authSessionUserEmail.textContent = user.email;
-      if (authSessionPracticeName) authSessionPracticeName.textContent = `Active Workspace: ${user.practice_name || 'DentVerify Clinic'}`;
+      if (authSessionPracticeName) authSessionPracticeName.textContent = `Active Workspace: ${user.practice_name || 'Website Owner (Master Admin)'}`;
     }
 
     async function checkUserAuth() {
@@ -4562,6 +4607,7 @@
           const cachedUser = JSON.parse(cachedRaw);
           if (cachedUser && cachedUser.email) {
             currentUser = cachedUser;
+            ownerPreviewingClinic = Boolean(cachedUser.role === 'owner' && cachedUser.practice_id);
             applyUserHeaderUI(cachedUser);
           }
         }
@@ -4587,6 +4633,8 @@
     async function setCurrentUser(user) {
       currentUser = user;
       if (user) {
+        // When Website Owner logs in with no assigned clinic, open Master Settings Dashboard directly
+        ownerPreviewingClinic = Boolean(user.role === 'owner' && user.practice_id);
         try {
           localStorage.setItem(CACHED_USER_KEY, JSON.stringify(user));
           localStorage.removeItem(HISTORY_STORAGE_KEY);
@@ -4602,6 +4650,7 @@
           await loadOwnerClinicsAndUsers();
         }
       } else {
+        ownerPreviewingClinic = false;
         try {
           localStorage.removeItem(CACHED_USER_KEY);
           localStorage.removeItem(HISTORY_STORAGE_KEY);
@@ -4651,8 +4700,7 @@
             await setCurrentUser(data.user);
             resetInactivityTimer();
             if (data.user.role === 'owner') {
-              if (clinicManagerModal) clinicManagerModal.classList.add('active');
-              displayToast(`Welcome Website Owner! Manage all clinics, admins, and users.`);
+              displayToast(`Welcome Website Owner! Global Settings & Multi-Clinic Dashboard loaded.`);
             } else if (data.user.role === 'clinic_admin') {
               displayToast(`Welcome Clinic Admin (${data.user.practice_name})! You can manage your clinic's users and settings.`);
             } else {
@@ -4716,58 +4764,61 @@
         </div>
       `;
 
-      // Top option: Master Owner Mode (No Clinic Assigned)
-      const isMaster = !currentUser.practice_id;
+      // Top option: Master Owner Mode (Dedicated Full-Page Settings Dashboard)
+      const isMaster = !ownerPreviewingClinic;
       const masterBtn = document.createElement('button');
       masterBtn.type = 'button';
       masterBtn.className = `workspace-item-btn ${isMaster ? 'active' : ''}`;
       masterBtn.innerHTML = `
         <div style="display: flex; flex-direction: column; gap: 2px;">
-          <span>👑 Website Owner (Master Admin)</span>
-          <span style="font-size: 0.65rem; color: #fbbf24; font-weight: 400;">Unassigned • Manage All Clinics & Users</span>
+          <span>👑 Website Owner Settings Dashboard</span>
+          <span style="font-size: 0.65rem; color: #fbbf24; font-weight: 400;">Manage All Clinics, Users, AI & Payers</span>
         </div>
         ${isMaster ? '<span style="color: #34d399; font-weight: 800;">✓</span>' : ''}
       `;
       masterBtn.addEventListener('click', async () => {
         workspaceDropdownPanel.style.display = 'none';
-        if (isMaster) return;
-        await switchActiveClinicWorkspace('none');
+        await switchActiveClinicWorkspace('none', { enterPreview: false });
       });
       workspaceDropdownPanel.appendChild(masterBtn);
 
       cachedPractices.forEach(prac => {
-        const isCurrent = prac.id === currentUser.practice_id;
+        const isCurrent = ownerPreviewingClinic && prac.id === currentUser.practice_id;
         const btn = document.createElement('button');
         btn.type = 'button';
         btn.className = `workspace-item-btn ${isCurrent ? 'active' : ''}`;
         btn.innerHTML = `
           <div style="display: flex; flex-direction: column; gap: 2px;">
-            <span>${escapeHtml(prac.name)}</span>
+            <span>👁️ Preview: ${escapeHtml(prac.name)}</span>
             <span style="font-size: 0.65rem; color: #94a3b8; font-weight: 400;">${prac.verification_count || 0} breakdowns • ${prac.user_count || 0} clinic accounts</span>
           </div>
           ${isCurrent ? '<span style="color: #34d399; font-weight: 800;">✓</span>' : ''}
         `;
         btn.addEventListener('click', async () => {
           workspaceDropdownPanel.style.display = 'none';
-          if (isCurrent) return;
-          await switchActiveClinicWorkspace(prac.id);
+          await switchActiveClinicWorkspace(prac.id, { enterPreview: true });
         });
         workspaceDropdownPanel.appendChild(btn);
       });
     }
 
-    async function switchActiveClinicWorkspace(practiceId) {
+    async function switchActiveClinicWorkspace(practiceId, options = {}) {
+      const enterPreview = options.enterPreview !== undefined
+        ? Boolean(options.enterPreview)
+        : (practiceId !== 'none');
       try {
         const res = await fetch(`/api/practices/switch/${practiceId}`, { method: 'POST' });
         const data = await res.json();
         if (res.ok && data.success) {
           currentUser.practice_id = data.practice_id;
           currentUser.practice_name = data.practice_name;
+          if (currentUser.role === 'owner') {
+            ownerPreviewingClinic = enterPreview && Boolean(data.practice_id);
+          }
           try {
             localStorage.setItem(CACHED_USER_KEY, JSON.stringify(currentUser));
           } catch (e) {}
-          if (activeWorkspaceLabel) activeWorkspaceLabel.textContent = data.practice_name;
-          if (authSessionPracticeName) authSessionPracticeName.textContent = `Active Workspace: ${data.practice_name}`;
+          applyUserHeaderUI(currentUser);
 
           // Reload isolated clinic data & per-clinic CDT checklist/prompt
           await loadClinicPayersFromServer();
@@ -4776,13 +4827,41 @@
           renderHistoryList();
           renderWorkspaceSwitcherDropdown();
           renderClinicManagerModalContent();
-          displayToast(`Active mode: ${data.practice_name}`);
+          displayToast(
+            ownerPreviewingClinic
+              ? `Previewing Clinic Workspace: ${data.practice_name}`
+              : `Active context: ${data.practice_name}`
+          );
         } else {
           displayToast(data.error || 'Failed to switch clinic workspace.');
         }
       } catch (e) {
         displayToast('Error switching workspace.');
       }
+    }
+
+    if (btnReturnToOwnerDashboard) {
+      btnReturnToOwnerDashboard.addEventListener('click', async () => {
+        await switchActiveClinicWorkspace('none', { enterPreview: false });
+      });
+    }
+
+    if (ownerOpenAiSettingsBtn) {
+      ownerOpenAiSettingsBtn.addEventListener('click', () => {
+        if (openSettingsBtn) openSettingsBtn.click();
+      });
+    }
+
+    if (ownerOpenPayerDirBtn) {
+      ownerOpenPayerDirBtn.addEventListener('click', () => {
+        openInsuranceDirectory();
+      });
+    }
+
+    if (ownerOpenHistoryBtn) {
+      ownerOpenHistoryBtn.addEventListener('click', () => {
+        if (openHistoryBtn) openHistoryBtn.click();
+      });
     }
 
     if (btnWorkspaceSwitcher) {
@@ -4807,7 +4886,7 @@
       }
     });
 
-    // Clinic & User Management Modal Logic
+    // Clinic & User Management Modal + Full-Page Owner Dashboard Rendering
     function renderClinicManagerModalContent() {
       const isOwner = currentUser && currentUser.role === 'owner';
       const modalTitleEl = document.getElementById('clinicManagerModalTitle');
@@ -4827,43 +4906,54 @@
         ownerRoleOpt.style.display = isOwner ? 'block' : 'none';
       }
 
-      if (clinicCountBadge) clinicCountBadge.textContent = cachedPractices.length;
       const staffOnlyCount = cachedUsers.filter(u => u.role !== 'owner').length;
-      if (userCountBadge) userCountBadge.textContent = staffOnlyCount;
+      const totalVerifications = cachedPractices.reduce((sum, p) => sum + (Number(p.verification_count) || 0), 0);
 
-      // Populate Practice Select in Add User Form
+      if (clinicCountBadge) clinicCountBadge.textContent = cachedPractices.length;
+      if (userCountBadge) userCountBadge.textContent = staffOnlyCount;
+      if (ownerDashClinicCount) ownerDashClinicCount.textContent = cachedPractices.length;
+      if (ownerDashUserCount) ownerDashUserCount.textContent = staffOnlyCount;
+      if (ownerDashVerificationCount) ownerDashVerificationCount.textContent = totalVerifications;
+
+      // Populate Practice Select in Add User Forms (Modal & Owner Dashboard)
+      const practiceOptsHtml = cachedPractices.map(p =>
+        `<option value="${escapeHtml(p.id)}">${escapeHtml(p.name)}</option>`
+      ).join('');
       if (newUserPracticeSelect) {
-        newUserPracticeSelect.innerHTML = cachedPractices.map(p =>
-          `<option value="${escapeHtml(p.id)}">${escapeHtml(p.name)}</option>`
-        ).join('');
+        newUserPracticeSelect.innerHTML = practiceOptsHtml;
         newUserPracticeSelect.disabled = !isOwner;
       }
+      if (ownerDashNewUserPracticeSelect) {
+        ownerDashNewUserPracticeSelect.innerHTML = practiceOptsHtml;
+      }
 
-      // Render Clinic Workspaces List
-      if (clinicWorkspacesList) {
-        clinicWorkspacesList.innerHTML = '';
+      // Helper to populate a Clinic Workspaces list container
+      const populateClinicList = (targetContainer) => {
+        if (!targetContainer) return;
+        targetContainer.innerHTML = '';
         cachedPractices.forEach(prac => {
           const isCurrent = currentUser && prac.id === currentUser.practice_id;
           const card = document.createElement('div');
           card.className = 'clinic-mgmt-card';
           card.style.flexWrap = 'wrap';
           card.innerHTML = `
-            <div style="flex: 1; min-width: 240px;">
+            <div style="flex: 1; min-width: 220px;">
               <div class="clinic-mgmt-title" style="flex-wrap: wrap;">
-                <input type="text" class="table-search-input clinic-rename-input" value="${escapeHtml(prac.name)}" style="font-weight: 700; color: #fff; max-width: 280px; padding: 0.28rem 0.55rem; font-size: 0.8rem;">
-                ${isCurrent ? '<span class="user-role-badge staff">Active</span>' : ''}
+                <input type="text" class="table-search-input clinic-rename-input" value="${escapeHtml(prac.name)}" style="font-weight: 700; color: #fff; max-width: 260px; padding: 0.28rem 0.55rem; font-size: 0.8rem;">
+                ${isCurrent ? '<span class="user-role-badge staff">Selected</span>' : ''}
               </div>
               <div class="clinic-mgmt-stats">
                 <span>📋 ${prac.verification_count || 0} Patient Breakdowns</span>
                 <span>•</span>
-                <span>👥 ${prac.user_count || 0} Clinic Accounts (Admin + Users)</span>
+                <span>👥 ${prac.user_count || 0} Clinic Accounts</span>
               </div>
             </div>
-            <div style="display: flex; gap: 0.4rem; align-items: center; flex-wrap: wrap;">
-              <button type="button" class="btn-action-ghost btn-save-clinic-name" style="padding: 0.3rem 0.6rem; font-size: 0.7rem;" title="Save new clinic name">💾 Save Name</button>
-              <button type="button" class="btn-action-ghost btn-edit-clinic-payers" style="padding: 0.3rem 0.6rem; font-size: 0.7rem;" title="Edit this clinic's Insurance Directory & Portals">🏥 Edit Payers</button>
+            <div style="display: flex; gap: 0.35rem; align-items: center; flex-wrap: wrap;">
+              <button type="button" class="btn-action-ghost btn-save-clinic-name" style="padding: 0.3rem 0.55rem; font-size: 0.69rem;" title="Save new clinic name">💾 Save Name</button>
+              <button type="button" class="btn-action-ghost btn-edit-clinic-payers" style="padding: 0.3rem 0.55rem; font-size: 0.69rem;" title="Edit this clinic's Master Insurance Hubs & Wired States">🏥 Payer Hubs</button>
+              <button type="button" class="btn-action-ghost btn-edit-clinic-ai" style="padding: 0.3rem 0.55rem; font-size: 0.69rem;" title="Edit this clinic's CDT Checklist & AI Prompt">⚙️ CDT & AI</button>
               ${isOwner ? `
-                <button type="button" class="btn-verify-primary btn-switch-here" style="padding: 0.3rem 0.65rem; font-size: 0.7rem;">${isCurrent ? '📂 Open Workspace' : '📂 Enter Clinic'}</button>
+                <button type="button" class="btn-verify-primary btn-switch-here" style="padding: 0.3rem 0.65rem; font-size: 0.69rem;" title="Preview this clinic's verification workspace">👁️ Preview Clinic</button>
                 <button type="button" class="del-payer-btn btn-del-clinic" title="Delete clinic workspace" style="background: none; border: none; color: #ef4444; cursor: pointer; padding: 4px;">✕</button>
               ` : ''}
             </div>
@@ -4882,7 +4972,7 @@
             if (res.ok) {
               if (currentUser && currentUser.practice_id === prac.id) {
                 currentUser.practice_name = newName;
-                if (activeWorkspaceLabel) activeWorkspaceLabel.textContent = newName;
+                applyUserHeaderUI(currentUser);
                 try { localStorage.setItem(CACHED_USER_KEY, JSON.stringify(currentUser)); } catch (e) {}
               }
               await loadOwnerClinicsAndUsers();
@@ -4894,19 +4984,28 @@
           if (editPayersBtn) {
             editPayersBtn.addEventListener('click', async () => {
               if (isOwner && !isCurrent) {
-                await switchActiveClinicWorkspace(prac.id);
+                await switchActiveClinicWorkspace(prac.id, { enterPreview: ownerPreviewingClinic });
               }
               if (clinicManagerModal) clinicManagerModal.classList.remove('active');
               openInsuranceDirectory();
             });
           }
 
+          const editAiBtn = card.querySelector('.btn-edit-clinic-ai');
+          if (editAiBtn) {
+            editAiBtn.addEventListener('click', async () => {
+              if (isOwner && !isCurrent) {
+                await switchActiveClinicWorkspace(prac.id, { enterPreview: ownerPreviewingClinic });
+              }
+              if (clinicManagerModal) clinicManagerModal.classList.remove('active');
+              if (openSettingsBtn) openSettingsBtn.click();
+            });
+          }
+
           const switchBtn = card.querySelector('.btn-switch-here');
           if (switchBtn) {
             switchBtn.addEventListener('click', async () => {
-              if (!isCurrent) {
-                await switchActiveClinicWorkspace(prac.id);
-              }
+              await switchActiveClinicWorkspace(prac.id, { enterPreview: true });
               if (clinicManagerModal) clinicManagerModal.classList.remove('active');
             });
           }
@@ -4924,7 +5023,7 @@
               const res = await fetch(`/api/practices/${prac.id}`, { method: 'DELETE' });
               if (res.ok) {
                 if (currentUser && currentUser.practice_id === prac.id) {
-                  await switchActiveClinicWorkspace('none');
+                  await switchActiveClinicWorkspace('none', { enterPreview: false });
                 }
                 await loadOwnerClinicsAndUsers();
                 displayToast(`Deleted clinic workspace "${prac.name}".`);
@@ -4932,13 +5031,17 @@
             });
           }
 
-          clinicWorkspacesList.appendChild(card);
+          targetContainer.appendChild(card);
         });
-      }
+      };
 
-      // Render Users List (Inline editable Full Name, Email, Role, Clinic Assignment, Inline Password Form, Delete)
-      if (usersListContainer) {
-        usersListContainer.innerHTML = '';
+      populateClinicList(clinicWorkspacesList);
+      populateClinicList(ownerDashClinicsList);
+
+      // Render Users List into both Modal and Owner Dashboard
+      const populateUsersList = (targetUsersContainer) => {
+        if (!targetUsersContainer) return;
+        targetUsersContainer.innerHTML = '';
         cachedUsers.forEach(u => {
           const isOwnerAccount = u.role === 'owner';
           const isClinicAdminAccount = u.role === 'clinic_admin';
@@ -4993,7 +5096,6 @@
             </div>
           `;
 
-          // Save Name & Email (and pending password if filled) button
           const saveUserBtn = card.querySelector('.btn-save-user-info');
           const nameInput = card.querySelector('.user-edit-name');
           const emailInput = card.querySelector('.user-edit-email');
@@ -5041,7 +5143,6 @@
             });
           }
 
-          // Role selector dropdown (Clinic User vs Clinic Admin)
           const roleSelect = card.querySelector('.user-role-select');
           if (roleSelect) {
             roleSelect.addEventListener('change', async () => {
@@ -5058,7 +5159,6 @@
             });
           }
 
-          // Reassign clinic dropdown (Website Owner only)
           const clinicSelect = card.querySelector('.user-clinic-select');
           if (clinicSelect) {
             clinicSelect.addEventListener('change', async () => {
@@ -5075,7 +5175,6 @@
             });
           }
 
-          // Inline Reset Password Panel
           if (pwBtn && pwPanel) {
             pwBtn.addEventListener('click', () => {
               const isHidden = pwPanel.style.display === 'none';
@@ -5124,7 +5223,6 @@
             });
           }
 
-          // Delete user button
           const delBtn = card.querySelector('.btn-del-user');
           if (delBtn) {
             delBtn.addEventListener('click', async () => {
@@ -5143,14 +5241,26 @@
             });
           }
 
-          usersListContainer.appendChild(card);
+          targetUsersContainer.appendChild(card);
         });
-      }
+      };
+
+      populateUsersList(usersListContainer);
+      populateUsersList(ownerDashUsersList);
     }
 
     if (openClinicManagerBtn) {
       openClinicManagerBtn.addEventListener('click', async () => {
         await loadOwnerClinicsAndUsers();
+        if (currentUser && currentUser.role === 'owner') {
+          if (ownerPreviewingClinic) {
+            await switchActiveClinicWorkspace('none', { enterPreview: false });
+          } else {
+            applyUserHeaderUI(currentUser);
+            displayToast('Website Owner Settings Dashboard active.');
+          }
+          return;
+        }
         if (clinicManagerModal) clinicManagerModal.classList.add('active');
       });
     }
@@ -5186,28 +5296,33 @@
       });
     });
 
-    // Create New Clinic
-    if (btnCreateClinic && newClinicNameInput) {
-      btnCreateClinic.addEventListener('click', async () => {
-        const name = newClinicNameInput.value.trim();
-        if (!name) {
-          await openCustomNotice('Clinic Name Required', 'Please enter a clinic workspace name.');
-          return;
-        }
-        const res = await fetch('/api/practices', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ name })
-        });
-        if (res.ok) {
-          newClinicNameInput.value = '';
-          await loadOwnerClinicsAndUsers();
-          displayToast(`Created clinic workspace: ${name}`);
-        }
+    // Create New Clinic (Modal & Owner Dashboard)
+    const handleCreateNewClinic = async (inputEl) => {
+      const name = inputEl?.value.trim();
+      if (!name) {
+        await openCustomNotice('Clinic Name Required', 'Please enter a clinic workspace name.');
+        return;
+      }
+      const res = await fetch('/api/practices', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name })
       });
+      if (res.ok) {
+        inputEl.value = '';
+        await loadOwnerClinicsAndUsers();
+        displayToast(`Created clinic workspace: ${name}`);
+      }
+    };
+
+    if (btnCreateClinic && newClinicNameInput) {
+      btnCreateClinic.addEventListener('click', () => handleCreateNewClinic(newClinicNameInput));
+    }
+    if (ownerDashCreateClinicBtn && ownerDashNewClinicInput) {
+      ownerDashCreateClinicBtn.addEventListener('click', () => handleCreateNewClinic(ownerDashNewClinicInput));
     }
 
-    // Create & Assign New User
+    // Create & Assign New User (Modal)
     if (toggleAddUserFormBtn && addUserFormPanel) {
       toggleAddUserFormBtn.addEventListener('click', () => {
         const isHidden = addUserFormPanel.style.display === 'none';
@@ -5229,7 +5344,7 @@
         const role = newUserRole?.value || 'staff';
         const practice_id = newUserPracticeSelect?.value;
 
-        if (!full_name || !email || !password || !practice_id) {
+        if (!full_name || !email || !password || (role !== 'owner' && !practice_id)) {
           await openCustomNotice('Missing Fields', 'Please fill in Full Name, Email, Password, and Assigned Clinic.');
           return;
         }
@@ -5245,6 +5360,52 @@
           if (newUserEmail) newUserEmail.value = '';
           if (newUserPassword) newUserPassword.value = '';
           if (addUserFormPanel) addUserFormPanel.style.display = 'none';
+          await loadOwnerClinicsAndUsers();
+          displayToast(`Created & assigned user: ${email}`);
+        } else {
+          await openCustomNotice('Could Not Create User', data.error || 'Could not create user.');
+        }
+      });
+    }
+
+    // Create & Assign New User (Owner Full-Page Dashboard)
+    if (ownerDashToggleAddUserBtn && ownerDashAddUserPanel) {
+      ownerDashToggleAddUserBtn.addEventListener('click', () => {
+        const isHidden = ownerDashAddUserPanel.style.display === 'none';
+        ownerDashAddUserPanel.style.display = isHidden ? 'block' : 'none';
+      });
+    }
+
+    if (ownerDashCancelAddUserBtn && ownerDashAddUserPanel) {
+      ownerDashCancelAddUserBtn.addEventListener('click', () => {
+        ownerDashAddUserPanel.style.display = 'none';
+      });
+    }
+
+    if (ownerDashSaveNewUserBtn) {
+      ownerDashSaveNewUserBtn.addEventListener('click', async () => {
+        const full_name = ownerDashNewUserName?.value.trim();
+        const email = ownerDashNewUserEmail?.value.trim();
+        const password = ownerDashNewUserPassword?.value;
+        const role = ownerDashNewUserRole?.value || 'staff';
+        const practice_id = ownerDashNewUserPracticeSelect?.value;
+
+        if (!full_name || !email || !password || (role !== 'owner' && !practice_id)) {
+          await openCustomNotice('Missing Fields', 'Please fill in Full Name, Email, Password, and Assigned Clinic.');
+          return;
+        }
+
+        const res = await fetch('/api/users', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ full_name, email, password, role, practice_id })
+        });
+        const data = await res.json();
+        if (res.ok && data.success) {
+          if (ownerDashNewUserName) ownerDashNewUserName.value = '';
+          if (ownerDashNewUserEmail) ownerDashNewUserEmail.value = '';
+          if (ownerDashNewUserPassword) ownerDashNewUserPassword.value = '';
+          if (ownerDashAddUserPanel) ownerDashAddUserPanel.style.display = 'none';
           await loadOwnerClinicsAndUsers();
           displayToast(`Created & assigned user: ${email}`);
         } else {
