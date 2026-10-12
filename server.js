@@ -1724,12 +1724,109 @@ app.get('/api/payers', async (req, res) => {
   }
 });
 
-// POST /api/payers (Save active clinic's custom directory; restricted to Website Owner and Clinic Admin)
+// Helper: Automatically sync edited Insurance Carrier Name, Claims Address, Phone, Payor ID, and Network Status into the clinic's Payer Directory
+async function syncBreakdownInsuranceToClinicDirectory(practiceId, ins) {
+  if (!practiceId || !ins || !ins.carrier) return null;
+  const rawCarrier = String(ins.carrier || '').trim();
+  if (!rawCarrier || /^(none|n\/a|na|-|dental insurance)$/i.test(rawCarrier)) return null;
+
+  try {
+    const res = await db.query(
+      `SELECT payer_directory_json FROM dentverify.practices WHERE id = $1`,
+      [practiceId]
+    );
+    const list = Array.isArray(res.rows[0]?.payer_directory_json) && res.rows[0].payer_directory_json.length > 0
+      ? res.rows[0].payer_directory_json.slice()
+      : db.DEFAULT_CLINIC_PAYER_DIRECTORY.map(x => ({ ...x }));
+
+    const cLower = rawCarrier.toLowerCase();
+    // 1. Prefer exact name/carrier match first
+    let matched = list.find(p =>
+      (p.name && p.name.toLowerCase().trim() === cLower) ||
+      (p.carrier && p.carrier.toLowerCase().trim() === cLower)
+    );
+
+    // 2. Otherwise match by specific matchKey (excluding generic 'delta dental' if rawCarrier is a specific sub-entity like 'Delta Dental Insurance Company' or 'Delta Dental California')
+    if (!matched) {
+      for (const p of list) {
+        if (Array.isArray(p.matchKeys)) {
+          for (const k of p.matchKeys) {
+            const kLower = String(k || '').toLowerCase().trim();
+            if (!kLower) continue;
+            if (kLower === 'delta dental' && cLower !== 'delta dental' && !cLower.includes('ppo') && !cLower.includes('national')) {
+              continue;
+            }
+            if (cLower === kLower || cLower.includes(kLower)) {
+              matched = p;
+              break;
+            }
+          }
+        }
+        if (matched) break;
+      }
+    }
+
+    const rawAddr = String(ins.insurance_address || '').trim();
+    const hasValidAddr = rawAddr && !/^(none|n\/a|na|-)$/i.test(rawAddr) && !/1605\s+johnson\s+pl/i.test(rawAddr);
+    const rawPid = String(ins.payor_id || '').trim();
+    const hasValidPid = rawPid && !/^(none|n\/a|na|-)$/i.test(rawPid);
+    const rawPhone = String(ins.insurance_phone || '').trim();
+    const hasValidPhone = rawPhone && !/^(none|n\/a|na|-)$/i.test(rawPhone);
+    const rawNet = String(ins.network_status || '').trim();
+    const normNet = rawNet.toLowerCase().includes('out') ? 'Out-of-Network' : 'In-Network';
+
+    if (matched) {
+      matched.name = rawCarrier;
+      matched.carrier = rawCarrier;
+      if (hasValidAddr) matched.address = rawAddr;
+      if (hasValidPid) matched.payorId = rawPid;
+      if (hasValidPhone) matched.phone = rawPhone;
+      if (rawNet) {
+        matched.network = normNet;
+        matched.networkStatus = normNet;
+      }
+      if (!Array.isArray(matched.matchKeys)) matched.matchKeys = [];
+      if (!matched.matchKeys.some(k => String(k).toLowerCase() === cLower)) {
+        matched.matchKeys.push(cLower);
+      }
+    } else {
+      let parentCarrier = 'Standard Carrier';
+      if (cLower.includes('delta')) parentCarrier = 'Delta Dental Ins';
+      else if (cLower.includes('metlife') || cLower.includes('met life')) parentCarrier = 'MetLife';
+      else if (cLower.includes('cigna')) parentCarrier = 'Cigna Healthcare';
+      else if (cLower.includes('guardian')) parentCarrier = 'Guardian';
+      else if (cLower.includes('aetna')) parentCarrier = 'Aetna';
+      else if (cLower.includes('blue cross') || cLower.includes('bcbs') || cLower.includes('anthem')) parentCarrier = 'Blue Cross Blue Shield';
+
+      list.push({
+        id: 'payer_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6),
+        parentCarrier,
+        name: rawCarrier,
+        carrier: rawCarrier,
+        network: normNet,
+        networkStatus: normNet,
+        matchKeys: [cLower],
+        address: hasValidAddr ? rawAddr : 'N/A',
+        phone: hasValidPhone ? rawPhone : 'N/A',
+        payorId: hasValidPid ? rawPid : 'N/A',
+        isCustom: true,
+      });
+    }
+
+    await db.query(
+      `UPDATE dentverify.practices SET payer_directory_json = $1 WHERE id = $2`,
+      [JSON.stringify(list), practiceId]
+    );
+    return list;
+  } catch (err) {
+    console.warn('Could not auto-sync breakdown insurance to directory:', err.message);
+    return null;
+  }
+}
+
+// POST /api/payers (Save active clinic's custom directory)
 app.post('/api/payers', async (req, res) => {
   if (!req.user) return res.status(401).json({ error: 'Unauthorized' });
-  if (req.user.role !== 'owner' && req.user.role !== 'clinic_admin') {
-    return res.status(403).json({ error: 'Only the Website Owner or Clinic Administrator can modify the clinic insurance directory.' });
-  }
   try {
     const { payers, apply_all } = req.body;
     if (!Array.isArray(payers)) {
@@ -1896,21 +1993,23 @@ app.put('/api/verifications/:id', async (req, res) => {
       ? await db.query(
           `UPDATE dentverify.verifications
            SET carrier = $1, patient_name_enc = $2, patient_name_masked = $3, dob_enc = $4, network_status = $5, breakdown_json = $6
-           WHERE id = $7 RETURNING id;`,
+           WHERE id = $7 RETURNING id, practice_id;`,
           [carrier, patientNameEnc, maskedName, dobEnc, networkStatus, JSON.stringify(breakdown), id]
         )
       : await db.query(
           `UPDATE dentverify.verifications
            SET carrier = $1, patient_name_enc = $2, patient_name_masked = $3, dob_enc = $4, network_status = $5, breakdown_json = $6
-           WHERE id = $7 AND practice_id = $8 RETURNING id;`,
+           WHERE id = $7 AND practice_id = $8 RETURNING id, practice_id;`,
           [carrier, patientNameEnc, maskedName, dobEnc, networkStatus, JSON.stringify(breakdown), id, req.user.practice_id]
         );
 
     if (updateRes.rows.length === 0) {
       return res.status(404).json({ error: 'Verification record not found or unauthorized.' });
     }
+    const targetPracticeId = updateRes.rows[0].practice_id || req.user.practice_id;
+    const syncedDirectory = await syncBreakdownInsuranceToClinicDirectory(targetPracticeId, ins);
     await recordAuditLog(req, 'UPDATE_BREAKDOWN_RECORD', id, { carrier });
-    res.json({ success: true, id });
+    res.json({ success: true, id, payers: syncedDirectory });
   } catch (err) {
     console.error('Record update error:', err);
     res.status(500).json({ error: 'Failed to save verification edits.' });

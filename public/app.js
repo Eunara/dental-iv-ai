@@ -983,16 +983,111 @@
     function matchPayerDirectory(carrierName) {
       if (!carrierName || typeof carrierName !== 'string') return null;
       const c = carrierName.toLowerCase().trim();
+      if (!c || /^(none|n\/a|na|-|dental insurance)$/i.test(c)) return null;
       const list = getPayerDirectory();
+
+      // 1. Exact case-insensitive name/carrier match first
+      const exact = list.find(p =>
+        (p.name && p.name.toLowerCase().trim() === c) ||
+        (p.carrier && p.carrier.toLowerCase().trim() === c)
+      );
+      if (exact) return exact;
+
+      // 2. Exact matchKey match
       for (const p of list) {
-        if (p.name && c.includes(p.name.toLowerCase())) return p;
         if (Array.isArray(p.matchKeys)) {
           for (const k of p.matchKeys) {
-            if (c.includes(k.toLowerCase())) return p;
+            if (String(k || '').toLowerCase().trim() === c) return p;
+          }
+        }
+      }
+
+      // 3. Substring match (skip generic 'delta dental' if a more specific Delta entry might exist)
+      for (const p of list) {
+        if (p.name && c.includes(p.name.toLowerCase().trim())) return p;
+        if (Array.isArray(p.matchKeys)) {
+          for (const k of p.matchKeys) {
+            const kLower = String(k || '').toLowerCase().trim();
+            if (!kLower) continue;
+            if (kLower === 'delta dental' && c !== 'delta dental' && !c.includes('ppo') && !c.includes('national')) {
+              continue;
+            }
+            if (c.includes(kLower)) return p;
           }
         }
       }
       return null;
+    }
+
+    async function syncBreakdownInsuranceToDirectory(details, oldCarrier = '') {
+      if (!details || !details.carrier) return;
+      const rawCarrier = String(details.carrier || '').trim();
+      if (!rawCarrier || /^(none|n\/a|na|-|dental insurance)$/i.test(rawCarrier)) return;
+
+      const list = getPayerDirectory().slice();
+      const cLower = rawCarrier.toLowerCase();
+      const oldLower = String(oldCarrier || '').toLowerCase().trim();
+
+      let target = list.find(p =>
+        (p.name && p.name.toLowerCase().trim() === cLower) ||
+        (p.carrier && p.carrier.toLowerCase().trim() === cLower)
+      );
+
+      if (!target && oldLower && oldLower === cLower) {
+        target = matchPayerDirectory(rawCarrier);
+      }
+
+      const rawAddr = String(details.insurance_address || '').trim();
+      const hasValidAddr = rawAddr && !/^(none|n\/a|na|-)$/i.test(rawAddr) && !/1605\s+johnson\s+pl/i.test(rawAddr);
+      const rawPid = String(details.payor_id || '').trim();
+      const hasValidPid = rawPid && !/^(none|n\/a|na|-)$/i.test(rawPid);
+      const rawPhone = String(details.insurance_phone || '').trim();
+      const hasValidPhone = rawPhone && !/^(none|n\/a|na|-)$/i.test(rawPhone);
+      const rawNet = String(details.network_status || '').trim();
+      const normNet = rawNet.toLowerCase().includes('out') ? 'Out-of-Network' : 'In-Network';
+
+      if (target) {
+        target.name = rawCarrier;
+        target.carrier = rawCarrier;
+        if (hasValidAddr) target.address = rawAddr;
+        if (hasValidPid) target.payorId = rawPid;
+        if (hasValidPhone) target.phone = rawPhone;
+        if (rawNet) {
+          target.network = normNet;
+          target.networkStatus = normNet;
+        }
+        if (!Array.isArray(target.matchKeys)) target.matchKeys = [];
+        if (!target.matchKeys.some(k => String(k).toLowerCase() === cLower)) {
+          target.matchKeys.push(cLower);
+        }
+      } else {
+        let parentCarrier = 'Standard Carrier';
+        if (cLower.includes('delta')) parentCarrier = 'Delta Dental Ins';
+        else if (cLower.includes('metlife') || cLower.includes('met life')) parentCarrier = 'MetLife';
+        else if (cLower.includes('cigna')) parentCarrier = 'Cigna Healthcare';
+        else if (cLower.includes('guardian')) parentCarrier = 'Guardian';
+        else if (cLower.includes('aetna')) parentCarrier = 'Aetna';
+        else if (cLower.includes('blue cross') || cLower.includes('bcbs') || cLower.includes('anthem')) parentCarrier = 'Blue Cross Blue Shield';
+
+        list.push({
+          id: 'payer_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6),
+          parentCarrier,
+          name: rawCarrier,
+          carrier: rawCarrier,
+          network: normNet,
+          networkStatus: normNet,
+          matchKeys: [cLower],
+          address: hasValidAddr ? rawAddr : 'N/A',
+          phone: hasValidPhone ? rawPhone : 'N/A',
+          payorId: hasValidPid ? rawPid : 'N/A',
+          isCustom: true,
+        });
+      }
+
+      await savePayerDirectory(list);
+      if (insuranceDirectoryModal && insuranceDirectoryModal.classList.contains('active')) {
+        renderDedicatedPayerDirectory();
+      }
     }
 
 
@@ -2088,6 +2183,7 @@
         { id: 'heroGroupNameDisplay', label: 'Employer / Group Name', get: () => details.group_name || '', set: (v) => { details.group_name = v; } },
         { id: 'heroGroupNumberDisplay', label: 'Group Number', get: () => details.group_number || '', set: (v) => { details.group_number = v; } },
         { id: 'carrierNameDisplay', label: 'Insurance Carrier Name', get: () => details.carrier || '', set: (v) => { details.carrier = v; } },
+        { id: 'heroCarrierSubDisplay', label: 'Insurance Carrier Name', get: () => details.carrier || '', set: (v) => { details.carrier = v; } },
         { id: 'heroEffectiveDateDisplay', label: 'Effective Date', get: () => details.effective_date || '', set: (v) => { details.effective_date = v; } },
         { id: 'heroTermedDateDisplay', label: 'Termed Date (or "Active (None)")', get: () => details.termed_date || 'Active (None)', set: (v) => { details.termed_date = v; } },
         { id: 'heroPlanBenefitsDisplay', label: 'Plan Benefits Period (e.g. Calendar Year)', get: () => details.plan_benefits || 'Calendar Year', set: (v) => { details.plan_benefits = v; } },
@@ -2113,12 +2209,22 @@
         el.title = `Click to edit ${b.label}`;
         el.onclick = async (ev) => {
           ev.stopPropagation();
+          const oldCarrier = details.carrier || '';
           const nextVal = await openCustomPrompt(`Edit ${b.label}`, `Update ${b.label}:`, b.get());
           if (nextVal === null) return;
           b.set(nextVal.trim());
+          const isInsuranceDirField = (
+            b.id === 'carrierNameDisplay' ||
+            b.id === 'heroCarrierSubDisplay' ||
+            b.id === 'heroClaimsAddressDisplay' ||
+            b.id === 'heroPayorIdDisplay'
+          );
+          if (isInsuranceDirField) {
+            await syncBreakdownInsuranceToDirectory(details, oldCarrier);
+          }
           renderReportDashboard(currentAuditData);
           persistActiveBreakdownToDb();
-          displayToast(`Updated ${b.label}!`);
+          displayToast(isInsuranceDirField ? `Updated ${b.label} & saved to Insurance Directory!` : `Updated ${b.label}!`);
         };
       });
 
@@ -2260,11 +2366,20 @@
     async function persistActiveBreakdownToDb() {
       if (!currentAuditData || currentAuditData.is_sample || !currentAuditData.verification_id) return;
       try {
-        await fetch(`/api/verifications/${currentAuditData.verification_id}`, {
+        const res = await fetch(`/api/verifications/${currentAuditData.verification_id}`, {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ breakdown: currentAuditData }),
         });
+        if (res.ok) {
+          const data = await res.json();
+          if (Array.isArray(data.payers) && data.payers.length > 0) {
+            activeClinicPayers = data.payers.map((item, idx) => normalizePayerItem(item, idx));
+            try {
+              localStorage.setItem(PAYER_DIRECTORY_STORAGE_KEY, JSON.stringify(activeClinicPayers));
+            } catch (e) {}
+          }
+        }
         await syncHistoryFromBackend();
       } catch (e) {
         console.warn('Could not persist breakdown edit:', e);
@@ -3248,7 +3363,7 @@
         return;
       }
 
-      const canManageDirectory = currentUser && (currentUser.role === 'owner' || currentUser.role === 'clinic_admin');
+      const canManageDirectory = Boolean(currentUser);
       if (dirToggleAddBtn) dirToggleAddBtn.style.display = canManageDirectory ? 'inline-flex' : 'none';
       if (dirToggleBulkImportBtn) dirToggleBulkImportBtn.style.display = canManageDirectory ? 'inline-flex' : 'none';
       if (dirResetDefaultsBtn) dirResetDefaultsBtn.style.display = canManageDirectory ? 'inline-flex' : 'none';
