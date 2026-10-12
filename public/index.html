@@ -249,80 +249,69 @@
       </div>
     </div>
 
-    <!-- Main 2-Column Owner Management Grid: Clinics (Left) + Users & Roles (Right) -->
-    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(460px, 1fr)); gap: 1.25rem; align-items: start;">
-      <!-- Column 1: Dental Clinic Workspaces -->
-      <div class="ui-panel" style="padding: 1.25rem;">
-        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.85rem; flex-wrap: wrap; gap: 0.5rem;">
-          <div>
-            <h3 style="color: #fff; font-size: 1rem; font-weight: 800; margin: 0;">🏥 Dental Clinic Workspaces</h3>
-            <p style="color: #94a3b8; font-size: 0.74rem; margin: 0.15rem 0 0 0;">Each clinic has isolated patient verifications, custom Insurance Hub settings, and CDT checklists.</p>
-          </div>
+      <!-- Website Owner Account Strip (Clean Read-Only Bar with Edit Toggle) -->
+      <div id="ownerProfileCardContainer" style="margin-top: 0.9rem;"></div>
+    </div>
+
+    <!-- Unified Clinics & Assigned Team Members Section (Grouped Per Clinic) -->
+    <div class="ui-panel" style="padding: 1.35rem 1.5rem;">
+      <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem; margin-bottom: 1.1rem; padding-bottom: 0.9rem; border-bottom: 1px solid rgba(148, 163, 184, 0.14);">
+        <div>
+          <h3 style="color: #fff; font-size: 1.08rem; font-weight: 800; margin: 0;">🏥 Dental Clinics & Assigned Team Members</h3>
+          <p style="color: #94a3b8; font-size: 0.76rem; margin: 0.2rem 0 0 0;">Each clinic card groups its own Clinic Administrator and Staff accounts. Click <strong>✏️ Edit</strong> on any user or clinic only when you need to make changes.</p>
         </div>
 
-        <div style="display: flex; gap: 0.5rem; margin-bottom: 1rem;">
-          <input type="text" id="ownerDashNewClinicInput" class="table-search-input" style="flex: 1;" placeholder="New Clinic Name (e.g. Clinic 4 - Downtown Dental)...">
-          <button type="button" class="btn-verify-primary" id="ownerDashCreateClinicBtn" style="padding: 0.42rem 0.9rem; font-size: 0.75rem; white-space: nowrap;">+ Add Clinic</button>
-        </div>
-
-        <div id="ownerDashClinicsList" style="display: flex; flex-direction: column; gap: 0.65rem;">
-          <!-- Populated dynamically by JS -->
-        </div>
-      </div>
-
-      <!-- Column 2: Website Users, Clinic Admins & Assignments -->
-      <div class="ui-panel" style="padding: 1.25rem;">
-        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.85rem; flex-wrap: wrap; gap: 0.5rem;">
-          <div>
-            <h3 style="color: #fff; font-size: 1rem; font-weight: 800; margin: 0;">👥 Clinic Administrators & Staff Accounts</h3>
-            <p style="color: #94a3b8; font-size: 0.74rem; margin: 0.15rem 0 0 0;">Create accounts, assign users to clinics, set Clinic Admin roles, and reset passwords.</p>
-          </div>
-          <button type="button" class="btn-verify-primary" id="ownerDashToggleAddUserBtn" style="padding: 0.38rem 0.8rem; font-size: 0.73rem;">
+        <div style="display: flex; gap: 0.55rem; align-items: center; flex-wrap: wrap;">
+          <input type="text" id="ownerDashNewClinicInput" class="table-search-input" style="width: 240px; padding: 0.4rem 0.7rem; font-size: 0.76rem;" placeholder="New Clinic Name (e.g. Clinic 4)...">
+          <button type="button" class="btn-action-ghost" id="ownerDashCreateClinicBtn" style="padding: 0.42rem 0.85rem; font-size: 0.74rem; white-space: nowrap; border-color: rgba(56, 189, 248, 0.4); color: #38bdf8;">+ Add Clinic</button>
+          <button type="button" class="btn-verify-primary" id="ownerDashToggleAddUserBtn" style="padding: 0.42rem 0.9rem; font-size: 0.74rem; white-space: nowrap;">
             + Create & Assign User
           </button>
         </div>
+      </div>
 
-        <div id="ownerDashAddUserPanel" style="display: none; background: rgba(15, 23, 42, 0.85); border: 1px dashed rgba(56, 189, 248, 0.45); border-radius: 8px; padding: 0.9rem; margin-bottom: 1rem;">
-          <h5 style="color: #38bdf8; font-size: 0.78rem; font-weight: 700; margin: 0 0 0.55rem 0;">New Account Credentials & Clinic Assignment</h5>
-          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem; margin-bottom: 0.5rem;">
-            <div>
-              <label style="display: block; font-size: 0.68rem; color: #94a3b8; margin-bottom: 0.2rem;">Full Name</label>
-              <input type="text" id="ownerDashNewUserName" class="table-search-input" placeholder="e.g. Dr. Maria Santos">
-            </div>
-            <div>
-              <label style="display: block; font-size: 0.68rem; color: #94a3b8; margin-bottom: 0.2rem;">Login Email</label>
-              <input type="email" id="ownerDashNewUserEmail" class="table-search-input" placeholder="user@dentverify.com">
-            </div>
+      <!-- Collapsible Create & Assign User Form -->
+      <div id="ownerDashAddUserPanel" style="display: none; background: rgba(15, 23, 42, 0.9); border: 1px dashed rgba(56, 189, 248, 0.45); border-radius: 10px; padding: 1rem 1.15rem; margin-bottom: 1.2rem;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.65rem;">
+          <h5 style="color: #38bdf8; font-size: 0.82rem; font-weight: 700; margin: 0;">➕ Create New Clinic Admin or Staff Account</h5>
+          <button type="button" class="btn-restore-defaults" id="ownerDashCancelAddUserBtn" style="padding: 0.22rem 0.6rem; font-size: 0.7rem;">✕ Close</button>
+        </div>
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 0.65rem; align-items: end;">
+          <div>
+            <label style="display: block; font-size: 0.68rem; color: #94a3b8; margin-bottom: 0.22rem;">Full Name</label>
+            <input type="text" id="ownerDashNewUserName" class="table-search-input" placeholder="e.g. Dr. Maria Santos">
           </div>
-          <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 0.5rem; margin-bottom: 0.65rem;">
-            <div>
-              <label style="display: block; font-size: 0.68rem; color: #94a3b8; margin-bottom: 0.2rem;">Password</label>
-              <input type="password" id="ownerDashNewUserPassword" class="table-search-input" placeholder="Min 8 characters">
-            </div>
-            <div>
-              <label style="display: block; font-size: 0.68rem; color: #94a3b8; margin-bottom: 0.2rem;">Account Role</label>
-              <select id="ownerDashNewUserRole" class="table-search-input" style="background: #0f172a; color: #f8fafc; border: 1px solid rgba(56, 189, 248, 0.3); border-radius: 6px; padding: 0.35rem 0.5rem; font-size: 0.74rem;">
-                <option value="staff">Clinic User (Staff)</option>
-                <option value="clinic_admin">Clinic Administrator</option>
-                <option value="owner">Website Owner</option>
-              </select>
-            </div>
-            <div>
-              <label style="display: block; font-size: 0.68rem; color: #94a3b8; margin-bottom: 0.2rem;">Assigned Clinic</label>
-              <select id="ownerDashNewUserPracticeSelect" class="table-search-input" style="background: #0f172a; color: #f8fafc; border: 1px solid rgba(56, 189, 248, 0.3); border-radius: 6px; padding: 0.35rem 0.5rem; font-size: 0.74rem;">
-                <!-- Populated by JS -->
-              </select>
-            </div>
+          <div>
+            <label style="display: block; font-size: 0.68rem; color: #94a3b8; margin-bottom: 0.22rem;">Login Email</label>
+            <input type="email" id="ownerDashNewUserEmail" class="table-search-input" placeholder="user@dentverify.com">
           </div>
-          <div style="display: flex; gap: 0.5rem; justify-content: flex-end;">
-            <button type="button" class="btn-restore-defaults" id="ownerDashCancelAddUserBtn" style="padding: 0.28rem 0.65rem; font-size: 0.72rem;">Cancel</button>
-            <button type="button" class="btn-verify-primary" id="ownerDashSaveNewUserBtn" style="padding: 0.28rem 0.8rem; font-size: 0.72rem;">Save & Assign Account</button>
+          <div>
+            <label style="display: block; font-size: 0.68rem; color: #94a3b8; margin-bottom: 0.22rem;">Password</label>
+            <input type="password" id="ownerDashNewUserPassword" class="table-search-input" placeholder="Min 8 characters">
+          </div>
+          <div>
+            <label style="display: block; font-size: 0.68rem; color: #94a3b8; margin-bottom: 0.22rem;">Account Role</label>
+            <select id="ownerDashNewUserRole" class="table-search-input" style="background: #0f172a; color: #f8fafc; border: 1px solid rgba(56, 189, 248, 0.3); border-radius: 6px; padding: 0.38rem 0.5rem; font-size: 0.74rem;">
+              <option value="staff">Clinic User (Staff)</option>
+              <option value="clinic_admin">Clinic Administrator</option>
+              <option value="owner">Website Owner</option>
+            </select>
+          </div>
+          <div>
+            <label style="display: block; font-size: 0.68rem; color: #94a3b8; margin-bottom: 0.22rem;">Assigned Clinic</label>
+            <select id="ownerDashNewUserPracticeSelect" class="table-search-input" style="background: #0f172a; color: #f8fafc; border: 1px solid rgba(56, 189, 248, 0.3); border-radius: 6px; padding: 0.38rem 0.5rem; font-size: 0.74rem;">
+              <!-- Populated by JS -->
+            </select>
+          </div>
+          <div>
+            <button type="button" class="btn-verify-primary" id="ownerDashSaveNewUserBtn" style="width: 100%; padding: 0.42rem 0.85rem; font-size: 0.74rem; justify-content: center;">💾 Save Account</button>
           </div>
         </div>
+      </div>
 
-        <div id="ownerDashUsersList" style="display: flex; flex-direction: column; gap: 0.65rem;">
-          <!-- Populated dynamically by JS -->
-        </div>
+      <!-- Grouped Clinic Cards Grid (Each Clinic Card contains its own Admin & Staff rows) -->
+      <div id="ownerDashClinicsList" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(500px, 1fr)); gap: 1.1rem; align-items: start;">
+        <!-- Populated dynamically by JS -->
       </div>
     </div>
   </section>

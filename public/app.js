@@ -4886,7 +4886,7 @@
       }
     });
 
-    // Clinic & User Management Modal + Full-Page Owner Dashboard Rendering
+    // Clinic & User Management Modal + Full-Page Grouped Owner Dashboard Rendering
     function renderClinicManagerModalContent() {
       const isOwner = currentUser && currentUser.role === 'owner';
       const modalTitleEl = document.getElementById('clinicManagerModalTitle');
@@ -4927,66 +4927,309 @@
         ownerDashNewUserPracticeSelect.innerHTML = practiceOptsHtml;
       }
 
-      // Helper to populate a Clinic Workspaces list container
-      const populateClinicList = (targetContainer) => {
-        if (!targetContainer) return;
-        targetContainer.innerHTML = '';
-        cachedPractices.forEach(prac => {
-          const isCurrent = currentUser && prac.id === currentUser.practice_id;
-          const card = document.createElement('div');
-          card.className = 'clinic-mgmt-card';
-          card.style.flexWrap = 'wrap';
-          card.innerHTML = `
-            <div style="flex: 1; min-width: 220px;">
-              <div class="clinic-mgmt-title" style="flex-wrap: wrap;">
-                <input type="text" class="table-search-input clinic-rename-input" value="${escapeHtml(prac.name)}" style="font-weight: 700; color: #fff; max-width: 260px; padding: 0.28rem 0.55rem; font-size: 0.8rem;">
-                ${isCurrent ? '<span class="user-role-badge staff">Selected</span>' : ''}
+      // Reusable Helper: Create a Clean Read-Only User Row with an On-Demand "✏️ Edit" Drawer
+      const createCleanUserRowElement = (u) => {
+        const isOwnerAccount = u.role === 'owner';
+        const isClinicAdminAccount = u.role === 'clinic_admin';
+        const badgeClass = isOwnerAccount ? 'owner' : (isClinicAdminAccount ? 'clinic_admin' : 'staff');
+        const badgeLabel = isOwnerAccount ? 'WEBSITE OWNER' : (isClinicAdminAccount ? 'CLINIC ADMIN' : 'USER / STAFF');
+
+        const initials = String(u.full_name || u.email || 'U')
+          .trim()
+          .split(/\s+/)
+          .slice(0, 2)
+          .map(w => w[0]?.toUpperCase() || '')
+          .join('') || 'U';
+
+        const avatarBg = isOwnerAccount
+          ? 'background: rgba(251, 191, 36, 0.16); color: #fbbf24; border: 1px solid rgba(251, 191, 36, 0.4);'
+          : (isClinicAdminAccount
+              ? 'background: rgba(56, 189, 248, 0.16); color: #38bdf8; border: 1px solid rgba(56, 189, 248, 0.4);'
+              : 'background: rgba(16, 185, 129, 0.14); color: #34d399; border: 1px solid rgba(16, 185, 129, 0.35);');
+
+        const practiceOptions = cachedPractices.map(p =>
+          `<option value="${escapeHtml(p.id)}" ${p.id === u.practice_id ? 'selected' : ''}>${escapeHtml(p.name)}</option>`
+        ).join('');
+
+        const rowWrap = document.createElement('div');
+        rowWrap.style.cssText = 'background: rgba(15, 23, 42, 0.65); border: 1px solid rgba(148, 163, 184, 0.14); border-radius: 8px; padding: 0.55rem 0.75rem; transition: border-color 0.15s ease;';
+
+        rowWrap.innerHTML = `
+          <!-- Clean 1-Line Read-Only Summary Row -->
+          <div style="display: flex; justify-content: space-between; align-items: center; gap: 0.65rem; flex-wrap: wrap;">
+            <div style="display: flex; align-items: center; gap: 0.65rem; min-width: 200px; flex: 1;">
+              <div style="width: 30px; height: 30px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 0.7rem; font-weight: 800; flex-shrink: 0; ${avatarBg}">
+                ${escapeHtml(initials)}
               </div>
-              <div class="clinic-mgmt-stats">
-                <span>📋 ${prac.verification_count || 0} Patient Breakdowns</span>
-                <span>•</span>
-                <span>👥 ${prac.user_count || 0} Clinic Accounts</span>
+              <div style="display: flex; flex-direction: column; line-height: 1.25;">
+                <span style="font-size: 0.82rem; font-weight: 700; color: #f8fafc;">${escapeHtml(u.full_name || 'User')}</span>
+                <span style="font-size: 0.72rem; color: #94a3b8; font-family: var(--font-mono);">${escapeHtml(u.email)}</span>
               </div>
             </div>
-            <div style="display: flex; gap: 0.35rem; align-items: center; flex-wrap: wrap;">
-              <button type="button" class="btn-action-ghost btn-save-clinic-name" style="padding: 0.3rem 0.55rem; font-size: 0.69rem;" title="Save new clinic name">💾 Save Name</button>
-              <button type="button" class="btn-action-ghost btn-edit-clinic-payers" style="padding: 0.3rem 0.55rem; font-size: 0.69rem;" title="Edit this clinic's Master Insurance Hubs & Wired States">🏥 Payer Hubs</button>
-              <button type="button" class="btn-action-ghost btn-edit-clinic-ai" style="padding: 0.3rem 0.55rem; font-size: 0.69rem;" title="Edit this clinic's CDT Checklist & AI Prompt">⚙️ CDT & AI</button>
-              ${isOwner ? `
-                <button type="button" class="btn-verify-primary btn-switch-here" style="padding: 0.3rem 0.65rem; font-size: 0.69rem;" title="Preview this clinic's verification workspace">👁️ Preview Clinic</button>
-                <button type="button" class="del-payer-btn btn-del-clinic" title="Delete clinic workspace" style="background: none; border: none; color: #ef4444; cursor: pointer; padding: 4px;">✕</button>
+
+            <div style="display: flex; align-items: center; gap: 0.45rem; flex-wrap: wrap;">
+              <span class="user-role-badge ${badgeClass}" style="font-size: 0.64rem; padding: 0.18rem 0.5rem;">${badgeLabel}</span>
+              <button type="button" class="btn-action-ghost btn-toggle-user-edit" style="padding: 0.24rem 0.58rem; font-size: 0.69rem;" title="Edit account details, role, clinic, or password">
+                ✏️ Edit
+              </button>
+              ${!isOwnerAccount && u.id !== currentUser?.id ? `
+                <button type="button" class="del-payer-btn btn-del-user" title="Delete account" style="background: none; border: none; color: #ef4444; cursor: pointer; padding: 2px 5px; font-size: 0.78rem;">✕</button>
               ` : ''}
             </div>
-          `;
+          </div>
 
-          const renameInput = card.querySelector('.clinic-rename-input');
-          const saveNameBtn = card.querySelector('.btn-save-clinic-name');
-          saveNameBtn.addEventListener('click', async () => {
-            const newName = renameInput.value.trim();
-            if (!newName) return;
-            const res = await fetch(`/api/practices/${prac.id}`, {
+          <!-- Hidden On-Demand Edit Drawer (Opens only when "✏️ Edit" is clicked) -->
+          <div class="user-edit-drawer" style="display: none; margin-top: 0.65rem; padding-top: 0.65rem; border-top: 1px dashed rgba(56, 189, 248, 0.3);">
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(155px, 1fr)); gap: 0.5rem; margin-bottom: 0.55rem;">
+              <div>
+                <label style="display: block; font-size: 0.65rem; color: #94a3b8; margin-bottom: 0.18rem;">Full Name</label>
+                <input type="text" class="table-search-input user-edit-name" value="${escapeHtml(u.full_name)}" style="padding: 0.3rem 0.55rem; font-size: 0.75rem; color: #fff;">
+              </div>
+              <div>
+                <label style="display: block; font-size: 0.65rem; color: #94a3b8; margin-bottom: 0.18rem;">Login Email</label>
+                <input type="email" class="table-search-input user-edit-email" value="${escapeHtml(u.email)}" style="padding: 0.3rem 0.55rem; font-size: 0.75rem; color: #38bdf8;">
+              </div>
+              ${!isOwnerAccount ? `
+                <div>
+                  <label style="display: block; font-size: 0.65rem; color: #94a3b8; margin-bottom: 0.18rem;">Clinic Role</label>
+                  <select class="table-search-input user-role-select" style="background: #0f172a; color: #f8fafc; border: 1px solid rgba(56, 189, 248, 0.3); border-radius: 6px; padding: 0.3rem 0.5rem; font-size: 0.74rem; width: 100%;">
+                    <option value="staff" ${u.role === 'staff' ? 'selected' : ''}>Clinic User (Staff)</option>
+                    <option value="clinic_admin" ${u.role === 'clinic_admin' ? 'selected' : ''}>Clinic Admin</option>
+                  </select>
+                </div>
+              ` : ''}
+              ${!isOwnerAccount && isOwner ? `
+                <div>
+                  <label style="display: block; font-size: 0.65rem; color: #94a3b8; margin-bottom: 0.18rem;">Assigned Clinic</label>
+                  <select class="table-search-input user-clinic-select" style="background: #0f172a; color: #f8fafc; border: 1px solid rgba(56, 189, 248, 0.3); border-radius: 6px; padding: 0.3rem 0.5rem; font-size: 0.74rem; width: 100%;">
+                    ${practiceOptions}
+                  </select>
+                </div>
+              ` : ''}
+              <div>
+                <label style="display: block; font-size: 0.65rem; color: #94a3b8; margin-bottom: 0.18rem;">New Password (Optional)</label>
+                <input type="password" class="table-search-input user-new-pw-input" placeholder="Leave blank to keep current" style="padding: 0.3rem 0.55rem; font-size: 0.74rem; color: #fff;">
+              </div>
+            </div>
+            <div style="display: flex; justify-content: flex-end; gap: 0.45rem;">
+              <button type="button" class="btn-restore-defaults btn-cancel-user-edit" style="padding: 0.25rem 0.65rem; font-size: 0.7rem;">Cancel</button>
+              <button type="button" class="btn-verify-primary btn-save-user-info" style="padding: 0.25rem 0.75rem; font-size: 0.7rem;">💾 Save Changes</button>
+            </div>
+          </div>
+        `;
+
+        const toggleEditBtn = rowWrap.querySelector('.btn-toggle-user-edit');
+        const cancelEditBtn = rowWrap.querySelector('.btn-cancel-user-edit');
+        const editDrawer = rowWrap.querySelector('.user-edit-drawer');
+        const saveUserBtn = rowWrap.querySelector('.btn-save-user-info');
+        const nameInput = rowWrap.querySelector('.user-edit-name');
+        const emailInput = rowWrap.querySelector('.user-edit-email');
+        const roleSelect = rowWrap.querySelector('.user-role-select');
+        const clinicSelect = rowWrap.querySelector('.user-clinic-select');
+        const pwInput = rowWrap.querySelector('.user-new-pw-input');
+        const delBtn = rowWrap.querySelector('.btn-del-user');
+
+        if (toggleEditBtn && editDrawer) {
+          toggleEditBtn.addEventListener('click', () => {
+            const isHidden = editDrawer.style.display === 'none';
+            editDrawer.style.display = isHidden ? 'block' : 'none';
+            toggleEditBtn.textContent = isHidden ? '✕ Close' : '✏️ Edit';
+            rowWrap.style.borderColor = isHidden ? 'rgba(56, 189, 248, 0.45)' : 'rgba(148, 163, 184, 0.14)';
+          });
+        }
+
+        if (cancelEditBtn && editDrawer && toggleEditBtn) {
+          cancelEditBtn.addEventListener('click', () => {
+            editDrawer.style.display = 'none';
+            toggleEditBtn.textContent = '✏️ Edit';
+            rowWrap.style.borderColor = 'rgba(148, 163, 184, 0.14)';
+            if (pwInput) pwInput.value = '';
+          });
+        }
+
+        if (saveUserBtn && nameInput && emailInput) {
+          saveUserBtn.addEventListener('click', async () => {
+            const newFullName = nameInput.value.trim();
+            const newEmail = emailInput.value.trim().toLowerCase().replace(/@+/g, '@');
+            emailInput.value = newEmail;
+            if (!newFullName || !newEmail) {
+              await openCustomNotice('Validation Notice', 'Name and Email cannot be empty.');
+              return;
+            }
+            const payload = { full_name: newFullName, email: newEmail };
+            if (roleSelect && roleSelect.value) {
+              payload.role = roleSelect.value;
+            }
+            if (clinicSelect && clinicSelect.value) {
+              payload.practice_id = clinicSelect.value;
+            }
+            if (pwInput && pwInput.value.trim()) {
+              if (pwInput.value.trim().length < 8) {
+                await openCustomNotice('Password Too Short', 'Password must be at least 8 characters.');
+                return;
+              }
+              payload.password = pwInput.value.trim();
+            }
+            const res = await fetch(`/api/users/${u.id}`, {
               method: 'PUT',
               headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ name: newName })
+              body: JSON.stringify(payload)
             });
-            if (res.ok) {
-              if (currentUser && currentUser.practice_id === prac.id) {
-                currentUser.practice_name = newName;
+            const data = await res.json();
+            if (res.ok && data.success) {
+              if (currentUser && currentUser.id === u.id) {
+                currentUser.full_name = newFullName;
+                currentUser.email = newEmail;
                 applyUserHeaderUI(currentUser);
                 try { localStorage.setItem(CACHED_USER_KEY, JSON.stringify(currentUser)); } catch (e) {}
               }
               await loadOwnerClinicsAndUsers();
-              displayToast(`Renamed clinic to "${newName}"`);
+              displayToast(`Saved changes for ${newFullName}!`);
+            } else {
+              await openCustomNotice('Update Failed', data.error || 'Failed to update user.');
             }
           });
+        }
+
+        if (delBtn) {
+          delBtn.addEventListener('click', async () => {
+            const ok = await openCustomConfirm(
+              'Delete User Account',
+              `Delete user account "${u.full_name}" (${u.email})?`,
+              'Delete Account',
+              'Cancel'
+            );
+            if (!ok) return;
+            const res = await fetch(`/api/users/${u.id}`, { method: 'DELETE' });
+            if (res.ok) {
+              await loadOwnerClinicsAndUsers();
+              displayToast(`Deleted user ${u.email}.`);
+            }
+          });
+        }
+
+        return rowWrap;
+      };
+
+      // 1. Render Website Owner Profile Strip at top of Owner Dashboard
+      const ownerProfileCardContainer = document.getElementById('ownerProfileCardContainer');
+      if (ownerProfileCardContainer) {
+        ownerProfileCardContainer.innerHTML = '';
+        const ownerAccounts = cachedUsers.filter(u => u.role === 'owner');
+        ownerAccounts.forEach(ownerAcc => {
+          ownerProfileCardContainer.appendChild(createCleanUserRowElement(ownerAcc));
+        });
+      }
+
+      // 2. Render Grouped Clinic Cards on Owner Dashboard (Each Clinic Card contains its own Admin & Staff rows)
+      if (ownerDashClinicsList) {
+        ownerDashClinicsList.innerHTML = '';
+        cachedPractices.forEach(prac => {
+          const isCurrent = currentUser && prac.id === currentUser.practice_id;
+          const clinicMembers = cachedUsers
+            .filter(u => u.practice_id === prac.id && u.role !== 'owner')
+            .sort((a, b) => {
+              if (a.role === 'clinic_admin' && b.role !== 'clinic_admin') return -1;
+              if (a.role !== 'clinic_admin' && b.role === 'clinic_admin') return 1;
+              return String(a.full_name || '').localeCompare(String(b.full_name || ''));
+            });
+
+          const card = document.createElement('div');
+          card.style.cssText = `background: rgba(15, 23, 42, 0.78); border: 1px solid ${isCurrent ? 'rgba(56, 189, 248, 0.55)' : 'rgba(56, 189, 248, 0.22)'}; border-radius: 12px; padding: 1.05rem 1.15rem; display: flex; flex-direction: column; gap: 0.75rem;`;
+
+          card.innerHTML = `
+            <!-- Clinic Card Header -->
+            <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 0.75rem; flex-wrap: wrap; padding-bottom: 0.65rem; border-bottom: 1px solid rgba(148, 163, 184, 0.14);">
+              <div>
+                <div style="display: flex; align-items: center; gap: 0.45rem; flex-wrap: wrap;">
+                  <span style="font-size: 1rem; font-weight: 800; color: #fff;">🏥 ${escapeHtml(prac.name)}</span>
+                  <button type="button" class="btn-action-ghost btn-toggle-clinic-rename" style="padding: 0.15rem 0.45rem; font-size: 0.65rem;" title="Rename this clinic">✏️ Rename</button>
+                  ${isCurrent ? '<span class="user-role-badge staff" style="font-size: 0.62rem;">Active Context</span>' : ''}
+                </div>
+                <div class="clinic-mgmt-stats" style="margin-top: 0.25rem;">
+                  <span>📋 ${prac.verification_count || 0} Patient Breakdowns</span>
+                  <span>•</span>
+                  <span>👥 ${clinicMembers.length} Assigned Accounts</span>
+                </div>
+              </div>
+
+              <div style="display: flex; gap: 0.35rem; align-items: center; flex-wrap: wrap;">
+                <button type="button" class="btn-action-ghost btn-add-user-here" style="padding: 0.28rem 0.58rem; font-size: 0.69rem; border-color: rgba(16, 185, 129, 0.4); color: #34d399;" title="Add a user or admin to ${escapeHtml(prac.name)}">+ User</button>
+                <button type="button" class="btn-action-ghost btn-edit-clinic-payers" style="padding: 0.28rem 0.58rem; font-size: 0.69rem;" title="Edit ${escapeHtml(prac.name)}'s Insurance Hub Directory">🏥 Payers</button>
+                <button type="button" class="btn-action-ghost btn-edit-clinic-ai" style="padding: 0.28rem 0.58rem; font-size: 0.69rem;" title="Edit ${escapeHtml(prac.name)}'s CDT Checklist & AI Prompt">⚙️ CDT & AI</button>
+                <button type="button" class="btn-verify-primary btn-switch-here" style="padding: 0.28rem 0.65rem; font-size: 0.69rem;" title="Preview ${escapeHtml(prac.name)}'s upload workspace">👁️ Preview</button>
+                <button type="button" class="del-payer-btn btn-del-clinic" title="Delete clinic workspace" style="background: none; border: none; color: #ef4444; cursor: pointer; padding: 2px 5px; font-size: 0.8rem;">✕</button>
+              </div>
+            </div>
+
+            <!-- Hidden Clinic Rename Drawer -->
+            <div class="clinic-rename-drawer" style="display: none; align-items: center; gap: 0.45rem; background: rgba(15, 23, 42, 0.9); padding: 0.5rem 0.65rem; border-radius: 8px; border: 1px dashed rgba(56, 189, 248, 0.35);">
+              <input type="text" class="table-search-input clinic-rename-input" value="${escapeHtml(prac.name)}" style="flex: 1; padding: 0.28rem 0.55rem; font-size: 0.78rem; color: #fff; font-weight: 700;">
+              <button type="button" class="btn-verify-primary btn-save-clinic-name" style="padding: 0.28rem 0.65rem; font-size: 0.7rem;">💾 Save Name</button>
+              <button type="button" class="btn-restore-defaults btn-cancel-clinic-rename" style="padding: 0.28rem 0.55rem; font-size: 0.7rem;">Cancel</button>
+            </div>
+
+            <!-- Clinic Team Members List -->
+            <div class="clinic-members-container" style="display: flex; flex-direction: column; gap: 0.45rem;"></div>
+          `;
+
+          const toggleRenameBtn = card.querySelector('.btn-toggle-clinic-rename');
+          const renameDrawer = card.querySelector('.clinic-rename-drawer');
+          const renameInput = card.querySelector('.clinic-rename-input');
+          const saveNameBtn = card.querySelector('.btn-save-clinic-name');
+          const cancelRenameBtn = card.querySelector('.btn-cancel-clinic-rename');
+
+          if (toggleRenameBtn && renameDrawer) {
+            toggleRenameBtn.addEventListener('click', () => {
+              const isHidden = renameDrawer.style.display === 'none';
+              renameDrawer.style.display = isHidden ? 'flex' : 'none';
+              if (isHidden && renameInput) renameInput.focus();
+            });
+          }
+
+          if (cancelRenameBtn && renameDrawer) {
+            cancelRenameBtn.addEventListener('click', () => {
+              renameDrawer.style.display = 'none';
+              if (renameInput) renameInput.value = prac.name;
+            });
+          }
+
+          if (saveNameBtn && renameInput) {
+            saveNameBtn.addEventListener('click', async () => {
+              const newName = renameInput.value.trim();
+              if (!newName) return;
+              const res = await fetch(`/api/practices/${prac.id}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ name: newName })
+              });
+              if (res.ok) {
+                if (currentUser && currentUser.practice_id === prac.id) {
+                  currentUser.practice_name = newName;
+                  applyUserHeaderUI(currentUser);
+                  try { localStorage.setItem(CACHED_USER_KEY, JSON.stringify(currentUser)); } catch (e) {}
+                }
+                await loadOwnerClinicsAndUsers();
+                displayToast(`Renamed clinic to "${newName}"`);
+              }
+            });
+          }
+
+          const addUserHereBtn = card.querySelector('.btn-add-user-here');
+          if (addUserHereBtn && ownerDashAddUserPanel) {
+            addUserHereBtn.addEventListener('click', () => {
+              ownerDashAddUserPanel.style.display = 'block';
+              if (ownerDashNewUserPracticeSelect) ownerDashNewUserPracticeSelect.value = prac.id;
+              if (ownerDashNewUserName) ownerDashNewUserName.focus();
+            });
+          }
 
           const editPayersBtn = card.querySelector('.btn-edit-clinic-payers');
           if (editPayersBtn) {
             editPayersBtn.addEventListener('click', async () => {
-              if (isOwner && !isCurrent) {
+              if (!isCurrent) {
                 await switchActiveClinicWorkspace(prac.id, { enterPreview: ownerPreviewingClinic });
               }
-              if (clinicManagerModal) clinicManagerModal.classList.remove('active');
               openInsuranceDirectory();
             });
           }
@@ -4994,10 +5237,9 @@
           const editAiBtn = card.querySelector('.btn-edit-clinic-ai');
           if (editAiBtn) {
             editAiBtn.addEventListener('click', async () => {
-              if (isOwner && !isCurrent) {
+              if (!isCurrent) {
                 await switchActiveClinicWorkspace(prac.id, { enterPreview: ownerPreviewingClinic });
               }
-              if (clinicManagerModal) clinicManagerModal.classList.remove('active');
               if (openSettingsBtn) openSettingsBtn.click();
             });
           }
@@ -5006,7 +5248,6 @@
           if (switchBtn) {
             switchBtn.addEventListener('click', async () => {
               await switchActiveClinicWorkspace(prac.id, { enterPreview: true });
-              if (clinicManagerModal) clinicManagerModal.classList.remove('active');
             });
           }
 
@@ -5031,222 +5272,82 @@
             });
           }
 
-          targetContainer.appendChild(card);
+          const membersContainer = card.querySelector('.clinic-members-container');
+          if (membersContainer) {
+            if (clinicMembers.length === 0) {
+              membersContainer.innerHTML = `
+                <div style="font-size: 0.74rem; color: #64748b; padding: 0.45rem 0.6rem; background: rgba(15, 23, 42, 0.45); border-radius: 6px; text-align: center;">
+                  No Clinic Admin or Staff assigned yet. Click <strong>+ User</strong> above to assign an account.
+                </div>
+              `;
+            } else {
+              clinicMembers.forEach(member => {
+                membersContainer.appendChild(createCleanUserRowElement(member));
+              });
+            }
+          }
+
+          ownerDashClinicsList.appendChild(card);
         });
-      };
+      }
 
-      populateClinicList(clinicWorkspacesList);
-      populateClinicList(ownerDashClinicsList);
-
-      // Render Users List into both Modal and Owner Dashboard
-      const populateUsersList = (targetUsersContainer) => {
-        if (!targetUsersContainer) return;
-        targetUsersContainer.innerHTML = '';
-        cachedUsers.forEach(u => {
-          const isOwnerAccount = u.role === 'owner';
-          const isClinicAdminAccount = u.role === 'clinic_admin';
-          const badgeClass = isOwnerAccount ? 'owner' : (isClinicAdminAccount ? 'clinic_admin' : 'staff');
-          const badgeLabel = isOwnerAccount ? 'WEBSITE OWNER' : (isClinicAdminAccount ? 'CLINIC ADMIN' : 'USER / STAFF');
-
+      // 3. Also populate the Clinic Manager Modal (for Clinic Admins managing their own clinic)
+      if (clinicWorkspacesList) {
+        clinicWorkspacesList.innerHTML = '';
+        cachedPractices.forEach(prac => {
           const card = document.createElement('div');
-          card.className = 'user-mgmt-card';
-          card.style.flexDirection = 'column';
-          card.style.alignItems = 'stretch';
-          const practiceOptions = cachedPractices.map(p =>
-            `<option value="${escapeHtml(p.id)}" ${p.id === u.practice_id ? 'selected' : ''}>${escapeHtml(p.name)}</option>`
-          ).join('');
-
+          card.className = 'clinic-mgmt-card';
+          card.style.flexWrap = 'wrap';
           card.innerHTML = `
-            <div style="display: flex; justify-content: space-between; align-items: center; gap: 0.75rem; flex-wrap: wrap; width: 100%;">
-              <div style="flex: 1; min-width: 260px; display: flex; flex-direction: column; gap: 0.35rem;">
-                <div style="display: flex; align-items: center; gap: 0.45rem; flex-wrap: wrap;">
-                  <input type="text" class="table-search-input user-edit-name" value="${escapeHtml(u.full_name)}" title="Edit Full Name" placeholder="Full Name" style="font-weight: 700; color: #fff; width: 175px; padding: 0.25rem 0.5rem; font-size: 0.78rem;">
-                  <input type="email" class="table-search-input user-edit-email" value="${escapeHtml(u.email)}" title="Edit Login Email" placeholder="Email Address" style="color: #38bdf8; width: 205px; padding: 0.25rem 0.5rem; font-size: 0.76rem;">
-                  <span class="user-role-badge ${badgeClass}">${badgeLabel}</span>
-                </div>
-                <div class="clinic-mgmt-stats">
-                  ${isOwnerAccount
-                    ? '<span style="color: #fbbf24; font-weight: 600;">👑 Website Owner • Not Assigned to a Clinic (Manages All Website Settings & Clinics)</span>'
-                    : `<span>Assigned Clinic: <strong style="color: #e2e8f0;">${escapeHtml(u.practice_name || 'Unassigned')}</strong> • ${isClinicAdminAccount ? '<span style="color: #38bdf8;">Manages this clinic\'s users & directory</span>' : 'Uses verification workspace'}</span>`
-                  }
-                </div>
+            <div style="flex: 1; min-width: 220px;">
+              <div class="clinic-mgmt-title" style="flex-wrap: wrap;">
+                <input type="text" class="table-search-input clinic-rename-input" value="${escapeHtml(prac.name)}" style="font-weight: 700; color: #fff; max-width: 260px; padding: 0.28rem 0.55rem; font-size: 0.8rem;">
               </div>
-              <div style="display: flex; gap: 0.4rem; align-items: center; flex-wrap: wrap;">
-                ${!isOwnerAccount ? `
-                  <select class="table-search-input user-role-select" title="Account Role in Clinic" style="background: #0f172a; color: #f8fafc; border: 1px solid rgba(56, 189, 248, 0.3); border-radius: 6px; padding: 0.28rem 0.5rem; font-size: 0.72rem;">
-                    <option value="staff" ${u.role === 'staff' ? 'selected' : ''}>Clinic User (Staff)</option>
-                    <option value="clinic_admin" ${u.role === 'clinic_admin' ? 'selected' : ''}>Clinic Admin</option>
-                  </select>
-                ` : ''}
-                ${!isOwnerAccount && isOwner ? `
-                  <select class="table-search-input user-clinic-select" title="Assign User to Clinic" style="background: #0f172a; color: #f8fafc; border: 1px solid rgba(56, 189, 248, 0.3); border-radius: 6px; padding: 0.28rem 0.5rem; font-size: 0.72rem;">
-                    ${practiceOptions}
-                  </select>
-                ` : ''}
-                <button type="button" class="btn-action-ghost btn-save-user-info" style="padding: 0.28rem 0.55rem; font-size: 0.68rem;" title="Save edited name & email">💾 Save</button>
-                <button type="button" class="btn-action-ghost btn-reset-user-pw" style="padding: 0.28rem 0.55rem; font-size: 0.68rem;" title="Set new password">🔑 Password</button>
-                ${!isOwnerAccount && u.id !== currentUser?.id ? `<button type="button" class="del-payer-btn btn-del-user" title="Delete user" style="background: none; border: none; color: #ef4444; cursor: pointer; padding: 4px;">✕</button>` : ''}
+              <div class="clinic-mgmt-stats">
+                <span>📋 ${prac.verification_count || 0} Patient Breakdowns</span>
+                <span>•</span>
+                <span>👥 ${prac.user_count || 0} Clinic Accounts</span>
               </div>
             </div>
-            <div class="user-inline-pw-panel" style="display: none; margin-top: 0.6rem; padding-top: 0.6rem; border-top: 1px dashed rgba(56, 189, 248, 0.3); align-items: center; gap: 0.5rem; flex-wrap: wrap;">
-              <span style="font-size: 0.72rem; color: #94a3b8; font-weight: 600;">New Password for ${escapeHtml(u.email)}:</span>
-              <input type="password" class="table-search-input user-new-pw-input" placeholder="Min 8 characters..." style="flex: 1; min-width: 180px; padding: 0.32rem 0.6rem; font-size: 0.76rem; color: #fff;">
-              <button type="button" class="btn-verify-primary btn-confirm-new-pw" style="padding: 0.3rem 0.75rem; font-size: 0.72rem;">💾 Update Password</button>
-              <button type="button" class="btn-restore-defaults btn-cancel-new-pw" style="padding: 0.3rem 0.65rem; font-size: 0.72rem;">Cancel</button>
+            <div style="display: flex; gap: 0.35rem; align-items: center; flex-wrap: wrap;">
+              <button type="button" class="btn-action-ghost btn-save-clinic-name" style="padding: 0.3rem 0.55rem; font-size: 0.69rem;">💾 Save Name</button>
+              <button type="button" class="btn-action-ghost btn-edit-clinic-payers" style="padding: 0.3rem 0.55rem; font-size: 0.69rem;">🏥 Payer Hubs</button>
+              <button type="button" class="btn-action-ghost btn-edit-clinic-ai" style="padding: 0.3rem 0.55rem; font-size: 0.69rem;">⚙️ CDT & AI</button>
             </div>
           `;
-
-          const saveUserBtn = card.querySelector('.btn-save-user-info');
-          const nameInput = card.querySelector('.user-edit-name');
-          const emailInput = card.querySelector('.user-edit-email');
-          const pwBtn = card.querySelector('.btn-reset-user-pw');
-          const pwPanel = card.querySelector('.user-inline-pw-panel');
-          const pwInput = card.querySelector('.user-new-pw-input');
-          const pwConfirmBtn = card.querySelector('.btn-confirm-new-pw');
-          const pwCancelBtn = card.querySelector('.btn-cancel-new-pw');
-
-          if (saveUserBtn && nameInput && emailInput) {
-            saveUserBtn.addEventListener('click', async () => {
-              const newFullName = nameInput.value.trim();
-              const newEmail = emailInput.value.trim().toLowerCase().replace(/@+/g, '@');
-              emailInput.value = newEmail;
-              if (!newFullName || !newEmail) {
-                await openCustomNotice('Validation Notice', 'Name and Email cannot be empty.');
-                return;
-              }
-              const payload = { full_name: newFullName, email: newEmail };
-              if (pwInput && pwInput.value.trim()) {
-                if (pwInput.value.trim().length < 8) {
-                  await openCustomNotice('Password Too Short', 'Password must be at least 8 characters.');
-                  return;
-                }
-                payload.password = pwInput.value.trim();
-              }
-              const res = await fetch(`/api/users/${u.id}`, {
-                method: 'PUT',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(payload)
-              });
-              const data = await res.json();
-              if (res.ok && data.success) {
-                if (currentUser && currentUser.id === u.id) {
-                  currentUser.full_name = newFullName;
-                  currentUser.email = newEmail;
-                  applyUserHeaderUI(currentUser);
-                  try { localStorage.setItem(CACHED_USER_KEY, JSON.stringify(currentUser)); } catch (e) {}
-                }
-                await loadOwnerClinicsAndUsers();
-                displayToast(payload.password ? `Saved profile & password for ${newEmail}!` : `Saved changes for ${newEmail}!`);
-              } else {
-                await openCustomNotice('Update Failed', data.error || 'Failed to update user.');
-              }
+          const renameInput = card.querySelector('.clinic-rename-input');
+          const saveNameBtn = card.querySelector('.btn-save-clinic-name');
+          saveNameBtn.addEventListener('click', async () => {
+            const newName = renameInput.value.trim();
+            if (!newName) return;
+            const res = await fetch(`/api/practices/${prac.id}`, {
+              method: 'PUT',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ name: newName })
             });
-          }
-
-          const roleSelect = card.querySelector('.user-role-select');
-          if (roleSelect) {
-            roleSelect.addEventListener('change', async () => {
-              const newRole = roleSelect.value;
-              const res = await fetch(`/api/users/${u.id}`, {
-                method: 'PUT',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ role: newRole })
-              });
-              if (res.ok) {
-                await loadOwnerClinicsAndUsers();
-                displayToast(`Updated role for ${u.full_name} to ${formatRoleLabel(newRole)}!`);
-              }
-            });
-          }
-
-          const clinicSelect = card.querySelector('.user-clinic-select');
-          if (clinicSelect) {
-            clinicSelect.addEventListener('change', async () => {
-              const newPracticeId = clinicSelect.value;
-              const res = await fetch(`/api/users/${u.id}`, {
-                method: 'PUT',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ practice_id: newPracticeId })
-              });
-              if (res.ok) {
-                await loadOwnerClinicsAndUsers();
-                displayToast(`Assigned ${u.full_name} to new clinic workspace!`);
-              }
-            });
-          }
-
-          if (pwBtn && pwPanel) {
-            pwBtn.addEventListener('click', () => {
-              const isHidden = pwPanel.style.display === 'none';
-              pwPanel.style.display = isHidden ? 'flex' : 'none';
-              if (isHidden && pwInput) {
-                pwInput.value = '';
-                pwInput.focus();
-              }
-            });
-          }
-
-          if (pwCancelBtn && pwPanel) {
-            pwCancelBtn.addEventListener('click', () => {
-              pwPanel.style.display = 'none';
-              if (pwInput) pwInput.value = '';
-            });
-          }
-
-          if (pwConfirmBtn && pwInput && pwPanel) {
-            const submitNewPassword = async () => {
-              const newPassword = pwInput.value.trim();
-              if (!newPassword || newPassword.length < 8) {
-                await openCustomNotice('Password Too Short', 'Password must be at least 8 characters.');
-                return;
-              }
-              const res = await fetch(`/api/users/${u.id}`, {
-                method: 'PUT',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ password: newPassword })
-              });
-              if (res.ok) {
-                pwPanel.style.display = 'none';
-                pwInput.value = '';
-                displayToast(`Password updated for ${u.email}!`);
-              } else {
-                const errData = await res.json().catch(() => ({}));
-                await openCustomNotice('Password Update Failed', errData.error || 'Could not update password.');
-              }
-            };
-            pwConfirmBtn.addEventListener('click', submitNewPassword);
-            pwInput.addEventListener('keydown', (e) => {
-              if (e.key === 'Enter') {
-                e.preventDefault();
-                submitNewPassword();
-              }
-            });
-          }
-
-          const delBtn = card.querySelector('.btn-del-user');
-          if (delBtn) {
-            delBtn.addEventListener('click', async () => {
-              const ok = await openCustomConfirm(
-                'Delete User Account',
-                `Delete user account "${u.full_name}" (${u.email})?`,
-                'Delete Account',
-                'Cancel'
-              );
-              if (!ok) return;
-              const res = await fetch(`/api/users/${u.id}`, { method: 'DELETE' });
-              if (res.ok) {
-                await loadOwnerClinicsAndUsers();
-                displayToast(`Deleted user ${u.email}.`);
-              }
-            });
-          }
-
-          targetUsersContainer.appendChild(card);
+            if (res.ok) {
+              await loadOwnerClinicsAndUsers();
+              displayToast(`Renamed clinic to "${newName}"`);
+            }
+          });
+          card.querySelector('.btn-edit-clinic-payers')?.addEventListener('click', () => {
+            if (clinicManagerModal) clinicManagerModal.classList.remove('active');
+            openInsuranceDirectory();
+          });
+          card.querySelector('.btn-edit-clinic-ai')?.addEventListener('click', () => {
+            if (clinicManagerModal) clinicManagerModal.classList.remove('active');
+            if (openSettingsBtn) openSettingsBtn.click();
+          });
+          clinicWorkspacesList.appendChild(card);
         });
-      };
+      }
 
-      populateUsersList(usersListContainer);
-      populateUsersList(ownerDashUsersList);
+      if (usersListContainer) {
+        usersListContainer.innerHTML = '';
+        cachedUsers.forEach(u => {
+          usersListContainer.appendChild(createCleanUserRowElement(u));
+        });
+      }
     }
 
     if (openClinicManagerBtn) {
