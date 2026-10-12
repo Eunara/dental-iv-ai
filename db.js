@@ -52,83 +52,112 @@ function decryptField(ciphertext) {
   }
 }
 
-// Default hierarchical payer directory with Delta Dental sub-portals (DD CA, DD FEP, etc.)
+// Default hierarchical payer directory with Master Claims Hubs & Wired States
 const DEFAULT_CLINIC_PAYER_DIRECTORY = [
   {
-    id: 'dd_ca',
-    parentCarrier: 'Delta Dental Ins',
-    carrier: 'Delta Dental of CA (DD CA)',
-    matchKeys: ['dd ca', 'delta dental of california', 'delta dental ca', 'delta ca'],
+    id: 'dd_ins_hub',
+    parentCarrier: 'DD Ins (Master Claims Hub)',
+    carrier: 'Delta Dental Ins (DD CA / TX / PA / NY / FL / GA)',
+    name: 'Delta Dental Ins (DD CA / TX / PA / NY / FL / GA)',
+    matchKeys: [
+      'dd ins',
+      'dd ca',
+      'dd tx',
+      'dd pa',
+      'dd ny',
+      'dd fl',
+      'dd ga',
+      'delta dental of california',
+      'delta dental of texas',
+      'delta dental of pennsylvania',
+      'delta dental of new york',
+      'delta dental of florida',
+      'delta dental ca',
+      'delta ca',
+    ],
     address: 'P.O. Box 997330, Sacramento, CA 95899-7330',
     phone: '(888) 335-8227',
     payorId: '94276',
     networkStatus: 'In-Network',
+    feeSchedule: 'Delta Dental PPO',
     portalUrl: 'https://www.deltadentalins.com',
   },
   {
     id: 'dd_fep',
-    parentCarrier: 'Delta Dental Ins',
+    parentCarrier: 'DD Ins (Master Claims Hub)',
     carrier: 'Delta Dental FEP (DD FEP)',
+    name: 'Delta Dental FEP (DD FEP)',
     matchKeys: ['dd fep', 'delta dental fep', 'federal employees dental', 'fedvip delta'],
     address: 'P.O. Box 537007, Sacramento, CA 95853-7007',
     phone: '(855) 410-3255',
     payorId: 'FEPDD',
     networkStatus: 'Out-of-Network',
+    feeSchedule: 'FEP / Standard Fee',
     portalUrl: 'https://www.deltadentalins.com',
   },
   {
     id: 'dd_ppo',
-    parentCarrier: 'Delta Dental Ins',
+    parentCarrier: 'DD Ins (Master Claims Hub)',
     carrier: 'Delta Dental PPO / National',
-    matchKeys: ['delta dental', 'delta ppo', 'delta premier'],
+    name: 'Delta Dental PPO / National',
+    matchKeys: ['delta dental', 'delta ppo', 'delta premier', 'delta dental ppo'],
     address: 'P.O. Box 9051, Farmington Hills, MI 48333',
     phone: '(800) 524-0149',
     payorId: '05430',
     networkStatus: 'In-Network',
+    feeSchedule: 'Delta Dental PPO',
     portalUrl: 'https://www.deltadentalins.com',
   },
   {
     id: 'cigna',
     parentCarrier: 'Cigna Healthcare',
     carrier: 'Cigna Dental DPPO',
+    name: 'Cigna Dental DPPO',
     matchKeys: ['cigna', 'cigna dental', 'cigna dppo'],
     address: 'P.O. Box 188037, Chattanooga, TN 37422-8037',
     phone: '(800) 244-6224',
     payorId: '62308',
     networkStatus: 'In-Network',
+    feeSchedule: 'Cigna DPPO Advantage',
     portalUrl: 'https://cignaforhcp.cigna.com',
   },
   {
     id: 'metlife',
     parentCarrier: 'MetLife',
     carrier: 'MetLife Dental PDP',
-    matchKeys: ['metlife', 'metlife dental', 'metlife pdp'],
+    name: 'MetLife Dental PDP',
+    matchKeys: ['metlife', 'metlife dental', 'metlife pdp', 'metlife pdp plus'],
     address: 'P.O. Box 981282, El Paso, TX 79998-1282',
     phone: '(877) 638-3379',
     payorId: '65978',
     networkStatus: 'In-Network',
+    feeSchedule: 'MetLife PDP Plus',
     portalUrl: 'https://dental.metlife.com',
   },
   {
     id: 'guardian',
     parentCarrier: 'Guardian',
     carrier: 'Guardian DentalGuard Preferred',
+    name: 'Guardian DentalGuard Preferred',
     matchKeys: ['guardian', 'guardian dental', 'dentalguard'],
     address: 'P.O. Box 981572, El Paso, TX 79998-1572',
     phone: '(800) 541-7846',
     payorId: '64246',
     networkStatus: 'In-Network',
+    feeSchedule: 'DentalGuard Preferred PPO',
     portalUrl: 'https://www.guardiananytime.com',
   },
   {
     id: 'aetna',
     parentCarrier: 'Aetna',
     carrier: 'Aetna Dental PPO',
-    matchKeys: ['aetna', 'aetna dental'],
+    name: 'Aetna Dental PPO',
+    matchKeys: ['aetna', 'aetna dental', 'aetna ppo'],
     address: 'P.O. Box 14094, Lexington, KY 40512-4094',
     phone: '(877) 238-6200',
     payorId: '60054',
     networkStatus: 'In-Network',
+    feeSchedule: 'Aetna PPO II',
     portalUrl: 'https://www.aetna.com',
   },
 ];
@@ -146,13 +175,15 @@ async function initDb() {
         name VARCHAR(255) NOT NULL,
         subscription_tier VARCHAR(50) DEFAULT 'pro',
         payer_directory_json JSONB,
+        clinic_ai_settings_json JSONB DEFAULT '{}'::jsonb,
         created_at TIMESTAMPTZ DEFAULT NOW()
       );
     `);
 
     await client.query(`
       ALTER TABLE dentverify.practices
-      ADD COLUMN IF NOT EXISTS payer_directory_json JSONB;
+      ADD COLUMN IF NOT EXISTS payer_directory_json JSONB,
+      ADD COLUMN IF NOT EXISTS clinic_ai_settings_json JSONB DEFAULT '{}'::jsonb;
     `);
 
     // 2. Users Table (Clinic Accounts)

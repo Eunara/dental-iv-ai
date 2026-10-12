@@ -404,14 +404,40 @@
                 </svg>
               </div>
               <div>
-                <h2 id="carrierNameDisplay">Delta Dental PPO</h2>
+                <div style="display: flex; align-items: center; gap: 0.55rem; flex-wrap: wrap;">
+                  <h2 id="carrierNameDisplay" title="Locked to Clinic Insurance Hub Directory">Delta Dental PPO</h2>
+                  <button type="button" id="switchWiredHubBtn" class="btn-action-ghost" style="padding: 2px 8px; font-size: 0.68rem; border-color: rgba(56, 189, 248, 0.4); color: #38bdf8;" title="Select a wired Insurance Hub from the Clinic Directory">
+                    🔗 Switch Insurance Hub
+                  </button>
+                </div>
                 <div class="policy-meta-sub" style="display: none;">
                   <span id="carrierAddressDisplay" style="font-size: 0.76rem; color: #94a3b8;"></span>
+                </div>
+                <!-- Verified By Staff Audit Stamp & Appointment Readiness Badge -->
+                <div id="auditMetaBanner" style="display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap; margin-top: 0.3rem; font-size: 0.71rem; color: #94a3b8;">
+                  <span style="display: inline-flex; align-items: center; gap: 0.25rem; color: #cbd5e1; font-weight: 600;">
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#38bdf8" stroke-width="2.3"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
+                    Verified by: <strong id="heroVerifiedByDisplay" style="color: #38bdf8;">Clinic Staff</strong>
+                  </span>
+                  <span>•</span>
+                  <span id="heroVerifiedAtDisplay">Today</span>
+                  <span>•</span>
+                  <button type="button" id="heroReadinessStatusBtn" style="background: rgba(16, 185, 129, 0.14); border: 1px solid rgba(16, 185, 129, 0.4); color: #34d399; padding: 1px 8px; border-radius: 999px; font-size: 0.68rem; font-weight: 700; cursor: pointer;" title="Click to change Appointment Readiness Status">
+                    ✅ Complete / Ready for Appointment
+                  </button>
                 </div>
               </div>
             </div>
 
             <div class="banner-quick-actions">
+              <button type="button" class="btn-verify-primary" id="directDownloadPdfBtn" style="padding: 0.42rem 0.85rem; font-size: 0.75rem;" title="One-click download clean bordered .PDF file (LastName_FirstName_Carrier_IV.pdf)">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3">
+                  <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                  <polyline points="7 10 12 15 17 10"></polyline>
+                  <line x1="12" y1="15" x2="12" y2="3"></line>
+                </svg>
+                Download Clean PDF
+              </button>
               <button type="button" class="btn-action-excel" id="openExcelModalBtn" title="View, copy, or print clean Excel sheet to PDF">
                 <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
                   <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
@@ -433,7 +459,7 @@
                   <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path>
                   <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path>
                 </svg>
-                Payer Directory
+                Insurance Hub Directory
               </button>
               <button type="button" class="btn-action-ghost" id="newVerificationBtn">
                 <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -468,9 +494,9 @@
 
             <!-- 3. Network Status -->
             <div class="policy-detail-cell">
-              <span class="policy-cell-label">Network Status</span>
+              <span class="policy-cell-label">Network Status (Pre-Set)</span>
               <div class="policy-cell-value-group">
-                <span id="heroNetworkBadge" class="network-indicator-pill in-network" title="Click to toggle In-Network / Out-of-Network">In-Network</span>
+                <span id="heroNetworkBadge" class="network-indicator-pill in-network" title="Auto-wired from Clinic Insurance Hub Directory">In-Network</span>
                 <span class="policy-cell-sub" id="heroCarrierSubDisplay">Carrier Verified</span>
               </div>
             </div>
@@ -498,7 +524,7 @@
 
             <!-- 6. Fee Schedule -->
             <div class="policy-detail-cell">
-              <span class="policy-cell-label">Fee Schedule</span>
+              <span class="policy-cell-label">Fee Schedule (Pre-Set)</span>
               <div class="policy-cell-value-group">
                 <span class="policy-cell-value bold" id="heroFeeScheduleDisplay">Delta Dental PPO</span>
                 <span class="policy-cell-sub">Contracted Tier</span>
@@ -514,9 +540,12 @@
               </div>
             </div>
 
-            <!-- 8. Claims Address & Payor ID (Wired to Directory Settings) -->
-            <div class="policy-detail-cell">
-              <span class="policy-cell-label">Claims Address & Payor ID</span>
+            <!-- 8. Claims Address & Payor ID (Locked & Wired to Directory Settings) -->
+            <div class="policy-detail-cell" id="heroClaimsAddressCell" title="Locked to Insurance Hub Directory — Click 'Switch Insurance Hub' to change carrier hub">
+              <span class="policy-cell-label" style="display: flex; align-items: center; justify-content: space-between;">
+                <span>Claims Address & Payor ID</span>
+                <span style="font-size: 0.6rem; color: #10b981; font-weight: 700;">🔒 Wired</span>
+              </span>
               <div class="policy-cell-value-group">
                 <span class="policy-cell-value bold" id="heroClaimsAddressDisplay" style="font-size: 0.72rem; line-height: 1.25; color: #38bdf8;">P.O. Box 9051 Farmington Hills, MI 48333</span>
                 <span class="policy-cell-sub" id="heroPayorIdDisplay">Payor ID: 05430</span>
@@ -558,7 +587,7 @@
               </div>
             </div>
 
-            <!-- Orthodontics Card (Ortho Max) -->
+            <!-- Orthodontics Card (Ortho Max + Payment Terms) -->
             <div class="financial-card" id="hudOrthoCard">
               <div class="financial-card-header">
                 <span class="financial-label">Ortho Max</span>
@@ -568,9 +597,10 @@
               <div class="meter-progress-track">
                 <div class="meter-progress-bar cyan" id="meterOrthoBar" style="width: 100%;"></div>
               </div>
-              <div class="financial-sub-text">
+              <div class="financial-sub-text" style="flex-wrap: wrap; gap: 0.35rem;">
                 <span id="hudOrthoRem" style="color: #38bdf8; font-weight: 700;">Ortho Rem: $999</span>
                 <span id="hudOrthoAgeLimit">Age limit: 26</span>
+                <span id="hudOrthoPaymentTerms" style="color: #a7f3d0; font-weight: 600;">Terms: N/A</span>
               </div>
             </div>
 
@@ -732,13 +762,21 @@
             </svg>
             Download CSV / Excel
           </button>
+          <button type="button" class="btn-action-pms" id="downloadCleanPdfModalBtn" style="padding: 0.38rem 0.85rem; font-size: 0.74rem;" title="Direct one-click download as LastName_FirstName_Carrier_IV.pdf">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4">
+              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+              <polyline points="7 10 12 15 17 10"></polyline>
+              <line x1="12" y1="15" x2="12" y2="3"></line>
+            </svg>
+            Download Clean .PDF
+          </button>
           <button type="button" class="btn-verify-primary" id="printExcelModalBtn" style="padding: 0.38rem 0.85rem; font-size: 0.74rem;">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
               <polyline points="6 9 6 2 18 2 18 9"></polyline>
               <path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path>
               <rect x="6" y="14" width="12" height="8"></rect>
             </svg>
-            Print / Save as PDF
+            Print Sheet
           </button>
         </div>
       </div>
@@ -786,16 +824,16 @@
     </div>
   </div>
 
-  <!-- AI SETTINGS & PROMPT DIRECTIVES MODAL -->
+  <!-- AI SETTINGS & PER-CLINIC CDT CHECKLIST MODAL -->
   <div class="settings-modal-backdrop" id="settingsModal">
-    <div class="settings-modal-box">
+    <div class="settings-modal-box" style="max-width: 820px;">
       <div class="pms-modal-header">
         <h3>
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#38bdf8" stroke-width="2">
             <circle cx="12" cy="12" r="3"></circle>
             <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
           </svg>
-          AI Auditor Role & Prompt Directives
+          Per-Clinic AI Prompt & CDT Code Checklist Settings
         </h3>
         <button type="button" class="btn-close-modal" id="closeSettingsModalBtn">
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -806,55 +844,60 @@
       </div>
 
       <div class="settings-tabs-row">
-        <button type="button" class="settings-tab-btn active" data-tab="tabRole">
+        <button type="button" class="settings-tab-btn active" data-tab="tabCdtMemory">
           <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
-            <circle cx="12" cy="7" r="4"></circle>
+            <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
+            <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
           </svg>
-          AI Role & System Prompt
+          CDT Checklist & Sequence Order (Locked Meanings)
         </button>
         <button type="button" class="settings-tab-btn" data-tab="tabCodes">
           <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
             <polyline points="14 2 14 8 20 8"></polyline>
           </svg>
-          Required CDT Codes & Directives
+          Clinic CDT AI Prompt
         </button>
-        <button type="button" class="settings-tab-btn" data-tab="tabCdtMemory">
+        <button type="button" class="settings-tab-btn" data-tab="tabRole">
           <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
-            <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+            <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+            <circle cx="12" cy="7" r="4"></circle>
           </svg>
-          CDT - Meaning Memory (Locked)
+          AI Auditor System Persona
         </button>
       </div>
 
-      <div class="pms-modal-body" style="padding-top: 1.25rem;">
-        <!-- Tab 1: System Instruction -->
-        <div class="settings-tab-pane active" id="tabRole">
-          <div class="settings-info-badge">
-            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#38bdf8" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg>
-            <span>Controls the AI auditor persona, clinical accuracy rules, and verification priority.</span>
+      <div class="pms-modal-body" style="padding-top: 1.15rem;">
+        <!-- Tab 1 (Default Active): Built-in Locked CDT - Meaning Memory + Per-Clinic Checklist & Sequence Ordering -->
+        <div class="settings-tab-pane active" id="tabCdtMemory">
+          <div class="settings-info-badge" style="margin-bottom: 0.7rem; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.5rem;">
+            <div style="display: flex; align-items: center; gap: 0.45rem;">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#10b981" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
+              <span><strong>Per-Clinic CDT Checklist & Sequence (`Pagkasunod-sunod`):</strong> Check <code>[✓]</code> which codes to include and use <code>↑</code> / <code>↓</code> to set their exact order. <strong>CDT — Meaning</strong> definitions are permanently locked.</span>
+            </div>
+            <button type="button" class="btn-action-ghost" id="btnSyncChecklistToPrompt" style="padding: 0.25rem 0.65rem; font-size: 0.7rem; border-color: rgba(56, 189, 248, 0.45); color: #38bdf8;">
+              🔄 Sync Checklist Order to AI Prompt
+            </button>
           </div>
-          <textarea id="settingSystemInstruction" class="prompt-editor-textarea" spellcheck="false" placeholder="Enter AI System Instructions..."></textarea>
+          <div id="cdtMemoryDictionaryList" style="max-height: 360px; overflow-y: auto; border: 1px solid rgba(56, 189, 248, 0.2); border-radius: 8px; background: rgba(15, 23, 42, 0.65); padding: 0.5rem;"></div>
         </div>
 
         <!-- Tab 2: Custom CDT Prompt -->
         <div class="settings-tab-pane" id="tabCodes">
           <div class="settings-info-badge">
             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#38bdf8" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg>
-            <span>Add or customize CDT codes (D0120, D1110, D4341, D2740, etc.) and category extraction instructions.</span>
+            <span>Dedicated CDT AI Prompt for this Clinic Workspace. Saved in PostgreSQL so all staff in this clinic share the exact same extraction rules.</span>
           </div>
           <textarea id="settingCustomPrompt" class="prompt-editor-textarea" spellcheck="false" placeholder="Enter CDT Codes Directives..."></textarea>
         </div>
 
-        <!-- Tab 3: Built-in Locked CDT - Meaning Memory Dictionary -->
-        <div class="settings-tab-pane" id="tabCdtMemory">
-          <div class="settings-info-badge" style="margin-bottom: 0.75rem;">
-            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#10b981" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
-            <span><strong>Permanent Built-In Memory (Read-Only):</strong> Standard ADA <strong>CDT Code — Meaning</strong> definitions are permanently stored in website memory and locked from editing.</span>
+        <!-- Tab 3: System Instruction -->
+        <div class="settings-tab-pane" id="tabRole">
+          <div class="settings-info-badge">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#38bdf8" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg>
+            <span>Controls the AI auditor persona, clinical accuracy rules, and verification priority for this clinic.</span>
           </div>
-          <div id="cdtMemoryDictionaryList" style="max-height: 340px; overflow-y: auto; border: 1px solid rgba(56, 189, 248, 0.2); border-radius: 8px; background: rgba(15, 23, 42, 0.65); padding: 0.5rem;"></div>
+          <textarea id="settingSystemInstruction" class="prompt-editor-textarea" spellcheck="false" placeholder="Enter AI System Instructions..."></textarea>
         </div>
       </div>
 
@@ -866,22 +909,22 @@
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
             <polyline points="20 6 9 17 4 12"></polyline>
           </svg>
-          Save & Apply Directives
+          Save Clinic Checklist & AI Directives
         </button>
       </div>
     </div>
   </div>
 
-  <!-- DEDICATED INSURANCE DIRECTORY & SUB-PORTALS MODAL -->
+  <!-- DEDICATED INSURANCE HUB DIRECTORY & STATE-TO-ADDRESS WIRING MODAL -->
   <div class="settings-modal-backdrop" id="insuranceDirectoryModal">
-    <div class="settings-modal-box" style="max-width: 920px;">
+    <div class="settings-modal-box" style="max-width: 960px;">
       <div class="pms-modal-header">
         <h3 style="display: flex; align-items: center; gap: 0.55rem; color: #fff; font-size: 1.05rem; font-weight: 700;">
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#38bdf8" stroke-width="2">
             <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path>
             <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path>
           </svg>
-          Insurance Directory & Sub-Portals (Claims Addresses & Payor IDs)
+          Master Insurance Hub Directory & Multi-State Wiring (Locked on Breakdown)
         </h3>
         <button type="button" class="btn-close-modal" id="closeInsuranceDirectoryModalBtn">
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -894,16 +937,16 @@
       <div class="pms-modal-body" style="padding-top: 1rem;">
         <div class="settings-info-badge" style="margin-bottom: 0.85rem;">
           <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#38bdf8" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg>
-          <span>Dedicated directory isolated per Clinic Workspace. Supports multi-branch payers like <strong>Delta Dental</strong> (DD CA, DD FEP, DD PPO), Cigna, MetLife, Guardian. Click "Apply to Policy" to populate active headers instantly.</span>
+          <span><strong>Master Claims Hub & State Wiring:</strong> Insurance Name, Claims Address, Phone #, and Payor ID are <strong>locked (read-only)</strong> on the Breakdown screen. Clinic Admins wire multiple states/plans (e.g. <code>DD CA, DD TX, DD PA, DD NY</code>) into one Master Hub (e.g. <strong>DD Ins</strong>) with pre-set <strong>In-Network / Out-of-Network</strong> and <strong>Fee Schedule</strong>.</span>
         </div>
 
         <!-- Filter chips & actions -->
         <div style="display: flex; gap: 0.6rem; margin-bottom: 0.85rem; flex-wrap: wrap; align-items: center;">
-          <input type="text" id="payerDirectorySearchInput" class="table-search-input" style="flex: 1; min-width: 200px;" placeholder="Search carriers or sub-portals (e.g. Delta CA, FEP, MetLife, Cigna)...">
+          <input type="text" id="payerDirectorySearchInput" class="table-search-input" style="flex: 1; min-width: 200px;" placeholder="Search Master Hubs, wired states (e.g. DD CA, DD TX, FEP, MetLife, Cigna)...">
           
           <select id="payerParentFilter" class="table-search-input" style="background: #0f172a; color: #f8fafc; border: 1px solid rgba(56, 189, 248, 0.3); border-radius: 6px; padding: 0.35rem 0.6rem; font-size: 0.74rem;">
-            <option value="ALL">All Carriers / Portals</option>
-            <option value="Delta Dental">Delta Dental Portals (DD CA, DD FEP, etc.)</option>
+            <option value="ALL">All Master Hubs / Carriers</option>
+            <option value="Delta Dental">DD Ins / Delta Dental Hubs</option>
             <option value="MetLife">MetLife</option>
             <option value="Cigna">Cigna</option>
             <option value="Guardian">Guardian</option>
@@ -915,7 +958,7 @@
             📋 Paste / Import
           </button>
           <button type="button" class="btn-verify-primary" id="dirToggleAddBtn" style="padding: 0.35rem 0.75rem; font-size: 0.72rem;">
-            + Add Sub-Portal / Carrier
+            + Add Master Hub / Carrier
           </button>
         </div>
 
@@ -923,43 +966,51 @@
         <div id="dirBulkImportPanel" style="display: none; background: rgba(15, 23, 42, 0.85); border: 1px solid rgba(56, 189, 248, 0.4); border-radius: 6px; padding: 0.85rem; margin-bottom: 0.85rem;">
           <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.4rem; flex-wrap: wrap; gap: 0.4rem;">
             <h5 style="color: #38bdf8; font-size: 0.78rem; font-weight: 700; margin: 0;">Bulk Import Carrier Portals (Excel / CSV / Text)</h5>
-            <span style="font-size: 0.68rem; color: #94a3b8;">Format: Parent Group | Portal Name | Address | In-Net/Out-Net | Phone | Payor ID</span>
+            <span style="font-size: 0.68rem; color: #94a3b8;">Format: Parent Hub | Carrier Name | Address | In-Net/Out-Net | Phone | Payor ID</span>
           </div>
-          <textarea id="dirBulkImportTextarea" class="prompt-editor-textarea" style="min-height: 120px; font-size: 0.74rem; font-family: var(--font-mono); margin-bottom: 0.5rem;" placeholder="Delta Dental | Delta Dental of California (DD CA) | P.O. Box 997330 Sacramento, CA 95899 | In-Network | 800-765-6003 | 94276&#10;Delta Dental | Delta Dental FEP (Federal Employees) | P.O. Box 6006 Mechanicsburg, PA 17055 | In-Network | 855-410-3255 | FEPDD&#10;MetLife Dental | MetLife Dental Claims | P.O. Box 981282 El Paso, TX 79998 | In-Network | 877-638-3379 | 65978"></textarea>
+          <textarea id="dirBulkImportTextarea" class="prompt-editor-textarea" style="min-height: 120px; font-size: 0.74rem; font-family: var(--font-mono); margin-bottom: 0.5rem;" placeholder="DD Ins | Delta Dental of California (DD CA) | P.O. Box 997330 Sacramento, CA 95899 | In-Network | 800-765-6003 | 94276&#10;DD Ins | Delta Dental FEP (Federal Employees) | P.O. Box 6006 Mechanicsburg, PA 17055 | Out-of-Network | 855-410-3255 | FEPDD&#10;MetLife | MetLife Dental Claims | P.O. Box 981282 El Paso, TX 79998 | In-Network | 877-638-3379 | 65978"></textarea>
           <div style="display: flex; gap: 0.5rem; justify-content: flex-end;">
             <button type="button" class="btn-restore-defaults" id="dirCancelBulkImportBtn" style="padding: 0.25rem 0.6rem; font-size: 0.7rem;">Cancel</button>
             <button type="button" class="btn-verify-primary" id="dirProcessBulkImportBtn" style="padding: 0.25rem 0.75rem; font-size: 0.7rem;">Import List Now</button>
           </div>
         </div>
 
-        <!-- Add Sub-Portal Inline Form -->
+        <!-- Add Sub-Portal / Master Hub Inline Form -->
         <div id="dirAddPayerFormPanel" style="display: none; background: rgba(15, 23, 42, 0.75); border: 1px dashed rgba(56, 189, 248, 0.4); border-radius: 6px; padding: 0.85rem; margin-bottom: 0.85rem;">
-          <h5 style="color: #38bdf8; font-size: 0.76rem; font-weight: 700; margin-bottom: 0.5rem;" id="dirFormTitle">Add Insurance Carrier / Sub-Portal</h5>
-          <div style="display: grid; grid-template-columns: 1.2fr 2fr 1fr; gap: 0.5rem; margin-bottom: 0.5rem;">
+          <h5 style="color: #38bdf8; font-size: 0.76rem; font-weight: 700; margin-bottom: 0.5rem;" id="dirFormTitle">Add Master Claims Hub / Wired Insurance Carrier</h5>
+          <div style="display: grid; grid-template-columns: 1.1fr 1.8fr 0.9fr 1.2fr; gap: 0.5rem; margin-bottom: 0.5rem;">
             <div>
-              <label style="display: block; font-size: 0.68rem; color: #94a3b8; margin-bottom: 0.2rem;">Parent Group</label>
-              <input type="text" id="dirNewParentCarrier" class="table-search-input" placeholder="e.g. Delta Dental Ins">
+              <label style="display: block; font-size: 0.68rem; color: #94a3b8; margin-bottom: 0.2rem;">Master Hub Group</label>
+              <input type="text" id="dirNewParentCarrier" class="table-search-input" placeholder="e.g. DD Ins">
             </div>
             <div>
-              <label style="display: block; font-size: 0.68rem; color: #94a3b8; margin-bottom: 0.2rem;">Portal / Carrier Name</label>
-              <input type="text" id="dirNewCarrierName" class="table-search-input" placeholder="e.g. Delta Dental of California (DD CA)">
+              <label style="display: block; font-size: 0.68rem; color: #94a3b8; margin-bottom: 0.2rem;">Hub / Carrier Display Name</label>
+              <input type="text" id="dirNewCarrierName" class="table-search-input" placeholder="e.g. Delta Dental Ins (DD CA / TX / PA)">
             </div>
             <div>
               <label style="display: block; font-size: 0.68rem; color: #94a3b8; margin-bottom: 0.2rem;">Payor ID</label>
               <input type="text" id="dirNewPayorId" class="table-search-input" placeholder="e.g. 94276">
             </div>
-          </div>
-          <div style="display: grid; grid-template-columns: 2fr 1fr 1fr; gap: 0.5rem; margin-bottom: 0.6rem;">
             <div>
-              <label style="display: block; font-size: 0.68rem; color: #94a3b8; margin-bottom: 0.2rem;">Claims Address</label>
+              <label style="display: block; font-size: 0.68rem; color: #94a3b8; margin-bottom: 0.2rem;">Pre-Set Fee Schedule</label>
+              <input type="text" id="dirNewFeeSchedule" class="table-search-input" placeholder="e.g. Delta Dental PPO">
+            </div>
+          </div>
+          <div style="display: grid; grid-template-columns: 1.6fr 1.4fr 0.9fr 0.9fr; gap: 0.5rem; margin-bottom: 0.6rem;">
+            <div>
+              <label style="display: block; font-size: 0.68rem; color: #94a3b8; margin-bottom: 0.2rem;">Claims Mailing Address (Locked)</label>
               <input type="text" id="dirNewAddress" class="table-search-input" placeholder="P.O. Box 997330 Sacramento, CA 95899">
             </div>
             <div>
-              <label style="display: block; font-size: 0.68rem; color: #94a3b8; margin-bottom: 0.2rem;">Phone #</label>
-              <input type="text" id="dirNewPhone" class="table-search-input" placeholder="800-765-6003">
+              <label style="display: block; font-size: 0.68rem; color: #94a3b8; margin-bottom: 0.2rem;">Wired States / Plan Aliases (comma-separated)</label>
+              <input type="text" id="dirNewMatchKeys" class="table-search-input" placeholder="dd ca, dd tx, dd pa, dd ny, dd fl">
             </div>
             <div>
-              <label style="display: block; font-size: 0.68rem; color: #94a3b8; margin-bottom: 0.2rem;">Network Status</label>
+              <label style="display: block; font-size: 0.68rem; color: #94a3b8; margin-bottom: 0.2rem;">Phone #</label>
+              <input type="text" id="dirNewPhone" class="table-search-input" placeholder="888-335-8227">
+            </div>
+            <div>
+              <label style="display: block; font-size: 0.68rem; color: #94a3b8; margin-bottom: 0.2rem;">Pre-Set Network</label>
               <select id="dirNewNetwork" class="table-search-input" style="background: #0f172a; color: #f8fafc; border: 1px solid rgba(56, 189, 248, 0.3); border-radius: 6px; padding: 0.35rem 0.5rem; font-size: 0.74rem;">
                 <option value="In-Network">In-Network</option>
                 <option value="Out-of-Network">Out-of-Network</option>
@@ -968,7 +1019,7 @@
           </div>
           <div style="display: flex; gap: 0.5rem; justify-content: flex-end;">
             <button type="button" class="btn-restore-defaults" id="dirCancelAddBtn" style="padding: 0.25rem 0.6rem; font-size: 0.7rem;">Cancel</button>
-            <button type="button" class="btn-verify-primary" id="dirSavePayerBtn" style="padding: 0.25rem 0.75rem; font-size: 0.7rem;">Save Carrier / Portal</button>
+            <button type="button" class="btn-verify-primary" id="dirSavePayerBtn" style="padding: 0.25rem 0.75rem; font-size: 0.7rem;">Save Master Hub</button>
           </div>
         </div>
 

@@ -35,119 +35,45 @@ NEXT UP: BACKGROUND HEADLESS BROWSER VERIFICATION (PLAYWRIGHT AUTOMATION)
      * Staff enters code -> runner resumes session and completes patient eligibility retrieval.
 
 --------------------------------------------------------------------------------
-NEXT UP (OFF-HOURS UPDATE): LOCKED INSURANCE HUB & STATE-TO-ADDRESS WIRING
---------------------------------------------------------------------------------
-* Objective: Make Insurance Name, Claims Address, Phone #, and Payor ID
-  READ-ONLY (non-editable) on the Breakdown screen, and editable ONLY inside
-  Settings (by Clinic Admin / Website Owner) using a "Master Claims Hub" wiring
-  system.
-
-1. Master Claims Hub & Multi-State Wiring (Settings -> Insurance Directory):
-   - Problem Solved: Carriers like Delta Dental have many states (CA, TX, PA,
-     NY, FL, GA, etc.) that all belong to the same parent hub ("DD Ins") with
-     the EXACT SAME Claims Address, Phone #, and Payor ID.
-   - Solution ("Claims Hub Wiring"):
-     * Create Master Claims Hubs (e.g. `DD Ins`, `DD FEP`, `MetLife`, `Cigna`,
-       `Guardian`, `Aetna`) that hold one canonical:
-       - Claims Mailing Address
-       - Insurance Phone #
-       - Electronic Payor ID
-       - Clinic Network Status (`In-Network` / `Out-of-Network`)
-       - Pre-Set Fee Schedule (e.g., `PPO Fee`, `Premier Fee`, `UCR / Standard Fee`)
-         *(Note: "Payment Goes To: Office vs Patient" is NOT pre-set per hub
-         because assignment of benefits varies per employer group/policy even
-         under the same carrier; it remains extracted per patient breakdown.)*
-     * Clinic Admin can "wire" (tag/assign) multiple states or plan aliases
-       (e.g. `[DD CA]`, `[DD TX]`, `[DD NY]`, `[DD PA]`, `[DD FL]`, `[Delta Dental PPO]`)
-       into a single Master Hub (`DD Ins`).
-     * Updating the address, phone number, or fee schedule on `DD Ins` updates
-       it once for all wired states automatically.
-
-2. Locked / Non-Editable Insurance Fields & Single Claims Address Display on Breakdown Dashboard:
-   - Single Claims Address Location (No Redundancy):
-     * Display the Claims Address, Payor ID, and Phone # in ONLY ONE place:
-       the dedicated `CLAIMS ADDRESS & PAYOR ID` box (removed redundant address
-       copies under the top Carrier Header and under `NETWORK STATUS`).
-   - MetLife / Portal Patient Address Bug Prevention:
-     * Never allow a patient's or subscriber's residential street address (e.g.
-       `1605 JOHNSON PL, FLOWER MOUND, TX` on MetLife printouts) to be used as
-       `Claims Address`. Always enforce the Clinic Insurance Directory's institutional
-       Claims P.O. Box Address (e.g. `P.O. Box 981282, El Paso, TX 79998-1282`).
-   - Remove free-text inline editing from `Ins Company`, `Ins Address`,
-     `Ins Ph #`, and `Payor ID` on the Breakdown screen so staff cannot
-     accidentally type wrong addresses or phone numbers.
-   - Replace free-text editing with a locked "Select Wired Insurance Hub"
-     dropdown on the breakdown card (if staff needs to switch e.g. from
-     `DD Ins` to `DD FEP`), which automatically populates the locked Address,
-     Phone #, Payor ID, Network Status, and pre-set Fee Schedule from Settings.
-
-3. Clinic Admin Pre-Set Network Status & Fee Schedule (Auto-Applied on Upload):
-   - In the Clinic's Insurance Hub Settings, the Clinic Admin pre-sets whether
-     their clinic is `In-Network` or `Out-of-Network` and what `Fee Schedule`
-     applies for each Insurance Hub / wired sub-plan.
-   - Automatic Detection During Upload:
-     * Staff does NOT need to manually select In-Network or Out-of-Network when
-       uploading a breakdown document.
-     * The backend (`POST /api/verify`) automatically injects the active clinic's
-       pre-set Insurance Hub network mapping into the AI extraction rules and
-       post-processing pipeline.
-     * As soon as the AI reads the carrier/plan name on the uploaded PDF/image,
-       it automatically knows whether that insurance is `In-Network` or
-       `Out-of-Network` for that clinic, extracts the matching benefit column
-       (In-Network % vs Out-of-Network %), and locks `Network Participation`
-       and the pre-set `Fee Schedule` accordingly.
-
-4. Per-Clinic Custom CDT Code Checklist, Sequence Ordering & Per-Clinic AI Prompt:
-   - Clickable CDT Code Checklist & Order (`pagkasunod-sunod`):
-     * Powered by the built-in locked `CDT_CODE_DICTIONARY` (`CDT - Meaning`),
-       the Clinic Admin can simply click/check `[✓]` which CDT codes their
-       clinic wants in their breakdown and arrange their exact display order
-       (up/down sequence) per category.
-   - Dedicated Per-Clinic AI Prompt (`dentverify.practices` in PostgreSQL):
-     * Each clinic workspace stores its own customized **CDT AI Prompt**,
-       **System Instruction**, and **Selected CDT Code Sequence** in the database
-       (managed by the Clinic Admin or Website Owner).
-     * All staff members assigned to that clinic automatically use their
-       clinic's exact CDT checklist, ordering, and AI prompt.
-
-5. 7-Day (Weekly) Duplicate Patient Verification Check:
-   - Validates whether the same patient (`Patient Name + DOB + Carrier`) in the
-     active clinic was already verified **within the last 7 days (1 week)**.
-   - Within 7 Days: Shows a custom DentVerify modal notice:
-     "Kini nga pasyente na-verify na ni [Staff Name] adtong [Date] (sulod sa
-     7 ka adlaw). Gusto nimo ablihan ang existing breakdown o mag-verify og bag-o?"
-   - After 7 Days (> 1 Week): Automatically allows fresh verification without
-     blocking, since patients with a new appointment after a week require an
-     updated check of remaining benefits and history.
-
-6. "Verified By" Staff Audit Stamp + Appointment Readiness Status Tag:
-   - Automatically stamps **`Verified by: [Staff Full Name] • [Date & Time]`**
-     on the Breakdown Dashboard, Excel/PDF Breakdown Sheet, PMS Clinical Note,
-     and Clinic History list.
-   - Adds a status badge per verification record:
-     * `✅ Complete / Ready for Appointment`
-     * `⏳ Pending Carrier Call / Fax History`
-     * `❌ Policy Termed / Inactive`
-
-7. Direct One-Click `.PDF` File Download with Auto-Naming:
-   - Adds a one-click **Download Clean PDF** button that saves the bordered
-     breakdown sheet directly as a `.pdf` file without needing the browser print
-     setup dialog.
-   - Automatically formats the filename as:
-     `LastName_FirstName_Carrier_IV.pdf` (e.g., `Smith_John_DeltaDental_IV.pdf`)
-     for instant drag-and-drop into Dentrix, Eaglesoft, or Open Dental.
-
-8. Ortho Payment Terms Detection (`Monthly`, `Quarterly`, `Yearly`):
-   - AI automatically detects and extracts Orthodontic Payment Terms (`ortho_payment_terms`)
-     when present in the breakdown document:
-     * e.g., `Monthly`, `Quarterly`, `Yearly`, `Lump Sum / At Banding`, or `N/A` if not stated.
-   - Displays `Ortho Payment Terms` alongside `Ortho Coverage %`, `Ortho Max`,
-     `Remaining Ortho`, and `Ortho Age Limit` across the Breakdown Dashboard,
-     Excel/PDF Sheet, CSV export, and PMS Clinical Note.
-
---------------------------------------------------------------------------------
 COMPLETED & LOCKED IN WEBSITE MEMORY:
 --------------------------------------------------------------------------------
+* Locked Insurance Hub & State-to-Address Wiring (8-Point Upgrade — Completed):
+  1. Master Claims Hub & Multi-State Wiring (Settings -> Insurance Directory):
+     - Master Claims Hubs (`DD Ins`, `DD FEP`, `MetLife`, `Cigna`, `Guardian`, `Aetna`)
+       store one canonical Claims Mailing Address, Insurance Phone #, Electronic Payor ID,
+       Clinic Network Status (`In-Network` / `Out-of-Network`), Pre-Set Fee Schedule,
+       and wired state aliases (`matchKeys`, e.g., `dd ca, dd tx, dd pa, dd ny, dd fl`).
+     - Editable ONLY by Clinic Admin / Website Owner inside the Insurance Hub Directory.
+  2. Locked / Non-Editable Insurance Fields on Breakdown Dashboard:
+     - `Ins Company`, `Ins Address`, `Ins Ph #`, and `Payor ID` are read-only on the
+       Breakdown screen and linked directly to the "Switch Wired Hub" selector.
+     - Single canonical `CLAIMS ADDRESS & PAYOR ID` box prevents patient residential
+       street addresses from ever replacing institutional Claims P.O. Box addresses.
+  3. Clinic Admin Pre-Set Network Status & Fee Schedule (Auto-Applied on Upload):
+     - Backend (`POST /api/verify`) automatically injects the clinic's pre-set
+       Insurance Hub network rules into the AI extraction pipeline and auto-populates
+       the wired hub's Address, Phone #, Payor ID, Network Status, and Fee Schedule.
+  4. Per-Clinic Custom CDT Code Checklist, Sequence Ordering (`pagkasunod-sunod`) & AI Prompt:
+     - Clinic Admin / Website Owner can check/uncheck (`[✓]`) and reorder (`↑`/`↓`)
+       CDT codes from the locked `CDT_CODE_DICTIONARY`, sync to the AI prompt, and
+       save per clinic in PostgreSQL (`dentverify.practices.clinic_ai_settings_json`).
+  5. 7-Day (Weekly) Duplicate Patient Verification Check:
+     - Warns staff via a custom modal if the same patient (`Patient Name + DOB + Carrier`)
+       was already verified within the last 7 days (`<= 7 days`), with one-click option
+       to open the existing breakdown or verify a new one anyway.
+  6. "Verified By" Staff Audit Stamp + Appointment Readiness Status Tag:
+     - Stamps `Verified by: [Staff Full Name] • [Date & Time]` and an interactive
+       Appointment Readiness Status badge (`✅ Complete / Ready for Appointment`,
+       `⏳ Pending Carrier Call / Fax History`, `❌ Policy Termed / Inactive`) across
+       the Breakdown Dashboard, Excel/PDF Sheet, PMS Note, and Clinic History.
+  7. Direct One-Click `.PDF` File Download with Auto-Naming:
+     - One-click **Download Clean PDF (.pdf)** button generates a single-page bordered
+       vector PDF named `LastName_FirstName_Carrier_IV.pdf`.
+  8. Ortho Payment Terms Detection (`Monthly`, `Quarterly`, `Yearly`):
+     - AI detects and extracts `ortho_payment_terms` (`Monthly`, `Quarterly`, `Yearly`,
+       `Lump Sum / At Banding`, or `N/A`) across the Breakdown Dashboard, Excel/PDF Sheet,
+       CSV export, and PMS Clinical Note.
+
 * Built-in ADA CDT Code Dictionary (CDT - Meaning):
   - All standard CDT codes and their clinical meanings (e.g. D0120, D1110, D4346,
     D0274, D0210/D0330, D4341, D4910, D2391, D2740, D7140, D7210, D9944, D6010, etc.)

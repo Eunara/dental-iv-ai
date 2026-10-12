@@ -357,6 +357,11 @@ const dentalBreakdownSchema = {
           description: 'Orthodontic remaining benefit balance (e.g., $1,000, $2,000, N/A)',
           nullable: true,
         },
+        ortho_payment_terms: {
+          type: Type.STRING,
+          description: 'Orthodontic payment schedule or payout terms if stated in the breakdown (e.g., Monthly, Quarterly, Yearly, Lump Sum / At Banding, Automatic Monthly Payments, or N/A if not specified)',
+          nullable: true,
+        },
       },
       required: [
         'preventive',
@@ -589,7 +594,7 @@ YOU MUST SPECIFICALLY AUDIT AND EXTRACT THE REQUIRED CDT PROCEDURES IF PRESENT O
 
 CRITICAL CLINICAL PROCEDURE SEQUENCE BY CATEGORIES:
 Audit the attached insurance breakdown sheet and extract the Procedure Table.
-Strictly capture Orthodontic terms in the header (Ortho Lifetime Max, Remaining Ortho, Ortho Coverage %, and Ortho Age Limit).
+Strictly capture Orthodontic terms in the header (Ortho Lifetime Max, Remaining Ortho, Ortho Coverage %, Ortho Age Limit, and Ortho Payment Terms such as Monthly, Quarterly, Yearly, Lump Sum / At Banding, or N/A if not stated).
 Strictly maintain the following sequence and exact order of procedure codes in the procedure_codes array:
 
 CATEGORY 1: PREVENTATIVE
@@ -713,6 +718,29 @@ const CDT_CODE_DICTIONARY = Object.freeze({
   'D9940': 'Occlusal Guard, by Report',
 });
 
+const DEFAULT_ENABLED_CDT_CODES = [
+  'D4346',
+  'D1110',
+  'D0274',
+  'D0210 / D0330',
+  'D0220',
+  'D9110',
+  'D0120',
+  'D0140',
+  'D1351',
+  'D1206',
+  'D4341',
+  'D4910',
+  'D2391',
+  'D2740',
+  'D2920',
+  'D7140',
+  'D7210',
+  'D9222 / D9223',
+  'D9944',
+  'D6010',
+];
+
 function getCanonicalCdtMeaning(rawCode, fallbackDesc = '') {
   if (!rawCode) return fallbackDesc || '-';
   const upper = String(rawCode).trim().toUpperCase();
@@ -736,13 +764,80 @@ function enforceCanonicalCdtMeanings(procedureCodes) {
 }
 
 // Endpoint to provide default prompts and built-in CDT dictionary to authenticated users only
-app.get('/api/prompts/default', (req, res) => {
+app.get('/api/prompts/default', async (req, res) => {
   if (!req.user) return res.status(401).json({ error: 'Unauthorized' });
-  res.json({
-    systemInstruction: DEFAULT_SYSTEM_INSTRUCTION,
-    customPrompt: DEFAULT_CDT_CODES_PROMPT,
-    cdtDictionary: CDT_CODE_DICTIONARY,
-  });
+  try {
+    let clinicSettings = {};
+    if (req.user.practice_id) {
+      const r = await db.query('SELECT clinic_ai_settings_json FROM dentverify.practices WHERE id = $1', [req.user.practice_id]);
+      clinicSettings = r.rows[0]?.clinic_ai_settings_json || {};
+    } else {
+      const r = await db.query('SELECT clinic_ai_settings_json FROM dentverify.practices ORDER BY created_at ASC LIMIT 1');
+      clinicSettings = r.rows[0]?.clinic_ai_settings_json || {};
+    }
+    res.json({
+      systemInstruction: clinicSettings.systemInstruction || DEFAULT_SYSTEM_INSTRUCTION,
+      customPrompt: clinicSettings.customPrompt || DEFAULT_CDT_CODES_PROMPT,
+      enabledCodes: Array.isArray(clinicSettings.enabledCodes) && clinicSettings.enabledCodes.length > 0
+        ? clinicSettings.enabledCodes
+        : DEFAULT_ENABLED_CDT_CODES,
+      defaultSystemInstruction: DEFAULT_SYSTEM_INSTRUCTION,
+      defaultCustomPrompt: DEFAULT_CDT_CODES_PROMPT,
+      defaultEnabledCodes: DEFAULT_ENABLED_CDT_CODES,
+      cdtDictionary: CDT_CODE_DICTIONARY,
+    });
+  } catch (err) {
+    res.json({
+      systemInstruction: DEFAULT_SYSTEM_INSTRUCTION,
+      customPrompt: DEFAULT_CDT_CODES_PROMPT,
+      enabledCodes: DEFAULT_ENABLED_CDT_CODES,
+      defaultSystemInstruction: DEFAULT_SYSTEM_INSTRUCTION,
+      defaultCustomPrompt: DEFAULT_CDT_CODES_PROMPT,
+      defaultEnabledCodes: DEFAULT_ENABLED_CDT_CODES,
+      cdtDictionary: CDT_CODE_DICTIONARY,
+    });
+  }
+});
+
+// Save Per-Clinic AI Prompt & CDT Code Checklist / Sequence Ordering
+app.post('/api/clinic-settings', async (req, res) => {
+  if (!req.user || (req.user.role !== 'owner' && req.user.role !== 'clinic_admin')) {
+    return res.status(403).json({ error: 'Only Clinic Admin or Website Owner can update clinic AI settings and CDT checklist.' });
+  }
+  try {
+    const { systemInstruction, customPrompt, enabledCodes, resetDefaults } = req.body;
+    const settingsPayload = resetDefaults
+      ? {}
+      : {
+          systemInstruction: systemInstruction ? String(systemInstruction).trim() : DEFAULT_SYSTEM_INSTRUCTION,
+          customPrompt: customPrompt ? String(customPrompt).trim() : DEFAULT_CDT_CODES_PROMPT,
+          enabledCodes: Array.isArray(enabledCodes) && enabledCodes.length > 0 ? enabledCodes : DEFAULT_ENABLED_CDT_CODES,
+          updated_by: req.user.full_name || req.user.email,
+          updated_at: new Date().toISOString(),
+        };
+
+    if (req.user.role === 'owner' && !req.user.practice_id) {
+      await db.query(`UPDATE dentverify.practices SET clinic_ai_settings_json = $1`, [JSON.stringify(settingsPayload)]);
+      await recordAuditLog(req, 'UPDATE_ALL_CLINIC_AI_SETTINGS', null, { resetDefaults: Boolean(resetDefaults) });
+    } else {
+      await db.query(
+        `UPDATE dentverify.practices SET clinic_ai_settings_json = $1 WHERE id = $2`,
+        [JSON.stringify(settingsPayload), req.user.practice_id]
+      );
+      await recordAuditLog(req, 'UPDATE_CLINIC_AI_SETTINGS', req.user.practice_id, { resetDefaults: Boolean(resetDefaults) });
+    }
+    res.json({
+      success: true,
+      settings: {
+        systemInstruction: settingsPayload.systemInstruction || DEFAULT_SYSTEM_INSTRUCTION,
+        customPrompt: settingsPayload.customPrompt || DEFAULT_CDT_CODES_PROMPT,
+        enabledCodes: settingsPayload.enabledCodes || DEFAULT_ENABLED_CDT_CODES,
+      },
+    });
+  } catch (err) {
+    console.error('Error saving clinic AI settings:', err);
+    res.status(500).json({ error: 'Failed to save clinic AI settings.' });
+  }
 });
 
 app.get('/api/cdt-dictionary', (req, res) => {
@@ -751,6 +846,7 @@ app.get('/api/cdt-dictionary', (req, res) => {
     success: true,
     locked: true,
     dictionary: CDT_CODE_DICTIONARY,
+    defaultEnabledCodes: DEFAULT_ENABLED_CDT_CODES,
   });
 });
 
@@ -1881,9 +1977,12 @@ async function syncBreakdownInsuranceToClinicDirectory(practiceId, ins) {
   }
 }
 
-// POST /api/payers (Save active clinic's custom directory)
+// POST /api/payers (Save active clinic's custom directory — restricted to Clinic Admin & Website Owner)
 app.post('/api/payers', async (req, res) => {
   if (!req.user) return res.status(401).json({ error: 'Unauthorized' });
+  if (req.user.role !== 'owner' && req.user.role !== 'clinic_admin') {
+    return res.status(403).json({ error: 'Only Clinic Admin or Website Owner can edit the Insurance Hub Directory.' });
+  }
   try {
     const { payers, apply_all } = req.body;
     if (!Array.isArray(payers)) {
@@ -1909,6 +2008,50 @@ app.post('/api/payers', async (req, res) => {
   }
 });
 
+// Helper: Match a carrier string against the clinic's Insurance Hub Directory (including wired states & aliases)
+function matchClinicPayerHub(carrierStr, directoryList) {
+  if (!carrierStr || !Array.isArray(directoryList) || directoryList.length === 0) return null;
+  const cLower = String(carrierStr).toLowerCase().trim();
+  if (!cLower || /^(none|n\/a|na|-|dental insurance)$/i.test(cLower)) return null;
+
+  // 1. Exact case-insensitive name/carrier match
+  const exact = directoryList.find(p =>
+    (p.name && String(p.name).toLowerCase().trim() === cLower) ||
+    (p.carrier && String(p.carrier).toLowerCase().trim() === cLower)
+  );
+  if (exact) return exact;
+
+  // 2. Exact wired state / alias matchKey
+  for (const p of directoryList) {
+    if (Array.isArray(p.matchKeys)) {
+      for (const k of p.matchKeys) {
+        if (String(k || '').toLowerCase().trim() === cLower) return p;
+      }
+    }
+  }
+
+  // 3. Specific wired state / alias substring match (prioritizing specific aliases over generic 'delta dental')
+  for (const p of directoryList) {
+    if (Array.isArray(p.matchKeys)) {
+      for (const k of p.matchKeys) {
+        const kLower = String(k || '').toLowerCase().trim();
+        if (!kLower || kLower === 'delta dental') continue;
+        if (cLower.includes(kLower)) return p;
+      }
+    }
+  }
+
+  // 4. General hub name or generic matchKey fallback
+  for (const p of directoryList) {
+    const pName = String(p.name || p.carrier || '').toLowerCase().trim();
+    if (pName && cLower.includes(pName)) return p;
+    if (Array.isArray(p.matchKeys)) {
+      if (p.matchKeys.some(k => k && cLower.includes(String(k).toLowerCase().trim()))) return p;
+    }
+  }
+  return null;
+}
+
 // ==========================================
 // PERSISTENT VERIFICATION HISTORY ENDPOINTS
 // ==========================================
@@ -1927,11 +2070,15 @@ app.get('/api/verifications', async (req, res) => {
       result = await db.query(`
         SELECT v.id, v.practice_id, p.name as practice_name, v.carrier, v.patient_name_enc, v.patient_name_masked,
                v.member_id_enc, v.dob_enc, v.network_status, v.created_at,
+               u.full_name as verified_by_user,
+               v.breakdown_json->'audit_meta'->>'verified_by_name' as audit_verified_by,
+               v.breakdown_json->'audit_meta'->>'readiness_status' as readiness_status,
                v.breakdown_json->'insurance_details'->>'plan_benefits' as plan_benefits,
                v.breakdown_json->'insurance_details'->>'effective_date' as effective_date,
                v.breakdown_json->'insurance_details'->>'policy_status' as policy_status
         FROM dentverify.verifications v
         LEFT JOIN dentverify.practices p ON v.practice_id = p.id
+        LEFT JOIN dentverify.users u ON v.user_id = u.id
         ORDER BY v.created_at DESC
         LIMIT 200;
       `);
@@ -1942,11 +2089,15 @@ app.get('/api/verifications', async (req, res) => {
       result = await db.query(`
         SELECT v.id, v.practice_id, p.name as practice_name, v.carrier, v.patient_name_enc, v.patient_name_masked,
                v.member_id_enc, v.dob_enc, v.network_status, v.created_at,
+               u.full_name as verified_by_user,
+               v.breakdown_json->'audit_meta'->>'verified_by_name' as audit_verified_by,
+               v.breakdown_json->'audit_meta'->>'readiness_status' as readiness_status,
                v.breakdown_json->'insurance_details'->>'plan_benefits' as plan_benefits,
                v.breakdown_json->'insurance_details'->>'effective_date' as effective_date,
                v.breakdown_json->'insurance_details'->>'policy_status' as policy_status
         FROM dentverify.verifications v
         LEFT JOIN dentverify.practices p ON v.practice_id = p.id
+        LEFT JOIN dentverify.users u ON v.user_id = u.id
         WHERE v.practice_id = $1
         ORDER BY v.created_at DESC
         LIMIT 100;
@@ -1956,6 +2107,7 @@ app.get('/api/verifications', async (req, res) => {
     const records = result.rows.map(row => {
       const decryptedName = db.decryptField(row.patient_name_enc);
       const decryptedDob = db.decryptField(row.dob_enc);
+      const isTermed = String(row.policy_status || '').toLowerCase().includes('term');
       return {
         id: row.id,
         practice_id: row.practice_id,
@@ -1967,6 +2119,8 @@ app.get('/api/verifications', async (req, res) => {
         plan_benefits: row.plan_benefits || 'Calendar Year',
         effective_date: row.effective_date || '01/01/2026',
         policy_status: row.policy_status || 'Active',
+        verified_by: row.audit_verified_by || row.verified_by_user || 'Clinic Staff',
+        readiness_status: row.readiness_status || (isTermed ? '❌ Policy Termed / Inactive' : '✅ Complete / Ready for Appointment'),
         created_at: row.created_at,
       };
     });
@@ -1989,13 +2143,19 @@ app.get('/api/verifications/:id', async (req, res) => {
     const isOwner = req.user.role === 'owner';
     const result = isOwner
       ? await db.query(
-          `SELECT id, practice_id, carrier, patient_name_enc, member_id_enc, dob_enc, network_status, breakdown_json, created_at
-           FROM dentverify.verifications WHERE id = $1`,
+          `SELECT v.id, v.practice_id, v.carrier, v.patient_name_enc, v.member_id_enc, v.dob_enc, v.network_status, v.breakdown_json, v.created_at,
+                  u.full_name as verified_by_user
+           FROM dentverify.verifications v
+           LEFT JOIN dentverify.users u ON v.user_id = u.id
+           WHERE v.id = $1`,
           [id]
         )
       : await db.query(
-          `SELECT id, practice_id, carrier, patient_name_enc, member_id_enc, dob_enc, network_status, breakdown_json, created_at
-           FROM dentverify.verifications WHERE id = $1 AND practice_id = $2`,
+          `SELECT v.id, v.practice_id, v.carrier, v.patient_name_enc, v.member_id_enc, v.dob_enc, v.network_status, v.breakdown_json, v.created_at,
+                  u.full_name as verified_by_user
+           FROM dentverify.verifications v
+           LEFT JOIN dentverify.users u ON v.user_id = u.id
+           WHERE v.id = $1 AND v.practice_id = $2`,
           [id, req.user.practice_id]
         );
 
@@ -2018,6 +2178,22 @@ app.get('/api/verifications/:id', async (req, res) => {
         if (decMember && breakdown.insurance_details.member_id === '[ENCRYPTED_AES256]') {
           breakdown.insurance_details.member_id = decMember;
         }
+      }
+    }
+
+    if (!breakdown.audit_meta || typeof breakdown.audit_meta !== 'object') {
+      const isTermed = String(breakdown.insurance_details?.policy_status || '').toLowerCase().includes('term');
+      breakdown.audit_meta = {
+        verified_by_name: row.verified_by_user || 'Clinic Staff',
+        verified_at: row.created_at,
+        readiness_status: isTermed ? '❌ Policy Termed / Inactive' : '✅ Complete / Ready for Appointment',
+      };
+    } else {
+      if (!breakdown.audit_meta.verified_by_name) {
+        breakdown.audit_meta.verified_by_name = row.verified_by_user || 'Clinic Staff';
+      }
+      if (!breakdown.audit_meta.verified_at) {
+        breakdown.audit_meta.verified_at = row.created_at;
       }
     }
 
@@ -2050,6 +2226,16 @@ app.put('/api/verifications/:id', async (req, res) => {
     const dobEnc = db.encryptField(ins.dob || '');
     const carrier = ins.carrier || 'Dental Insurance';
     const networkStatus = ins.network_status || 'In-Network';
+
+    if (!breakdown.audit_meta || typeof breakdown.audit_meta !== 'object') {
+      breakdown.audit_meta = {};
+    }
+    if (!breakdown.audit_meta.verified_by_name) {
+      breakdown.audit_meta.verified_by_name = req.user.full_name || req.user.email || 'Clinic Staff';
+    }
+    breakdown.audit_meta.last_edited_by = req.user.full_name || req.user.email || 'Clinic Staff';
+    breakdown.audit_meta.last_edited_at = new Date().toISOString();
+
     const sanitizedBreakdown = sanitizeBreakdownForStorage(breakdown);
 
     const isOwner = req.user.role === 'owner';
@@ -2071,7 +2257,10 @@ app.put('/api/verifications/:id', async (req, res) => {
       return res.status(404).json({ error: 'Verification record not found or unauthorized.' });
     }
     const targetPracticeId = updateRes.rows[0].practice_id || req.user.practice_id;
-    const syncedDirectory = await syncBreakdownInsuranceToClinicDirectory(targetPracticeId, ins);
+    let syncedDirectory = null;
+    if (req.user.role === 'owner' || req.user.role === 'clinic_admin') {
+      syncedDirectory = await syncBreakdownInsuranceToClinicDirectory(targetPracticeId, ins);
+    }
     await recordAuditLog(req, 'UPDATE_BREAKDOWN_RECORD', id, { carrier });
     res.json({ success: true, id, payers: syncedDirectory });
   } catch (err) {
@@ -2125,7 +2314,33 @@ app.post('/api/verify', upload.array('files', 10), async (req, res) => {
       });
     }
 
+    // Load active clinic's Insurance Hub Directory & Per-Clinic AI Settings BEFORE calling Gemini
+    let directoryList = db.DEFAULT_CLINIC_PAYER_DIRECTORY || [];
+    let clinicAiSettings = {};
+    try {
+      const pracQuery = req.user.practice_id
+        ? await db.query('SELECT payer_directory_json, clinic_ai_settings_json FROM dentverify.practices WHERE id = $1', [req.user.practice_id])
+        : await db.query('SELECT payer_directory_json, clinic_ai_settings_json FROM dentverify.practices ORDER BY created_at ASC LIMIT 1');
+      if (pracQuery.rows.length > 0) {
+        if (Array.isArray(pracQuery.rows[0].payer_directory_json) && pracQuery.rows[0].payer_directory_json.length > 0) {
+          directoryList = pracQuery.rows[0].payer_directory_json;
+        }
+        if (pracQuery.rows[0].clinic_ai_settings_json && typeof pracQuery.rows[0].clinic_ai_settings_json === 'object') {
+          clinicAiSettings = pracQuery.rows[0].clinic_ai_settings_json;
+        }
+      }
+    } catch (e) {}
+
     const networkPreference = (req.body.network_preference || 'auto').toLowerCase();
+
+    // Build Clinic Insurance Hub Pre-Set Network Context so Auto mode knows which carriers are In-Network vs Out-of-Network
+    const hubNetworkSummary = directoryList.map(p => {
+      const pName = p.name || p.carrier || 'Carrier';
+      const net = (p.network || p.networkStatus || 'In-Network').toLowerCase().includes('out') ? 'Out-of-Network' : 'In-Network';
+      const aliases = Array.isArray(p.matchKeys) && p.matchKeys.length > 0 ? ` (Wired states/aliases: ${p.matchKeys.join(', ')})` : '';
+      const fee = p.feeSchedule && p.feeSchedule !== 'N/A' ? ` [Fee Schedule: ${p.feeSchedule}]` : '';
+      return `- ${pName}${aliases} => CLINIC PRE-SET: ${net}${fee}`;
+    }).join('\n');
 
     // Map network preference into clear instructions
     let networkInstruction = '';
@@ -2141,24 +2356,32 @@ app.post('/api/verify', upload.array('files', 10), async (req, res) => {
         'Set insurance_details.network_status to "Out-of-Network".';
     } else {
       networkInstruction =
-        'NETWORK DIRECTIVE: Auto-detect network status from the document. ' +
-        'If both In-Network and Out-of-Network tiers are present and not specified, default to extracting In-Network benefits and note "In-Network" in network_status, unless only Out-of-Network benefits apply.';
+        'NETWORK DIRECTIVE (AUTOMATIC CLINIC HUB WIRING): Identify the Insurance Carrier / Plan on the document and match it against this clinic\'s pre-configured Insurance Hub Network Participation list below:\n' +
+        hubNetworkSummary +
+        '\nIf the document\'s carrier matches an Out-of-Network hub above, strictly extract OUT-OF-NETWORK column benefits and set insurance_details.network_status to "Out-of-Network". Otherwise, extract IN-NETWORK column benefits and set insurance_details.network_status to "In-Network".';
     }
 
-    // Support frontend prompt customization with fallback to defaults
-    const systemInstruction = req.body.system_instruction && req.body.system_instruction.trim()
+    // Use Per-Clinic AI Settings & CDT Code Checklist Sequence (with fallback to request overrides or defaults)
+    const systemInstruction = (req.body.system_instruction && req.body.system_instruction.trim())
       ? req.body.system_instruction.trim()
-      : DEFAULT_SYSTEM_INSTRUCTION;
+      : (clinicAiSettings.systemInstruction || DEFAULT_SYSTEM_INSTRUCTION);
 
-    const basePrompt = req.body.custom_prompt && req.body.custom_prompt.trim()
+    const basePrompt = (req.body.custom_prompt && req.body.custom_prompt.trim())
       ? req.body.custom_prompt.trim()
-      : DEFAULT_CDT_CODES_PROMPT;
+      : (clinicAiSettings.customPrompt || DEFAULT_CDT_CODES_PROMPT);
+
+    const activeEnabledCodes = Array.isArray(clinicAiSettings.enabledCodes) && clinicAiSettings.enabledCodes.length > 0
+      ? clinicAiSettings.enabledCodes
+      : DEFAULT_ENABLED_CDT_CODES;
+
+    const checklistDirective = `\n\nCLINIC MANDATORY CDT CHECKLIST & SEQUENCE ORDER (${activeEnabledCodes.length} CODES):\n` +
+      activeEnabledCodes.map((code, idx) => `${idx + 1}. ${code} — ${getCanonicalCdtMeaning(code)}`).join('\n');
 
     const multiFileNote = uploadedFiles.length > 1
       ? `\n\nNOTE ON MULTIPLE DOCUMENTS: The user has uploaded ${uploadedFiles.length} files/pages representing different pages or sections of the dental insurance breakdown or portal eligibility history. Cross-examine and synthesize information from ALL uploaded files to produce one unified, comprehensive audit output without omitting codes.`
       : '';
 
-    const userPrompt = `${networkInstruction}${multiFileNote}\n\n${basePrompt}`;
+    const userPrompt = `${networkInstruction}${multiFileNote}\n\n${basePrompt}${checklistDirective}`;
 
     // Initialize Google Gen AI client
     const ai = new GoogleGenAI({ apiKey });
@@ -2241,7 +2464,7 @@ app.post('/api/verify', upload.array('files', 10), async (req, res) => {
       throw new Error('Failed to parse structured JSON from Gemini response.');
     }
 
-    // Deterministic validation 1: Policy Termed Date & Active Status
+    // Deterministic validation 1: Policy Termed Date, Active Status & Master Claims Hub Wiring
     if (parsedResult && parsedResult.insurance_details) {
       if (req.body.patient_name && req.body.patient_name.trim()) {
         if (!parsedResult.insurance_details.patient_name || parsedResult.insurance_details.patient_name === 'N/A') {
@@ -2279,26 +2502,8 @@ app.post('/api/verify', upload.array('files', 10), async (req, res) => {
         ins.carrier = 'Dental Insurance';
       }
 
-      // Guard against AI extracting a patient/subscriber street address (e.g. MetLife portal bug)
-      // and wire directly to the clinic's Payer Directory Claims Address, Phone & Payor ID
-      let directoryList = db.DEFAULT_CLINIC_PAYER_DIRECTORY || [];
-      if (req.user?.practice_id) {
-        try {
-          const dirRes = await db.query('SELECT payer_directory_json FROM dentverify.practices WHERE id = $1', [req.user.practice_id]);
-          if (dirRes.rows.length > 0 && Array.isArray(dirRes.rows[0].payer_directory_json) && dirRes.rows[0].payer_directory_json.length > 0) {
-            directoryList = dirRes.rows[0].payer_directory_json;
-          }
-        } catch (e) {}
-      }
-      const carrierLower = String(ins.carrier || '').toLowerCase();
-      const matchedDirPayer = directoryList.find(p => {
-        const pName = String(p.name || p.carrier || '').toLowerCase();
-        if (pName && carrierLower.includes(pName)) return true;
-        if (Array.isArray(p.matchKeys)) {
-          return p.matchKeys.some(k => k && carrierLower.includes(String(k).toLowerCase()));
-        }
-        return false;
-      });
+      // Match against the clinic's Wired Insurance Hub Directory (Address, Phone, Payor ID, Pre-Set Network & Fee Schedule)
+      const matchedDirPayer = matchClinicPayerHub(ins.carrier, directoryList) || matchClinicPayerHub(ins.plan_name, directoryList);
 
       if (matchedDirPayer) {
         if (matchedDirPayer.address && matchedDirPayer.address !== 'N/A') {
@@ -2309,6 +2514,13 @@ app.post('/api/verify', upload.array('files', 10), async (req, res) => {
         }
         if (matchedDirPayer.payorId && matchedDirPayer.payorId !== 'N/A') {
           ins.payor_id = matchedDirPayer.payorId;
+        }
+        const presetNet = matchedDirPayer.network || matchedDirPayer.networkStatus;
+        if (presetNet && networkPreference === 'auto') {
+          ins.network_status = presetNet;
+        }
+        if (matchedDirPayer.feeSchedule && matchedDirPayer.feeSchedule !== 'N/A') {
+          ins.fee_schedule = matchedDirPayer.feeSchedule;
         }
       } else if (ins.insurance_address && ins.insurance_address !== 'N/A') {
         // If no directory match, reject obvious residential street addresses that lack PO Box / Claims keywords
@@ -2321,12 +2533,30 @@ app.post('/api/verify', upload.array('files', 10), async (req, res) => {
       parsedResult.insurance_details = enforcePolicyTermedRules(parsedResult.insurance_details);
     }
 
+    if (parsedResult && parsedResult.coverage_levels) {
+      const oTerms = parsedResult.coverage_levels.ortho_payment_terms;
+      if (!oTerms || /^(none|na|null|undefined|-)$/i.test(String(oTerms).trim())) {
+        parsedResult.coverage_levels.ortho_payment_terms = 'N/A';
+      }
+    }
+
     // Deterministic validation 2: CDT D0210 & D0330 shared frequency, age limits & locked CDT meanings
     if (parsedResult && Array.isArray(parsedResult.procedure_codes)) {
       parsedResult.procedure_codes = enforceCanonicalCdtMeanings(parsedResult.procedure_codes);
       parsedResult.procedure_codes = enforceSharedFmxPanoRules(parsedResult.procedure_codes);
       parsedResult.procedure_codes = enforceAgeLimitAndFrequencyRules(parsedResult.procedure_codes, parsedResult.insurance_details || {});
     }
+
+    // Stamp Verified By Staff Audit Meta & Appointment Readiness Status
+    const isTermedPolicy = String(parsedResult?.insurance_details?.policy_status || '').toLowerCase().includes('term');
+    parsedResult.audit_meta = {
+      verified_by_name: req.user.full_name || req.user.email || 'Clinic Staff',
+      verified_by_email: req.user.email || '',
+      verified_at: new Date().toISOString(),
+      readiness_status: isTermedPolicy
+        ? '❌ Policy Termed / Inactive'
+        : '✅ Complete / Ready for Appointment',
+    };
 
     // Persist to PostgreSQL Database with AES-256-GCM Field Encryption
     let savedVerificationId = null;
@@ -2388,6 +2618,7 @@ app.post('/api/verify', upload.array('files', 10), async (req, res) => {
         network_preference: networkPreference,
         model: usedModel,
         analyzed_at: new Date().toISOString(),
+        verified_by: parsedResult.audit_meta.verified_by_name,
       },
       data: parsedResult,
     });

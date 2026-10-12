@@ -41,7 +41,13 @@
         ortho: "50%",
         ortho_max: "$1,000",
         ortho_remaining: "$999",
-        ortho_age_limit: "26"
+        ortho_age_limit: "26",
+        ortho_payment_terms: "Monthly"
+      },
+      audit_meta: {
+        verified_by_name: "Clinic Admin",
+        verified_at: "10/12/2026, 09:30 AM",
+        readiness_status: "Complete / Ready for Appointment"
       },
       procedure_codes: [
         // 1. D4346
@@ -652,35 +658,48 @@
       return procedureCodes;
     }
 
-    // Exact Procedure Clinical Sequence Mapping (Strict order 1-19 from plan.txt)
+    const DEFAULT_ENABLED_CDT_CODES = [
+      'D4346', 'D1110', 'D0274', 'D0210 / D0330', 'D0220', 'D9110', 'D0120', 'D0140', 'D1351', 'D1206',
+      'D4341', 'D4910', 'D2391', 'D2740', 'D2920', 'D7140', 'D7210', 'D9222 / D9223', 'D9944', 'D6010'
+    ];
+    let activeEnabledCdtCodes = DEFAULT_ENABLED_CDT_CODES.slice();
+
+    // Exact Procedure Clinical Sequence Mapping (Prioritizes Active Clinic's Custom Sequence -> Fallback Default Order)
     function getProcedureOrderRank(code) {
       if (!code) return 999;
       const c = String(code).trim().toUpperCase();
-      // 1-10: Preventative
-      if (c.includes('D4346')) return 1;
-      if (c.includes('D1110')) return 2;
-      if (c.includes('D0274')) return 3;
-      if (c.includes('D0210') || c.includes('D0330')) return 4;
-      if (c.includes('D0220')) return 5;
-      if (c.includes('D9110')) return 6;
-      if (c.includes('D0120')) return 7;
-      if (c.includes('D0140')) return 8;
-      if (c.includes('D1351')) return 9;
-      if (c.includes('D1206')) return 10;
-      // 11-12: Periodontal
-      if (c.includes('D4341')) return 11;
-      if (c.includes('D4910')) return 12;
-      // 13: Restorative (D2391)
-      if (c.includes('D2391')) return 13;
-      // 14-19: Major
-      if (c.includes('D2740')) return 14;
-      if (c.includes('D2920')) return 15;
-      if (c.includes('D7140')) return 16;
-      if (c.includes('D7210')) return 17;
-      if (c.includes('D9222') || c.includes('D9223')) return 18;
-      if (c.includes('D9944')) return 19;
-      if (c.includes('D6010')) return 20;
-      return 100;
+      if (Array.isArray(activeEnabledCdtCodes) && activeEnabledCdtCodes.length > 0) {
+        for (let i = 0; i < activeEnabledCdtCodes.length; i++) {
+          const target = String(activeEnabledCdtCodes[i] || '').trim().toUpperCase();
+          if (!target) continue;
+          if (c === target) return i + 1;
+          if (target.includes('D0210') && (c.includes('D0210') || c.includes('D0330'))) return i + 1;
+          if (target.includes('D9222') && (c.includes('D9222') || c.includes('D9223'))) return i + 1;
+          if (c.includes(target)) return i + 1;
+        }
+      }
+      // Fallback 1-20 default sequence
+      if (c.includes('D4346')) return 201;
+      if (c.includes('D1110')) return 202;
+      if (c.includes('D0274')) return 203;
+      if (c.includes('D0210') || c.includes('D0330')) return 204;
+      if (c.includes('D0220')) return 205;
+      if (c.includes('D9110')) return 206;
+      if (c.includes('D0120')) return 207;
+      if (c.includes('D0140')) return 208;
+      if (c.includes('D1351')) return 209;
+      if (c.includes('D1206')) return 210;
+      if (c.includes('D4341')) return 211;
+      if (c.includes('D4910')) return 212;
+      if (c.includes('D2391')) return 213;
+      if (c.includes('D2740')) return 214;
+      if (c.includes('D2920')) return 215;
+      if (c.includes('D7140')) return 216;
+      if (c.includes('D7210')) return 217;
+      if (c.includes('D9222') || c.includes('D9223')) return 218;
+      if (c.includes('D9944')) return 219;
+      if (c.includes('D6010')) return 220;
+      return 300;
     }
 
     // Strict categorization into the 5 clinical breakdown categories:
@@ -758,17 +777,23 @@
       return 'major';
     }
 
-    // ── Pre-configured Payer Addresses & Sub-Portal Directory (Clinic-Isolated) ──────────
+    // ── Pre-configured Payer Addresses & Master Claims Hubs Directory (Clinic-Isolated) ──────────
     const PAYER_DIRECTORY_STORAGE_KEY = 'dentverify_payer_directory';
     const DEFAULT_PAYER_DIRECTORY = [
       {
         id: 'dd_ca',
         parentCarrier: 'Delta Dental Ins',
-        name: 'Delta Dental of CA (DD CA)',
-        carrier: 'Delta Dental of CA (DD CA)',
+        name: 'DD Ins (Delta Dental Multi-State Hub)',
+        carrier: 'DD Ins (Delta Dental Multi-State Hub)',
         network: 'In-Network',
         networkStatus: 'In-Network',
-        matchKeys: ['dd ca', 'delta dental of california', 'delta dental ca', 'delta ca'],
+        feeSchedule: 'Delta Dental PPO',
+        matchKeys: [
+          'dd ins', 'dd ca', 'dd tx', 'dd pa', 'dd ny', 'dd fl', 'dd ga', 'dd il', 'dd mi',
+          'dd wa', 'dd nj', 'dd oh', 'dd va', 'dd ma', 'dd nc', 'dd az', 'dd co', 'dd mn',
+          'dd mo', 'dd wi', 'dd md', 'dd in', 'dd tn', 'dd or',
+          'delta dental of california', 'delta dental ca', 'delta ca', 'delta dental ins', 'delta dental'
+        ],
         address: 'P.O. Box 997330, Sacramento, CA 95899-7330',
         phone: '(888) 335-8227',
         payorId: '94276'
@@ -780,6 +805,7 @@
         carrier: 'Delta Dental FEP (DD FEP)',
         network: 'Out-of-Network',
         networkStatus: 'Out-of-Network',
+        feeSchedule: 'Delta Dental FEP / UCR',
         matchKeys: ['dd fep', 'delta dental fep', 'federal employees dental', 'fedvip delta'],
         address: 'P.O. Box 537007, Sacramento, CA 95853-7007',
         phone: '(855) 410-3255',
@@ -792,7 +818,8 @@
         carrier: 'Delta Dental PPO / National',
         network: 'In-Network',
         networkStatus: 'In-Network',
-        matchKeys: ['delta dental', 'delta ppo', 'delta premier', 'delta'],
+        feeSchedule: 'Delta Dental PPO',
+        matchKeys: ['delta ppo', 'delta premier', 'delta dental ppo'],
         address: 'P.O. Box 9051, Farmington Hills, MI 48333',
         phone: '(800) 524-0149',
         payorId: '05430'
@@ -804,6 +831,7 @@
         carrier: 'MetLife Dental PDP',
         network: 'In-Network',
         networkStatus: 'In-Network',
+        feeSchedule: 'MetLife PDP Plus',
         matchKeys: ['metlife', 'met life'],
         address: 'P.O. Box 981282, El Paso, TX 79998',
         phone: '(877) 638-3379',
@@ -816,6 +844,7 @@
         carrier: 'Cigna Dental DPPO',
         network: 'In-Network',
         networkStatus: 'In-Network',
+        feeSchedule: 'Cigna Total DPPO',
         matchKeys: ['cigna'],
         address: 'P.O. Box 188037, Chattanooga, TN 37422',
         phone: '(800) 244-6224',
@@ -828,6 +857,7 @@
         carrier: 'Guardian DentalGuard Preferred',
         network: 'In-Network',
         networkStatus: 'In-Network',
+        feeSchedule: 'Guardian DentalGuard Preferred',
         matchKeys: ['guardian'],
         address: 'P.O. Box 981572, El Paso, TX 79998',
         phone: '(800) 541-7846',
@@ -840,6 +870,7 @@
         carrier: 'Aetna Dental PPO',
         network: 'In-Network',
         networkStatus: 'In-Network',
+        feeSchedule: 'Aetna Dental PPO II',
         matchKeys: ['aetna'],
         address: 'P.O. Box 14094, Lexington, KY 40512',
         phone: '(877) 238-6200',
@@ -852,6 +883,7 @@
         carrier: 'Ameritas Life Insurance',
         network: 'In-Network',
         networkStatus: 'In-Network',
+        feeSchedule: 'Ameritas Classic PPO',
         matchKeys: ['ameritas'],
         address: 'P.O. Box 81889, Lincoln, NE 68501',
         phone: '(800) 487-5553',
@@ -864,6 +896,7 @@
         carrier: 'UnitedHealthcare Dental',
         network: 'In-Network',
         networkStatus: 'In-Network',
+        feeSchedule: 'UHC National Options PPO',
         matchKeys: ['unitedhealthcare', 'united healthcare', 'uhc'],
         address: 'P.O. Box 30567, Salt Lake City, UT 84130',
         phone: '(877) 816-3596',
@@ -876,6 +909,7 @@
         carrier: 'Blue Cross Blue Shield (BCBS)',
         network: 'In-Network',
         networkStatus: 'In-Network',
+        feeSchedule: 'BCBS Dental Grid PPO',
         matchKeys: ['blue cross', 'bluecross', 'bcbs', 'anthem', 'regence', 'premera', 'horizon', 'carefirst'],
         address: 'P.O. Box 660247, Dallas, TX 75266',
         phone: '(800) 521-2227',
@@ -888,6 +922,7 @@
         carrier: 'Humana Dental',
         network: 'Out-of-Network',
         networkStatus: 'Out-of-Network',
+        feeSchedule: 'Humana PPO / Out-of-Network',
         matchKeys: ['humana'],
         address: 'P.O. Box 14611, Lexington, KY 40512',
         phone: '(800) 233-4013',
@@ -900,6 +935,7 @@
         carrier: 'Principal Financial Group',
         network: 'In-Network',
         networkStatus: 'In-Network',
+        feeSchedule: 'Principal Plan Dental PPO',
         matchKeys: ['principal'],
         address: 'P.O. Box 10350, Des Moines, IA 50306',
         phone: '(800) 247-4695',
@@ -913,6 +949,13 @@
       const displayName = p.name || p.carrier || 'Dental Carrier';
       const parentGroup = p.parentCarrier || p.parentGroup || (displayName.toLowerCase().includes('delta') ? 'Delta Dental Ins' : 'Standard Carrier');
       const net = p.network || p.networkStatus || 'In-Network';
+      const defaultFee = displayName.toLowerCase().includes('delta') ? 'Delta Dental PPO' : (displayName + ' PPO');
+      let parsedMatchKeys = [displayName.toLowerCase()];
+      if (Array.isArray(p.matchKeys) && p.matchKeys.length > 0) {
+        parsedMatchKeys = p.matchKeys.map(k => String(k || '').trim().toLowerCase()).filter(Boolean);
+      } else if (typeof p.matchKeys === 'string' && p.matchKeys.trim()) {
+        parsedMatchKeys = p.matchKeys.split(',').map(k => k.trim().toLowerCase()).filter(Boolean);
+      }
       return {
         id: p.id || ('payer_' + idx + '_' + Date.now()),
         parentCarrier: parentGroup,
@@ -920,7 +963,8 @@
         carrier: displayName,
         network: net,
         networkStatus: net,
-        matchKeys: Array.isArray(p.matchKeys) ? p.matchKeys : [displayName.toLowerCase()],
+        feeSchedule: p.feeSchedule || defaultFee,
+        matchKeys: parsedMatchKeys,
         address: p.address || 'N/A',
         phone: p.phone || 'N/A',
         payorId: p.payorId || 'N/A',
@@ -1543,6 +1587,50 @@
       window.scrollTo({ top: 0, behavior: 'smooth' });
     }
 
+    // 7-Day (Weekly) Duplicate Patient Verification Check Helper
+    function findRecentPatientDuplicateWithin7Days(nameStr, excludeId = null) {
+      if (!nameStr || typeof nameStr !== 'string') return null;
+      const cleanTarget = nameStr.trim().toLowerCase().replace(/\s+/g, ' ');
+      if (!cleanTarget || /^(none|n\/a|na|-|patient|patient \(unspecified\)|katherine birdwell)$/i.test(cleanTarget)) {
+        return null;
+      }
+      const list = getAuditHistory();
+      const sevenDaysMs = 7 * 24 * 60 * 60 * 1000;
+      const now = Date.now();
+      for (const item of list) {
+        if (!item || !item.patientName) continue;
+        if (excludeId && item.id === excludeId) continue;
+        const itemClean = String(item.patientName).trim().toLowerCase().replace(/\s+/g, ' ');
+        if (itemClean === cleanTarget) {
+          const ts = item.timestamp ? new Date(item.timestamp).getTime() : 0;
+          if (ts > 0 && (now - ts) <= sevenDaysMs) {
+            return item;
+          }
+        }
+      }
+      return null;
+    }
+
+    async function loadExistingDuplicateRecord(dupItem) {
+      if (!dupItem) return;
+      try {
+        if (!dupItem.data && (dupItem.isDbRecord || (typeof dupItem.id === 'string' && dupItem.id.includes('-')))) {
+          const res = await fetch(`/api/verifications/${dupItem.id}`);
+          const json = await res.json();
+          if (json.success && json.record) {
+            dupItem.data = json.record;
+          }
+        }
+        if (dupItem.data) {
+          currentAuditData = dupItem.data;
+          renderReportDashboard(currentAuditData);
+          displayToast(`Loaded existing breakdown for ${dupItem.patientName} (${dupItem.displayDate})`);
+        }
+      } catch (e) {
+        console.warn('Could not load existing duplicate record:', e);
+      }
+    }
+
     // Form submission
     analyzeBtn.addEventListener('click', async () => {
       hideAlert();
@@ -1555,6 +1643,23 @@
       const pref = document.querySelector('input[name="network_preference"]:checked')?.value || 'auto';
       const patientNameVal = patientNameInput ? patientNameInput.value.trim() : '';
       const patientDobVal = patientDobInput ? patientDobInput.value.trim() : '';
+
+      // 7-Day (Weekly) Duplicate Patient Verification Check before calling AI
+      if (patientNameVal) {
+        const recentDup = findRecentPatientDuplicateWithin7Days(patientNameVal);
+        if (recentDup) {
+          const verifyNewAnyway = await openCustomConfirm(
+            '⚠️ Na-Verify Na Sulod sa 7 Ka Adlaw (Weekly Duplicate Check)',
+            `Si "${recentDup.patientName}" na-verify na niadtong ${recentDup.displayDate} (${recentDup.carrier} • ${recentDup.networkStatus || 'In-Network'}).\n\nSulod sa 1 ka semana (7 days), dili na kinahanglan i-verify og balik gawas kung lahi nga insurance. Gusto ba nimo ablihan na lang ang existing breakdown o mag-verify gihapon og bag-o?`,
+            'Verify New Anyway',
+            'Open Existing Breakdown'
+          );
+          if (!verifyNewAnyway) {
+            await loadExistingDuplicateRecord(recentDup);
+            return;
+          }
+        }
+      }
 
       const formData = new FormData();
       
@@ -1653,8 +1758,25 @@
         if (resData.meta && resData.meta.verification_id) {
           currentAuditData.verification_id = resData.meta.verification_id;
         }
+
+        // If patient name wasn't typed upfront, check if extracted patient name was already verified within 7 days
+        const extractedPName = currentAuditData?.insurance_details?.patient_name || '';
+        const postDup = !patientNameVal ? findRecentPatientDuplicateWithin7Days(extractedPName, currentAuditData.verification_id) : null;
+
         renderReportDashboard(currentAuditData);
         saveAuditToHistory(currentAuditData);
+
+        if (postDup) {
+          const keepNew = await openCustomConfirm(
+            '⚠️ Duplicate Patient Detected (Verified Within Last 7 Days)',
+            `Si "${postDup.patientName}" naa nay existing verification niadtong ${postDup.displayDate} (${postDup.carrier}).\n\nGusto ba nimo ablihan ang naunang breakdown o magpabilin niining bag-ong gi-verify?`,
+            'Keep New Breakdown',
+            'Open Previous Breakdown'
+          );
+          if (!keepNew) {
+            await loadExistingDuplicateRecord(postDup);
+          }
+        }
       } catch (err) {
         console.error('Audit verification error:', err);
         let errorMsg = err.message || 'Adunay problema sa pagkonektar sa server.';
@@ -1677,6 +1799,28 @@
       return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 }).format(amount);
     }
 
+    // Format Appointment Readiness Status Pill
+    function applyReadinessBadgeStyle(btnEl, statusStr) {
+      if (!btnEl) return;
+      const s = String(statusStr || 'Complete / Ready for Appointment');
+      if (s.toLowerCase().includes('pending')) {
+        btnEl.textContent = '⏳ Pending Carrier Call / Fax History';
+        btnEl.style.background = 'rgba(245, 158, 11, 0.16)';
+        btnEl.style.color = '#fbbf24';
+        btnEl.style.border = '1px solid rgba(245, 158, 11, 0.45)';
+      } else if (s.toLowerCase().includes('term') || s.toLowerCase().includes('inact')) {
+        btnEl.textContent = '❌ Policy Termed / Inactive';
+        btnEl.style.background = 'rgba(244, 63, 94, 0.16)';
+        btnEl.style.color = '#fb7185';
+        btnEl.style.border = '1px solid rgba(244, 63, 94, 0.45)';
+      } else {
+        btnEl.textContent = '✅ Complete / Ready for Appointment';
+        btnEl.style.background = 'rgba(16, 185, 129, 0.16)';
+        btnEl.style.color = '#34d399';
+        btnEl.style.border = '1px solid rgba(16, 185, 129, 0.45)';
+      }
+    }
+
     // Render verification report
     function renderReportDashboard(data) {
       if (data) {
@@ -1692,7 +1836,7 @@
       const details = data.insurance_details || {};
       const levels = data.coverage_levels || {};
 
-      // Auto-populate & enforce Claims Address, Payor ID, Phone, and pre-configured Network Status from Directory
+      // Auto-populate & enforce Locked Claims Address, Payor ID, Phone, Pre-Set Network Status & Pre-Set Fee Schedule from Wired Hub Directory
       if (details.carrier) {
         const matchedPayer = matchPayerDirectory(details.carrier);
         if (matchedPayer) {
@@ -1705,9 +1849,13 @@
           if (matchedPayer.payorId && !/^(none|n\/a|na|-)$/i.test(matchedPayer.payorId.trim())) {
             details.payor_id = matchedPayer.payorId;
           }
-          // Pre-configured clinic network participation
           if (matchedPayer.network) {
             details.network_status = matchedPayer.network;
+          }
+          if (matchedPayer.feeSchedule && !/^(none|n\/a|na|-)$/i.test(matchedPayer.feeSchedule.trim())) {
+            if (!details.fee_schedule || /^(none|n\/a|na|-|delta dental ppo)$/i.test(details.fee_schedule.trim())) {
+              details.fee_schedule = matchedPayer.feeSchedule.trim();
+            }
           }
         } else if (details.insurance_address && details.insurance_address !== 'N/A') {
           // Reject patient residential street addresses (e.g. MetLife bug) that lack P.O. Box / Claims keywords
@@ -1715,6 +1863,47 @@
             details.insurance_address = 'N/A';
           }
         }
+      }
+
+      // Initialize & Render "Verified By" Staff Audit Stamp + Appointment Readiness Status Tag
+      if (!data.audit_meta) {
+        const isPolTermed = String(details.policy_status || '').toLowerCase().includes('term');
+        data.audit_meta = {
+          verified_by_name: currentUser?.full_name || 'Clinic Staff',
+          verified_at: new Date().toLocaleString('en-US', { month: '2-digit', day: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' }),
+          readiness_status: isPolTermed ? 'Policy Termed / Inactive' : 'Complete / Ready for Appointment',
+        };
+      }
+      const heroVerifiedByDisplay = document.getElementById('heroVerifiedByDisplay');
+      if (heroVerifiedByDisplay) {
+        heroVerifiedByDisplay.textContent = data.audit_meta.verified_by_name || currentUser?.full_name || 'Clinic Staff';
+      }
+      const heroVerifiedAtDisplay = document.getElementById('heroVerifiedAtDisplay');
+      if (heroVerifiedAtDisplay) {
+        heroVerifiedAtDisplay.textContent = data.audit_meta.verified_at || new Date().toLocaleDateString('en-US');
+      }
+      const heroReadinessStatusBtn = document.getElementById('heroReadinessStatusBtn');
+      if (heroReadinessStatusBtn) {
+        applyReadinessBadgeStyle(heroReadinessStatusBtn, data.audit_meta.readiness_status);
+        heroReadinessStatusBtn.onclick = () => {
+          if (!currentAuditData) return;
+          if (!currentAuditData.audit_meta) currentAuditData.audit_meta = {};
+          const cur = String(currentAuditData.audit_meta.readiness_status || 'Complete / Ready for Appointment');
+          let nextStatus = 'Complete / Ready for Appointment';
+          if (cur.toLowerCase().includes('complete')) {
+            nextStatus = 'Pending Carrier Call / Fax History';
+          } else if (cur.toLowerCase().includes('pending')) {
+            nextStatus = 'Policy Termed / Inactive';
+          } else {
+            nextStatus = 'Complete / Ready for Appointment';
+          }
+          currentAuditData.audit_meta.readiness_status = nextStatus;
+          applyReadinessBadgeStyle(heroReadinessStatusBtn, nextStatus);
+          renderExcelBreakdownSheet(currentAuditData);
+          if (pmsModal && pmsModal.classList.contains('active')) buildPmsNote();
+          persistActiveBreakdownToDb();
+          displayToast(`Appointment Readiness set to: ${nextStatus}`);
+        };
       }
 
       // Patient Name & DOB Display
@@ -1764,7 +1953,7 @@
         heroGroupNumberDisplay.textContent = `Group #: ${grpNum}`;
       }
 
-      // Carrier Name in Top Banner (No redundant Claims Address here — shown only in Card #8)
+      // Carrier Name in Top Banner (Locked to Insurance Hub Directory)
       const carrierNameDisplay = document.getElementById('carrierNameDisplay');
       if (carrierNameDisplay) carrierNameDisplay.textContent = details.carrier || 'Dental Insurance';
 
@@ -1788,7 +1977,7 @@
       if (heroNetBadge) {
         heroNetBadge.textContent = netStatus;
         heroNetBadge.className = netStatus.toLowerCase().includes('out') ? 'network-indicator-pill out-network' : 'network-indicator-pill in-network';
-        heroNetBadge.title = `Click to toggle In-Network / Out-of-Network`;
+        heroNetBadge.title = `Pre-set by Clinic Insurance Hub (Click to switch Hub or toggle)`;
 
         if (!heroNetBadge.dataset.listenerAttached) {
           heroNetBadge.dataset.listenerAttached = 'true';
@@ -1798,21 +1987,11 @@
             const newNet = curNet.toLowerCase().includes('out') ? 'In-Network' : 'Out-of-Network';
             currentAuditData.insurance_details.network_status = newNet;
 
-            // Also remember this preference in Payer Directory
-            const carrier = currentAuditData.insurance_details.carrier;
-            if (carrier) {
-              const list = getPayerDirectory();
-              const matched = list.find(p => p.name && (carrier.toLowerCase().includes(p.name.toLowerCase()) || p.name.toLowerCase().includes(carrier.toLowerCase())));
-              if (matched) {
-                matched.network = newNet;
-                savePayerDirectory(list);
-              }
-            }
-
             renderReportDashboard(currentAuditData);
             renderExcelBreakdownSheet(currentAuditData);
             if (pmsModal && pmsModal.classList.contains('active')) buildPmsNote();
-            displayToast(`Network status toggled to: ${newNet} (Saved to Directory)`);
+            persistActiveBreakdownToDb();
+            displayToast(`Network status toggled to: ${newNet}`);
           });
         }
       }
@@ -1879,7 +2058,7 @@
         heroPaymentToDisplay.textContent = payToStr;
       }
 
-      // Claims Address & Payor ID Wired to Directory Settings in Compact Grid
+      // Claims Address & Payor ID (Locked to Directory Settings in Compact Grid)
       const heroClaimsAddressDisplay = document.getElementById('heroClaimsAddressDisplay');
       if (heroClaimsAddressDisplay) {
         const addr = (details.insurance_address && !/^(none|n\/a|na|-)$/i.test(details.insurance_address.trim())) ? details.insurance_address.trim() : 'N/A';
@@ -1933,11 +2112,12 @@
       document.getElementById('chipPrevMaxDot').className = prevCounts ? 'rule-status-circle warn' : 'rule-status-circle good';
       document.getElementById('chipPrevMaxText').textContent = prevCounts ? 'Prev counts toward annual max' : 'Preventive does NOT apply to max';
 
-      // Orthodontics Card in policy-hero-card
+      // Orthodontics Card in policy-hero-card (with Ortho Payment Terms)
       const oMaxStr = levels.ortho_max || '$1,000';
       const oRemStr = levels.ortho_remaining || '$999';
       const oAgeStr = levels.ortho_age_limit || '26';
       const oCovStr = levels.ortho || '50%';
+      const oPayTermsStr = levels.ortho_payment_terms || 'Monthly';
 
       const hudOrthoMaxEl = document.getElementById('hudOrthoMax');
       if (hudOrthoMaxEl) hudOrthoMaxEl.textContent = oMaxStr;
@@ -1950,6 +2130,9 @@
 
       const hudOrthoCoveragePillEl = document.getElementById('hudOrthoCoveragePill');
       if (hudOrthoCoveragePillEl) hudOrthoCoveragePillEl.textContent = oCovStr;
+
+      const hudOrthoPaymentTermsEl = document.getElementById('hudOrthoPaymentTerms');
+      if (hudOrthoPaymentTermsEl) hudOrthoPaymentTermsEl.textContent = 'Pay Terms: ' + oPayTermsStr;
 
       const meterOrthoBar = document.getElementById('meterOrthoBar');
       if (meterOrthoBar) {
@@ -2176,21 +2359,36 @@
         categoryCardsGrid.appendChild(cBox);
       });
 
-      // Make all top Policy Hero Card fields click-to-edit
+      // Lock Insurance Company, Claims Address, Phone #, and Payor ID on Breakdown (Only switchable via Insurance Hub Directory)
+      const lockedHubElements = [
+        document.getElementById('carrierNameDisplay'),
+        document.getElementById('heroCarrierSubDisplay'),
+        document.getElementById('heroClaimsAddressDisplay'),
+        document.getElementById('heroPayorIdDisplay'),
+        document.getElementById('heroClaimsAddressCell'),
+        document.getElementById('switchWiredHubBtn'),
+      ];
+      lockedHubElements.forEach(el => {
+        if (!el) return;
+        el.style.cursor = 'pointer';
+        el.onclick = (ev) => {
+          ev.stopPropagation();
+          openInsuranceDirectory();
+          displayToast('🔒 Insurance Company, Address & Payor ID are locked to Clinic Directory. Click "Apply to Policy" on a Hub!');
+        };
+      });
+
+      // Make non-locked Policy Hero Card fields click-to-edit
       const heroEditBindings = [
         { id: 'heroPatientNameDisplay', label: 'Patient Name', get: () => details.patient_name || '', set: (v) => { details.patient_name = v; } },
         { id: 'heroPatientDobDisplay', label: 'Patient DOB (MM/DD/YYYY)', get: () => details.dob || '', set: (v) => { details.dob = v; } },
         { id: 'heroGroupNameDisplay', label: 'Employer / Group Name', get: () => details.group_name || '', set: (v) => { details.group_name = v; } },
         { id: 'heroGroupNumberDisplay', label: 'Group Number', get: () => details.group_number || '', set: (v) => { details.group_number = v; } },
-        { id: 'carrierNameDisplay', label: 'Insurance Carrier Name', get: () => details.carrier || '', set: (v) => { details.carrier = v; } },
-        { id: 'heroCarrierSubDisplay', label: 'Insurance Carrier Name', get: () => details.carrier || '', set: (v) => { details.carrier = v; } },
         { id: 'heroEffectiveDateDisplay', label: 'Effective Date', get: () => details.effective_date || '', set: (v) => { details.effective_date = v; } },
         { id: 'heroTermedDateDisplay', label: 'Termed Date (or "Active (None)")', get: () => details.termed_date || 'Active (None)', set: (v) => { details.termed_date = v; } },
         { id: 'heroPlanBenefitsDisplay', label: 'Plan Benefits Period (e.g. Calendar Year)', get: () => details.plan_benefits || 'Calendar Year', set: (v) => { details.plan_benefits = v; } },
         { id: 'heroFeeScheduleDisplay', label: 'Fee Schedule / Tier', get: () => details.fee_schedule || '', set: (v) => { details.fee_schedule = v; } },
         { id: 'heroPaymentToDisplay', label: 'Insurance Payment Goes To (Patient / Office)', get: () => details.payment_recipient || 'Office', set: (v) => { details.payment_recipient = v; } },
-        { id: 'heroClaimsAddressDisplay', label: 'Insurance Claims Mailing Address', get: () => details.insurance_address || '', set: (v) => { details.insurance_address = v; } },
-        { id: 'heroPayorIdDisplay', label: 'Electronic Payor ID', get: () => details.payor_id || '', set: (v) => { details.payor_id = v; } },
         { id: 'hudAnnualMax', label: 'Annual Maximum ($)', get: () => details.annual_maximum ?? '', set: (v) => { const n = parseFloat(String(v).replace(/[^0-9.]/g, '')); details.annual_maximum = isNaN(n) ? null : n; } },
         { id: 'hudRemainingMax', label: 'Remaining Annual Maximum ($)', get: () => details.remaining_maximum ?? '', set: (v) => { const n = parseFloat(String(v).replace(/[^0-9.]/g, '')); details.remaining_maximum = isNaN(n) ? null : n; } },
         { id: 'hudDeductible', label: 'Individual Deductible ($)', get: () => details.deductible_individual ?? '', set: (v) => { const n = parseFloat(String(v).replace(/[^0-9.]/g, '')); details.deductible_individual = isNaN(n) ? null : n; } },
@@ -2200,6 +2398,7 @@
         { id: 'hudOrthoRem', label: 'Remaining Ortho (e.g. $999)', get: () => levels.ortho_remaining || '$999', set: (v) => { levels.ortho_remaining = v; } },
         { id: 'hudOrthoAgeLimit', label: 'Ortho Age Limit', get: () => levels.ortho_age_limit || '26', set: (v) => { levels.ortho_age_limit = v; } },
         { id: 'hudOrthoCoveragePill', label: 'Ortho Coverage %', get: () => levels.ortho || '50%', set: (v) => { levels.ortho = v; } },
+        { id: 'hudOrthoPaymentTerms', label: 'Ortho Payment Terms (Monthly / Quarterly / Yearly / Lump Sum / N/A)', get: () => levels.ortho_payment_terms || 'Monthly', set: (v) => { levels.ortho_payment_terms = v; } },
       ];
 
       heroEditBindings.forEach(b => {
@@ -2209,22 +2408,12 @@
         el.title = `Click to edit ${b.label}`;
         el.onclick = async (ev) => {
           ev.stopPropagation();
-          const oldCarrier = details.carrier || '';
           const nextVal = await openCustomPrompt(`Edit ${b.label}`, `Update ${b.label}:`, b.get());
           if (nextVal === null) return;
           b.set(nextVal.trim());
-          const isInsuranceDirField = (
-            b.id === 'carrierNameDisplay' ||
-            b.id === 'heroCarrierSubDisplay' ||
-            b.id === 'heroClaimsAddressDisplay' ||
-            b.id === 'heroPayorIdDisplay'
-          );
-          if (isInsuranceDirField) {
-            await syncBreakdownInsuranceToDirectory(details, oldCarrier);
-          }
           renderReportDashboard(currentAuditData);
           persistActiveBreakdownToDb();
-          displayToast(isInsuranceDirField ? `Updated ${b.label} & saved to Insurance Directory!` : `Updated ${b.label}!`);
+          displayToast(`Updated ${b.label}!`);
         };
       });
 
@@ -2504,15 +2693,21 @@
       if (!currentAuditData) return '';
       const d = currentAuditData.insurance_details || {};
       const c = currentAuditData.coverage_levels || {};
+      const meta = currentAuditData.audit_meta || {};
       const codes = (currentAuditData.procedure_codes || []).slice();
 
-      // Strictly sort by clinical 1-to-21 sequence
+      // Strictly sort by active clinic's CDT sequence
       codes.sort((a, b) => getProcedureOrderRank(a.code) - getProcedureOrderRank(b.code));
 
       const today = new Date().toLocaleDateString('en-US');
+      const verifiedBy = meta.verified_by_name || currentUser?.full_name || 'Clinic Staff';
+      const verifiedAt = meta.verified_at || today;
+      const readinessStatus = meta.readiness_status || 'Complete / Ready for Appointment';
 
       let txt = `==========================================================\n`;
       txt += `DENTAL INSURANCE VERIFICATION AUDIT [${today}]\n`;
+      txt += `VERIFIED BY:          ${verifiedBy} (${verifiedAt})\n`;
+      txt += `APPOINTMENT STATUS:   ${readinessStatus}\n`;
       txt += `==========================================================\n`;
       if (d.patient_name && d.patient_name.trim() !== '' && d.patient_name.toLowerCase() !== 'n/a') {
         txt += `PATIENT NAME:         ${d.patient_name.trim()}\n`;
@@ -2556,6 +2751,7 @@
       txt += `DEDUCTIBLE APPLIES:   ${d.deductible_applies_to || 'Basic & Major only, Waived on Preventive'}\n`;
       txt += `ORTHO MAX:            ${c.ortho_max || '$1,000'} | REMAINING ORTHO: ${c.ortho_remaining || c.ortho_max || '$1,000'}\n`;
       txt += `ORTHO AGE LIMIT:      ${c.ortho_age_limit || '14 Maximum'} | ORTHO COVERAGE: ${c.ortho || '50%'}\n`;
+      txt += `ORTHO PAYMENT TERMS:  ${c.ortho_payment_terms || 'Monthly'}\n`;
       txt += `PREVENTIVE TO MAX:    ${d.preventive_applies_to_max ? 'YES (Counts toward max)' : 'NO (Waived from max)'}\n`;
       txt += `MISSING TOOTH CLAUSE: ${d.missing_tooth_clause ? 'YES' : 'NO'}\n`;
       txt += `WAITING PERIODS:      ${d.waiting_period ? 'YES' : 'NO'} (${c.waiting_period_details || 'Basic 6mo Major 12'})\n`;
@@ -2568,7 +2764,7 @@
       txt += ` • ORAL SURGERY:      ${c.oral_surgery || '80%'}\n`;
       txt += ` • IMPLANTS D6010:    ${c.implants || 'NC'}\n`;
       txt += ` • NIGHT GUARD D9944: ${c.night_guard || 'NC'}\n`;
-      txt += ` • Orthodontics:      ${c.ortho || '50%'} (Max: ${c.ortho_max || '$1,000'}, Remaining: ${c.ortho_remaining || c.ortho_max || '$1,000'}, Age Limit: ${c.ortho_age_limit || '14 Maximum'})\n`;
+      txt += ` • Orthodontics:      ${c.ortho || '50%'} (Max: ${c.ortho_max || '$1,000'}, Remaining: ${c.ortho_remaining || c.ortho_max || '$1,000'}, Age Limit: ${c.ortho_age_limit || '14 Maximum'}, Pay Terms: ${c.ortho_payment_terms || 'Monthly'})\n`;
       txt += `----------------------------------------------------------\n`;
       txt += `AUDITED CDT PROCEDURE CODES (SEPARATED BY CATEGORIES):\n`;
 
@@ -2632,13 +2828,15 @@
     });
 
     // ==========================================
-    // EXCEL BREAKDOWN SHEET & PDF (OPTION 4)
+    // EXCEL BREAKDOWN SHEET & DIRECT 1-CLICK VECTOR PDF DOWNLOAD
     // ==========================================
     const openExcelModalBtn = document.getElementById('openExcelModalBtn');
     const excelModal = document.getElementById('excelModal');
     const closeExcelModalBtn = document.getElementById('closeExcelModalBtn');
     const printExcelModalBtn = document.getElementById('printExcelModalBtn');
     const copyExcelTableBtn = document.getElementById('copyExcelTableBtn');
+    const directDownloadPdfBtn = document.getElementById('directDownloadPdfBtn');
+    const downloadCleanPdfModalBtn = document.getElementById('downloadCleanPdfModalBtn');
 
     openExcelModalBtn?.addEventListener('click', () => {
       if (currentAuditData) {
@@ -2674,6 +2872,327 @@
       });
     });
 
+    // Format filename as LastName_FirstName_Carrier_IV.pdf
+    function buildCleanPdfFilename(data) {
+      const d = (data && data.insurance_details) ? data.insurance_details : {};
+      const rawName = (d.patient_name && !/^(none|n\/a|na|-)$/i.test(d.patient_name.trim())) ? d.patient_name.trim() : 'Patient_Breakdown';
+      let lastFirst = 'Patient';
+      if (rawName.includes(',')) {
+        const parts = rawName.split(',').map(s => s.trim()).filter(Boolean);
+        lastFirst = parts.join('_');
+      } else {
+        const words = rawName.split(/\s+/).filter(Boolean);
+        if (words.length >= 2) {
+          const last = words[words.length - 1];
+          const first = words.slice(0, words.length - 1).join('');
+          lastFirst = `${last}_${first}`;
+        } else if (words.length === 1) {
+          lastFirst = words[0];
+        }
+      }
+      const rawCarrier = (d.carrier || 'Carrier').replace(/\(.*?\)/g, '').trim();
+      const safePart = (s) => String(s || '').replace(/[^a-zA-Z0-9]+/g, '').slice(0, 28) || 'Carrier';
+      const safeName = lastFirst.split('_').map(p => p.replace(/[^a-zA-Z0-9]+/g, '')).filter(Boolean).join('_') || 'Patient';
+      return `${safeName}_${safePart(rawCarrier)}_IV.pdf`;
+    }
+
+    // Pure-JS Single-Page Vector PDF 1.4 Generator (Zero External Dependencies, CSP-Safe)
+    function generateCleanBreakdownPdfBytes(data) {
+      const d = (data && data.insurance_details) ? data.insurance_details : {};
+      const c = (data && data.coverage_levels) ? data.coverage_levels : {};
+      const meta = (data && data.audit_meta) ? data.audit_meta : {};
+      const allCodes = ((data && data.procedure_codes) ? data.procedure_codes : []).slice();
+      allCodes.sort((a, b) => getProcedureOrderRank(a.code) - getProcedureOrderRank(b.code));
+
+      const pdfEsc = (str) => String(str ?? '')
+        .replace(/[^\x20-\x7E]/g, ' ')
+        .replace(/\\/g, '\\\\')
+        .replace(/\(/g, '\\(')
+        .replace(/\)/g, '\\)');
+
+      const trunc = (str, maxLen) => {
+        const s = String(str ?? '').replace(/\s+/g, ' ').trim();
+        return s.length > maxLen ? s.slice(0, maxLen - 2) + '..' : s;
+      };
+
+      const ops = [];
+      const pageW = 612;
+      const pageH = 792;
+      const marginX = 20;
+      const contentW = pageW - marginX * 2; // 572
+
+      const drawRect = (x, topY, w, h, fillRgb, strokeRgb, lineW = 0.6) => {
+        const pdfY = pageH - topY - h;
+        ops.push(`${lineW} w`);
+        if (fillRgb && strokeRgb) {
+          ops.push(`${fillRgb[0]} ${fillRgb[1]} ${fillRgb[2]} rg ${strokeRgb[0]} ${strokeRgb[1]} ${strokeRgb[2]} RG ${x.toFixed(1)} ${pdfY.toFixed(1)} ${w.toFixed(1)} ${h.toFixed(1)} B`);
+        } else if (fillRgb) {
+          ops.push(`${fillRgb[0]} ${fillRgb[1]} ${fillRgb[2]} rg ${x.toFixed(1)} ${pdfY.toFixed(1)} ${w.toFixed(1)} ${h.toFixed(1)} f`);
+        } else if (strokeRgb) {
+          ops.push(`${strokeRgb[0]} ${strokeRgb[1]} ${strokeRgb[2]} RG ${x.toFixed(1)} ${pdfY.toFixed(1)} ${w.toFixed(1)} ${h.toFixed(1)} S`);
+        }
+      };
+
+      const drawLine = (x1, topY1, x2, topY2, strokeRgb = [0.78, 0.82, 0.87], lineW = 0.5) => {
+        const y1 = pageH - topY1;
+        const y2 = pageH - topY2;
+        ops.push(`${lineW} w ${strokeRgb[0]} ${strokeRgb[1]} ${strokeRgb[2]} RG ${x1.toFixed(1)} ${y1.toFixed(1)} m ${x2.toFixed(1)} ${y2.toFixed(1)} l S`);
+      };
+
+      const drawText = (text, x, topY, size = 7.5, bold = false, rgb = [0.06, 0.09, 0.16]) => {
+        const pdfY = pageH - topY - size * 0.82;
+        const fontName = bold ? '/F2' : '/F1';
+        ops.push(`BT ${fontName} ${size.toFixed(1)} Tf ${rgb[0]} ${rgb[1]} ${rgb[2]} rg ${x.toFixed(1)} ${pdfY.toFixed(1)} Td (${pdfEsc(text)}) Tj ET`);
+      };
+
+      let curY = 18;
+
+      // 1. Top Title Banner
+      drawRect(marginX, curY, contentW, 22, [0.06, 0.09, 0.16], [0.06, 0.09, 0.16]);
+      drawText('DENTAL INSURANCE BENEFIT BREAKDOWN FORM', marginX + 8, curY + 4, 9.5, true, [1, 1, 1]);
+      const verifiedBy = meta.verified_by_name || currentUser?.full_name || 'Clinic Staff';
+      const verifiedAt = meta.verified_at || new Date().toLocaleDateString('en-US');
+      const readiness = meta.readiness_status || 'Complete / Ready for Appointment';
+      drawText(`Verified by: ${trunc(verifiedBy, 22)} (${trunc(verifiedAt, 18)})  |  Status: ${trunc(readiness, 32)}`, marginX + 245, curY + 5.5, 6.8, true, [0.22, 0.74, 0.97]);
+      curY += 24;
+
+      // 2. Policy Header Table (12 rows x 4 columns)
+      const pName = (d.patient_name && !/^(none|n\/a|na|-)$/i.test(d.patient_name.trim())) ? d.patient_name.trim() : 'N/A';
+      const pDob = (d.dob && !/^(none|n\/a|na|-)$/i.test(d.dob.trim())) ? d.dob.trim() : '';
+      const pAge = pDob ? calculateAge(pDob) : null;
+      const dobDisplay = pDob ? `${pDob}${pAge !== null ? ` (Age: ${pAge})` : ''}` : 'N/A';
+      const grp = (d.group_name && !/^(none|n\/a|na|-)$/i.test(d.group_name.trim())) ? d.group_name.trim() : '';
+      const pln = (d.plan_name && !/^(none|n\/a|na|-)$/i.test(d.plan_name.trim())) ? d.plan_name.trim() : '';
+      const grpPlan = (grp && pln && grp.toLowerCase() !== pln.toLowerCase()) ? `${grp} - ${pln}` : (grp || pln || 'N/A');
+      const grpNum = d.group_number || 'N/A';
+      const carrier = d.carrier || 'Dental Insurance';
+      const insPhone = d.insurance_phone || 'N/A';
+      const insAddr = d.insurance_address || 'N/A';
+      const payorId = d.payor_id || 'N/A';
+      const netStatus = d.network_status || 'In-Network';
+      const polStatus = d.policy_status || 'Active';
+      const effDate = d.effective_date || '01/01/2026';
+      const termDate = d.termed_date || 'Active (None)';
+      const planBen = d.plan_benefits || 'Calendar Year';
+      const feeSched = d.fee_schedule || (carrier + ' PPO');
+      const payTo = d.payment_recipient || 'Patient or Office';
+      const prevMax = d.preventive_applies_to_max ? 'Yes' : 'No';
+      const annMax = fmtMoney(d.annual_maximum);
+      const remMax = fmtMoney(d.remaining_maximum);
+      const indDed = fmtMoney(d.deductible_individual);
+      const remDed = fmtMoney(d.deductible_remaining);
+      const dedScope = d.deductible_applies_to || 'Basic & Major Services Only (Waived on Preventive)';
+      const oMax = c.ortho_max || '$1,000';
+      const oRem = c.ortho_remaining || c.ortho_max || '$1,000';
+      const oAge = c.ortho_age_limit || '14 Maximum';
+      const oCov = c.ortho || '50%';
+      const oTerms = c.ortho_payment_terms || 'Monthly';
+
+      const headerRows = [
+        ['Subscriber Name:', trunc(pName, 36), 'Subscriber DOB:', trunc(dobDisplay, 30)],
+        ['Employer / Group:', trunc(grpPlan, 36), 'Group #:', trunc(grpNum, 30)],
+        ['Ins Company (Locked):', trunc(carrier, 36), 'Ins Ph #:', trunc(insPhone, 30)],
+        ['Ins Claims Address:', trunc(insAddr, 42), 'Electronic Payor ID:', trunc(payorId, 28)],
+        ['Network Participation:', trunc(netStatus, 32), 'Policy Status:', trunc(polStatus, 28)],
+        ['Effective Date:', trunc(effDate, 32), 'Termed Date:', trunc(termDate, 28)],
+        ['Plan Benefits:', trunc(planBen, 32), 'Fee Schedule / Tier:', trunc(feeSched, 32)],
+        ['Yearly Maximum:', trunc(annMax, 28), 'Remaining Benefits:', trunc(remMax, 28)],
+        ['Payment Goes To:', trunc(payTo, 32), 'Prev Counts to Max?:', trunc(prevMax, 28)],
+        ['Individual Deductible:', trunc(indDed, 28), 'Deductible Remaining:', trunc(remDed, 28)],
+        ['Deductible Scope:', trunc(dedScope, 42), 'Ortho Payment Terms:', trunc(oTerms, 28)],
+        ['Ortho Max / Rem:', `${trunc(oMax, 14)} / Rem: ${trunc(oRem, 14)}`, 'Ortho Coverage / Age:', `${trunc(oCov, 12)} (Age Limit: ${trunc(oAge, 14)})`],
+      ];
+
+      const rowH = 11.5;
+      const colW = [105, 181, 105, 181];
+      headerRows.forEach((r, idx) => {
+        const isOrthoRow = idx === 11;
+        const bg = isOrthoRow ? [0.94, 0.99, 0.96] : (idx % 2 === 0 ? [0.98, 0.99, 1.0] : [1, 1, 1]);
+        drawRect(marginX, curY, contentW, rowH, bg, [0.78, 0.82, 0.87], 0.4);
+        let xOff = marginX;
+        drawRect(xOff, curY, colW[0], rowH, [0.93, 0.95, 0.98], [0.78, 0.82, 0.87], 0.4);
+        drawText(r[0], xOff + 4, curY + 2.2, 6.8, true, [0.15, 0.2, 0.3]);
+        xOff += colW[0];
+        drawText(r[1], xOff + 4, curY + 2.2, 6.9, idx === 0 || idx === 2, idx === 0 ? [0.01, 0.45, 0.72] : [0.06, 0.09, 0.16]);
+        xOff += colW[1];
+        drawRect(xOff, curY, colW[2], rowH, [0.93, 0.95, 0.98], [0.78, 0.82, 0.87], 0.4);
+        drawText(r[2], xOff + 4, curY + 2.2, 6.8, true, [0.15, 0.2, 0.3]);
+        xOff += colW[2];
+        drawText(r[3], xOff + 4, curY + 2.2, 6.9, idx === 4 || idx === 7, [0.06, 0.09, 0.16]);
+        curY += rowH;
+      });
+
+      curY += 3;
+
+      // 3. 10-Box Category Summary Matrix
+      const missingTooth = d.missing_tooth_clause ? 'Yes' : 'No';
+      const waitingPeriod = d.waiting_period ? 'Yes' : 'No (Waived)';
+      const summaryBoxes = [
+        ['PREVENTATIVE', c.preventive || '100%'],
+        ['BASIC', c.basic || '80%'],
+        ['MAJOR', c.major || '60%'],
+        ['ENDO', c.endo || c.basic || '80%'],
+        ['ORAL SURG', c.oral_surgery || c.basic || '80%'],
+        ['IMPLANTS', c.implants || 'NC'],
+        ['NIGHT GUARD', c.night_guard || 'NC'],
+        ['MISSING TOOTH', missingTooth],
+        ['WAITING PER', waitingPeriod],
+        ['ORTHO (' + trunc(oTerms, 7) + ')', oCov],
+      ];
+      const boxW = contentW / 10;
+      const boxH = 20;
+      summaryBoxes.forEach((b, i) => {
+        const bx = marginX + i * boxW;
+        drawRect(bx, curY, boxW, boxH, [0.95, 0.97, 1.0], [0.75, 0.8, 0.86], 0.4);
+        drawText(trunc(b[0], 13), bx + 2.5, curY + 2.2, 5.5, true, [0.28, 0.33, 0.41]);
+        drawText(trunc(b[1], 12), bx + 2.5, curY + 10.2, 7.2, true, [0.02, 0.38, 0.62]);
+      });
+      curY += boxH + 4;
+
+      // 4. CDT Procedure Categories Table
+      const prevCodes = [];
+      const perioCodes = [];
+      const restorativeCodes = [];
+      const majorCodes = [];
+
+      allCodes.forEach(cd => {
+        const cat = categorizeProcedureCode(cd);
+        if (cat === 'preventative') prevCodes.push(cd);
+        else if (cat === 'periodontal') perioCodes.push(cd);
+        else if (cat === 'restorative') restorativeCodes.push(cd);
+        else if (cat === 'major') majorCodes.push(cd);
+      });
+
+      const sections = [
+        { title: 'PREVENTATIVE PROCEDURES', list: prevCodes, bg: [0.98, 0.91, 0.95], fg: [0.61, 0.09, 0.3] },
+        { title: 'PERIODONTAL PROCEDURES', list: perioCodes, bg: [0.92, 0.99, 0.96], fg: [0.02, 0.37, 0.27] },
+        { title: 'RESTORATIVE PROCEDURES (D2391)', list: restorativeCodes, bg: [0.95, 0.91, 1.0], fg: [0.42, 0.13, 0.66] },
+        { title: 'MAJOR PROCEDURES', list: majorCodes, bg: [0.88, 0.98, 0.93], fg: [0.02, 0.47, 0.34] },
+      ];
+
+      // Calculate dynamic row height so all rows fit on 1 page
+      const totalCodeRows = prevCodes.length + perioCodes.length + restorativeCodes.length + majorCodes.length;
+      const availH = pageH - curY - 22;
+      const totalHeaderH = sections.length * 20;
+      const cdtRowH = Math.max(9.2, Math.min(12.2, (availH - totalHeaderH) / Math.max(1, totalCodeRows)));
+      const cdtFont = cdtRowH < 10.2 ? 6.1 : 6.6;
+
+      // Columns: CDT Code (58), Description (162), Cov% (38), Ded (42), Freq (68), History (54), Elig (34), Notes (116) = 572
+      const cCols = [58, 162, 38, 42, 68, 54, 34, 116];
+
+      sections.forEach(sec => {
+        // Section Banner
+        drawRect(marginX, curY, contentW, 10.5, sec.bg, [0.75, 0.8, 0.86], 0.4);
+        drawText(sec.title, marginX + 5, curY + 1.8, 6.8, true, sec.fg);
+        curY += 10.5;
+
+        // Column Headers
+        drawRect(marginX, curY, contentW, 9.5, [0.93, 0.95, 0.98], [0.75, 0.8, 0.86], 0.4);
+        const headers = ['CDT Code', 'Procedure Description (Locked)', 'Cov %', 'Ded', 'Frequency', 'History', 'Elig', 'Notes / Age / Downgrade'];
+        let cx = marginX;
+        headers.forEach((hText, ci) => {
+          drawText(hText, cx + 3, curY + 1.6, 5.9, true, [0.2, 0.25, 0.33]);
+          if (ci > 0) drawLine(cx, curY, cx, curY + 9.5, [0.8, 0.84, 0.88], 0.35);
+          cx += cCols[ci];
+        });
+        curY += 9.5;
+
+        if (sec.list.length === 0) {
+          drawRect(marginX, curY, contentW, cdtRowH, [1, 1, 1], [0.82, 0.85, 0.9], 0.35);
+          drawText('None specified in breakdown', marginX + 8, curY + 2, cdtFont, false, [0.5, 0.55, 0.62]);
+          curY += cdtRowH;
+        } else {
+          sec.list.forEach((item, rIdx) => {
+            const rBg = rIdx % 2 === 0 ? [1, 1, 1] : [0.985, 0.99, 1.0];
+            drawRect(marginX, curY, contentW, cdtRowH, rBg, [0.82, 0.85, 0.9], 0.35);
+
+            const eligStr = item.is_eligible ? 'Yes' : 'No';
+            const eligColor = item.is_eligible ? [0.05, 0.48, 0.25] : [0.72, 0.11, 0.11];
+            const noteParts = [];
+            if (item.downgrade_rule && item.downgrade_rule.toLowerCase() !== 'none') noteParts.push(`DG: ${item.downgrade_rule}`);
+            if (item.age_limit && item.age_limit.toLowerCase() !== 'none') noteParts.push(`Age: ${item.age_limit}`);
+            if (item.notes && item.notes !== '-') noteParts.push(item.notes);
+
+            const vals = [
+              trunc(item.code || '', 14),
+              trunc(item.description || '', 40),
+              trunc(item.coverage_percentage || '0%', 8),
+              item.deductible_applied ? 'Applies' : 'Waived',
+              trunc(item.frequency_limitation || '-', 17),
+              trunc(item.history_dates || 'None', 13),
+              eligStr,
+              trunc(noteParts.join(' | '), 30),
+            ];
+
+            let rx = marginX;
+            vals.forEach((v, ci) => {
+              const isBold = ci === 0 || ci === 2 || ci === 6;
+              const colRgb = ci === 0 ? [0.01, 0.45, 0.72] : (ci === 6 ? eligColor : [0.08, 0.12, 0.2]);
+              drawText(v, rx + 3, curY + 1.8, cdtFont, isBold, colRgb);
+              if (ci > 0) drawLine(rx, curY, rx, curY + cdtRowH, [0.85, 0.88, 0.92], 0.3);
+              rx += cCols[ci];
+            });
+            curY += cdtRowH;
+          });
+        }
+      });
+
+      // Footer
+      drawText(`Generated by DentVerify AI (dentverify.com) • Verified by ${trunc(verifiedBy, 28)} • ${trunc(readiness, 38)}`, marginX, pageH - 12, 6.2, false, [0.4, 0.45, 0.52]);
+
+      const streamContent = ops.join('\n');
+      const objects = [];
+      objects.push('1 0 obj\n<< /Type /Catalog /Pages 2 0 R >>\nendobj');
+      objects.push('2 0 obj\n<< /Type /Pages /Kids [3 0 R] /Count 1 >>\nendobj');
+      objects.push(`3 0 obj\n<< /Type /Page /Parent 2 0 R /MediaBox [0 0 ${pageW} ${pageH}] /Resources << /Font << /F1 4 0 R /F2 5 0 R >> >> /Contents 6 0 R >>\nendobj`);
+      objects.push('4 0 obj\n<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica /Encoding /WinAnsiEncoding >>\nendobj');
+      objects.push('5 0 obj\n<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica-Bold /Encoding /WinAnsiEncoding >>\nendobj');
+      objects.push(`6 0 obj\n<< /Length ${streamContent.length} >>\nstream\n${streamContent}\nendstream\nendobj`);
+
+      let pdfStr = '%PDF-1.4\n';
+      const offsets = [0];
+      objects.forEach((obj) => {
+        offsets.push(pdfStr.length);
+        pdfStr += obj + '\n';
+      });
+      const xrefStart = pdfStr.length;
+      pdfStr += `xref\n0 ${objects.length + 1}\n0000000000 65535 f \n`;
+      for (let i = 1; i <= objects.length; i++) {
+        pdfStr += String(offsets[i]).padStart(10, '0') + ' 00000 n \n';
+      }
+      pdfStr += `trailer\n<< /Size ${objects.length + 1} /Root 1 0 R >>\nstartxref\n${xrefStart}\n%%EOF`;
+
+      const bytes = new Uint8Array(pdfStr.length);
+      for (let i = 0; i < pdfStr.length; i++) {
+        bytes[i] = pdfStr.charCodeAt(i) & 0xff;
+      }
+      return bytes;
+    }
+
+    function downloadCleanVectorPdf(data) {
+      const targetData = data || currentAuditData || SAMPLE_BREAKDOWN_DATA;
+      const pdfBytes = generateCleanBreakdownPdfBytes(targetData);
+      const fileName = buildCleanPdfFilename(targetData);
+      const blob = new Blob([pdfBytes], { type: 'application/pdf' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = fileName;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+      displayToast(`Downloaded clean PDF: ${fileName}`);
+    }
+
+    directDownloadPdfBtn?.addEventListener('click', () => {
+      downloadCleanVectorPdf(currentAuditData || SAMPLE_BREAKDOWN_DATA);
+    });
+
+    downloadCleanPdfModalBtn?.addEventListener('click', () => {
+      downloadCleanVectorPdf(currentAuditData || SAMPLE_BREAKDOWN_DATA);
+    });
+
     const downloadExcelCsvBtn = document.getElementById('downloadExcelCsvBtn');
     downloadExcelCsvBtn?.addEventListener('click', () => {
       const data = currentAuditData || SAMPLE_BREAKDOWN_DATA;
@@ -2696,6 +3215,10 @@
       if (!data) return '';
       const d = data.insurance_details || {};
       const c = data.coverage_levels || {};
+      const meta = data.audit_meta || {};
+      const verifiedBy = meta.verified_by_name || currentUser?.full_name || 'Clinic Staff';
+      const verifiedAt = meta.verified_at || new Date().toLocaleDateString('en-US');
+      const readinessStatus = meta.readiness_status || 'Complete / Ready for Appointment';
       const patientName = (d.patient_name && d.patient_name.trim() !== '' && !/^(none|n\/a|na|-)$/i.test(d.patient_name.trim())) ? d.patient_name.trim() : 'N/A';
       const patientDob = (d.dob && d.dob.trim() !== '' && !/^(none|n\/a|na|-)$/i.test(d.dob.trim())) ? d.dob.trim() : '';
       const pAge = patientDob ? calculateAge(patientDob) : null;
@@ -2719,7 +3242,6 @@
       const network = d.network_status || 'In Network';
       const policyStatus = d.policy_status || 'Active';
       const effective = d.effective_date || '01/01/2026';
-      const termedDate = d.termed_date || 'Active (None)';
       const planBenefits = d.plan_benefits || 'Calendar Year';
       const feeSchedule = d.fee_schedule || (carrier + ' PPO');
       const paymentTo = d.payment_recipient || 'Office';
@@ -2733,6 +3255,7 @@
       const orthoRemaining = c.ortho_remaining || c.ortho_max || '$1,000';
       const orthoAgeLimit = c.ortho_age_limit || '14 Maximum';
       const orthoCoverage = c.ortho || '50%';
+      const orthoPaymentTerms = c.ortho_payment_terms || 'Monthly';
       const missingTooth = d.missing_tooth_clause ? 'Yes' : 'No';
       const waitingPeriod = d.waiting_period ? (c.waiting_period_details || 'Yes') : ('No (' + (c.waiting_period_details || 'Basic 6mo Major 12') + ')');
 
@@ -2743,6 +3266,7 @@
 
       let lines = [];
       lines.push([csvCell('DENTAL INSURANCE BENEFIT BREAKDOWN FORM')].join(','));
+      lines.push([csvCell('Verified By:'), csvCell(`${verifiedBy} (${verifiedAt})`), csvCell('Appointment Status:'), csvCell(readinessStatus)].join(','));
       lines.push('');
       lines.push([csvCell('Subscriber / Patient Name:'), csvCell(patientName), csvCell('Subscriber DOB:'), csvCell(dobDisplay)].join(','));
       lines.push([csvCell('Employer / Group Name:'), csvCell(groupPlanDisplay), csvCell('Group #:'), csvCell(groupNumber)].join(','));
@@ -2756,6 +3280,7 @@
       lines.push([csvCell('Deductible Remaining:'), csvCell(dedRemaining), csvCell('Deductible Scope:'), csvCell(dedScope)].join(','));
       lines.push([csvCell('Ortho Max:'), csvCell(orthoMax), csvCell('Remaining Ortho:'), csvCell(orthoRemaining)].join(','));
       lines.push([csvCell('Ortho Age Limit:'), csvCell(orthoAgeLimit), csvCell('Ortho Coverage:'), csvCell(orthoCoverage)].join(','));
+      lines.push([csvCell('Ortho Payment Terms:'), csvCell(orthoPaymentTerms)].join(','));
       lines.push('');
       lines.push([csvCell('SUMMARY CATEGORIES MATRIX')].join(','));
       lines.push([
@@ -2780,7 +3305,7 @@
         csvCell(c.night_guard || 'NC'),
         csvCell(missingTooth),
         csvCell(waitingPeriod),
-        csvCell(`${orthoCoverage} (Rem: ${orthoRemaining}, Age: ${orthoAgeLimit})`)
+        csvCell(`${orthoCoverage} (Rem: ${orthoRemaining}, Age: ${orthoAgeLimit}, Terms: ${orthoPaymentTerms})`)
       ].join(','));
       lines.push('');
 
@@ -2842,7 +3367,12 @@
       if (!data) return;
       const d = data.insurance_details || {};
       const c = data.coverage_levels || {};
+      const meta = data.audit_meta || {};
       const allCodes = (data.procedure_codes || []).slice();
+
+      const verifiedBy = meta.verified_by_name || currentUser?.full_name || 'Clinic Staff';
+      const verifiedAt = meta.verified_at || new Date().toLocaleDateString('en-US');
+      const readinessStatus = meta.readiness_status || 'Complete / Ready for Appointment';
 
       const patientName = (d.patient_name && d.patient_name.trim() !== '' && !/^(none|n\/a|na|-)$/i.test(d.patient_name.trim())) ? d.patient_name.trim() : 'N/A';
       const patientDob = (d.dob && d.dob.trim() !== '' && !/^(none|n\/a|na|-)$/i.test(d.dob.trim())) ? d.dob.trim() : '';
@@ -2884,8 +3414,9 @@
       const orthoRemaining = c.ortho_remaining || c.ortho_max || '$1,000';
       const orthoAgeLimit = c.ortho_age_limit || '14 Maximum';
       const orthoCoverage = c.ortho || '50%';
+      const orthoPaymentTerms = c.ortho_payment_terms || 'Monthly';
 
-      // Sort all codes strictly in clinical 1-to-19 sequence
+      // Sort all codes strictly in active clinic's sequence
       allCodes.sort((a, b) => getProcedureOrderRank(a.code) - getProcedureOrderRank(b.code));
 
       const prevCodes = [];
@@ -2909,7 +3440,10 @@
 
       let html = `
         <div class="excel-sheet-doc">
-          <div class="excel-sheet-header-title">DENTAL INSURANCE BENEFIT BREAKDOWN FORM</div>
+          <div class="excel-sheet-header-title" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 6px;">
+            <span>DENTAL INSURANCE BENEFIT BREAKDOWN FORM</span>
+            <span style="font-size: 9.5px; font-weight: 700; color: #38bdf8;">Verified by: ${escapeHtml(verifiedBy)} (${escapeHtml(verifiedAt)}) • ${escapeHtml(readinessStatus)}</span>
+          </div>
           
           <!-- Patient Policy Header Table (Excel Gridline Aesthetic) -->
           <table class="excel-grid-table">
@@ -2926,13 +3460,13 @@
               <td class="excel-val-cell" style="font-weight: 700; font-family: var(--font-mono);">${escapeHtml(groupNumber)}</td>
             </tr>
             <tr>
-              <td class="excel-label-cell">Ins Company:</td>
+              <td class="excel-label-cell">Ins Company (Locked):</td>
               <td class="excel-val-cell" style="font-weight: 700; color: #0f172a;">${escapeHtml(carrier)}</td>
               <td class="excel-label-cell">Ins Ph #:</td>
               <td class="excel-val-cell">${escapeHtml(insPhone)}</td>
             </tr>
             <tr>
-              <td class="excel-label-cell">Ins Address:</td>
+              <td class="excel-label-cell">Ins Address (Locked):</td>
               <td class="excel-val-cell" style="color: #334155;">${escapeHtml(insAddress)}</td>
               <td class="excel-label-cell">PayorID:</td>
               <td class="excel-val-cell">${escapeHtml(payorId)}</td>
@@ -2975,7 +3509,9 @@
             </tr>
             <tr>
               <td class="excel-label-cell">Deductible Scope:</td>
-              <td class="excel-val-cell" colspan="3">${escapeHtml(dedScope)}</td>
+              <td class="excel-val-cell">${escapeHtml(dedScope)}</td>
+              <td class="excel-label-cell" style="font-weight: 700; color: #065f46;">Ortho Payment Terms:</td>
+              <td class="excel-val-cell" style="font-weight: 700; color: #065f46;">${escapeHtml(orthoPaymentTerms)}</td>
             </tr>
             <tr style="background: #f0fdf4;">
               <td class="excel-label-cell" style="font-weight: 700; color: #065f46;">Ortho Max:</td>
@@ -2987,7 +3523,7 @@
               <td class="excel-label-cell" style="font-weight: 600; color: #065f46;">Ortho Age Limit:</td>
               <td class="excel-val-cell">${escapeHtml(orthoAgeLimit)}</td>
               <td class="excel-label-cell" style="font-weight: 600; color: #065f46;">Ortho Coverage:</td>
-              <td class="excel-val-cell">${escapeHtml(orthoCoverage)}</td>
+              <td class="excel-val-cell">${escapeHtml(orthoCoverage)} (${escapeHtml(orthoPaymentTerms)})</td>
             </tr>
           </table>
 
@@ -3040,7 +3576,7 @@
                 <div class="cat-sub">Status</div>
               </td>
               <td class="excel-summary-cat-box" style="width: 10%;">
-                <div class="cat-h">Ortho</div>
+                <div class="cat-h">Ortho (${escapeHtml(orthoPaymentTerms)})</div>
                 <div class="cat-v">${escapeHtml(orthoCoverage)}</div>
                 <div class="cat-sub">Rem: ${escapeHtml(orthoRemaining)} • ${escapeHtml(orthoAgeLimit)}</div>
               </td>
@@ -3144,7 +3680,7 @@
           </table>
 
           <div style="font-size: 9.5px; color: #64748b; text-align: right; margin-top: 6px;">
-            Generated by DentVerify AI (dentverify.com) • Verification audit grounded in uploaded carrier breakdown
+            Generated by DentVerify AI (dentverify.com) • Verified by ${escapeHtml(verifiedBy)} (${escapeHtml(verifiedAt)}) • ${escapeHtml(readinessStatus)}
           </div>
         </div>
       `;
@@ -3185,7 +3721,7 @@
     }
 
     // ==========================================
-    // AI SETTINGS & PROMPTS CONFIGURATION LOGIC
+    // PER-CLINIC CDT CHECKLIST, SEQUENCE ORDERING & AI PROMPT SETTINGS
     // ==========================================
     const openSettingsBtn = document.getElementById('openSettingsBtn');
     const settingsModal = document.getElementById('settingsModal');
@@ -3194,6 +3730,7 @@
     const settingCustomPrompt = document.getElementById('settingCustomPrompt');
     const btnRestoreDefaults = document.getElementById('btnRestoreDefaults');
     const btnSaveSettings = document.getElementById('btnSaveSettings');
+    const btnSyncChecklistToPrompt = document.getElementById('btnSyncChecklistToPrompt');
     const settingsTabBtns = document.querySelectorAll('.settings-tab-btn');
     const settingsTabPanes = document.querySelectorAll('.settings-tab-pane');
 
@@ -3208,93 +3745,198 @@
       });
     });
 
-    // Fetch and sync default or saved prompt settings
+    // Fetch and sync active clinic's CDT checklist sequence & AI prompt settings
     async function loadPromptSettings() {
       try {
-        const storedSys = localStorage.getItem('dentverify_system_instruction');
-        const storedPr = localStorage.getItem('dentverify_custom_prompt');
-
-        if (storedSys && storedPr) {
-          settingSystemInstruction.value = storedSys;
-          settingCustomPrompt.value = storedPr;
-          return;
-        }
-
         const res = await fetch('/api/prompts/default');
         if (res.ok) {
           const data = await res.json();
-          if (!storedSys) settingSystemInstruction.value = data.systemInstruction || '';
-          if (!storedPr) settingCustomPrompt.value = data.customPrompt || '';
+          if (Array.isArray(data.enabledCdtCodes) && data.enabledCdtCodes.length > 0) {
+            activeEnabledCdtCodes = data.enabledCdtCodes.slice();
+          } else {
+            activeEnabledCdtCodes = DEFAULT_ENABLED_CDT_CODES.slice();
+          }
+          if (settingSystemInstruction) settingSystemInstruction.value = data.systemInstruction || '';
+          if (settingCustomPrompt) settingCustomPrompt.value = data.customPrompt || '';
+          try {
+            if (data.systemInstruction) localStorage.setItem('dentverify_system_instruction', data.systemInstruction);
+            if (data.customPrompt) localStorage.setItem('dentverify_custom_prompt', data.customPrompt);
+          } catch (e) {}
         }
       } catch (e) {
-        console.warn('Could not load default prompts:', e);
+        console.warn('Could not load clinic prompt settings:', e);
       }
     }
 
-    // Open Settings Modal
+    // Render Interactive Per-Clinic CDT Checklist & Sequence Ordering (while keeping Meanings Locked)
     function renderCdtMemoryDictionary() {
       const container = document.getElementById('cdtMemoryDictionaryList');
       if (!container) return;
-      const entries = Object.entries(CDT_CODE_DICTIONARY);
-      container.innerHTML = entries.map(([code, meaning]) => `
-        <div style="display: flex; align-items: center; justify-content: space-between; gap: 0.75rem; padding: 0.42rem 0.65rem; border-bottom: 1px solid rgba(148, 163, 184, 0.12); font-size: 0.78rem;">
-          <div style="display: flex; align-items: center; gap: 0.65rem;">
-            <span class="cdt-badge" style="min-width: 105px; text-align: center;">${escapeHtml(code)}</span>
-            <span style="color: #f8fafc; font-weight: 600;">${escapeHtml(meaning)}</span>
+
+      const allDictKeys = Object.keys(CDT_CODE_DICTIONARY);
+      const enabledSet = new Set(activeEnabledCdtCodes);
+      const orderedKeys = [
+        ...activeEnabledCdtCodes.filter(k => CDT_CODE_DICTIONARY[k]),
+        ...allDictKeys.filter(k => !enabledSet.has(k)),
+      ];
+
+      container.innerHTML = orderedKeys.map((code) => {
+        const meaning = CDT_CODE_DICTIONARY[code] || '-';
+        const enabledIdx = activeEnabledCdtCodes.indexOf(code);
+        const isChecked = enabledIdx !== -1;
+        const seqLabel = isChecked ? `#${enabledIdx + 1}` : 'Off';
+
+        return `
+          <div class="cdt-checklist-row" data-code="${escapeHtml(code)}" style="display: flex; align-items: center; justify-content: space-between; gap: 0.65rem; padding: 0.44rem 0.65rem; border-bottom: 1px solid rgba(148, 163, 184, 0.12); font-size: 0.78rem; background: ${isChecked ? 'rgba(16, 185, 129, 0.05)' : 'transparent'};">
+            <div style="display: flex; align-items: center; gap: 0.55rem; flex: 1; min-width: 0;">
+              <input type="checkbox" class="cdt-check-toggle" data-code="${escapeHtml(code)}" ${isChecked ? 'checked' : ''} style="width: 15px; height: 15px; accent-color: #10b981; cursor: pointer;" title="Enable/Disable this CDT code for this clinic">
+              <span style="min-width: 30px; text-align: center; font-family: var(--font-mono); font-size: 0.7rem; font-weight: 800; color: ${isChecked ? '#34d399' : '#64748b'};">${seqLabel}</span>
+              <span class="cdt-badge" style="min-width: 105px; text-align: center;">${escapeHtml(code)}</span>
+              <span style="color: ${isChecked ? '#f8fafc' : '#94a3b8'}; font-weight: 600; overflow: hidden; text-overflow: ellipsis;">${escapeHtml(meaning)}</span>
+            </div>
+            <div style="display: flex; align-items: center; gap: 0.35rem; flex-shrink: 0;">
+              ${isChecked ? `
+                <button type="button" class="btn-action-ghost cdt-move-up" data-code="${escapeHtml(code)}" ${enabledIdx === 0 ? 'disabled' : ''} style="padding: 2px 7px; font-size: 0.7rem;" title="Move Up in Sequence">↑</button>
+                <button type="button" class="btn-action-ghost cdt-move-down" data-code="${escapeHtml(code)}" ${enabledIdx === activeEnabledCdtCodes.length - 1 ? 'disabled' : ''} style="padding: 2px 7px; font-size: 0.7rem;" title="Move Down in Sequence">↓</button>
+              ` : ''}
+              <span style="font-size: 0.64rem; color: #10b981; background: rgba(16, 185, 129, 0.12); border: 1px solid rgba(16, 185, 129, 0.3); padding: 2px 7px; border-radius: 999px; font-weight: 700; white-space: nowrap;">🔒 Locked</span>
+            </div>
           </div>
-          <span style="font-size: 0.66rem; color: #10b981; background: rgba(16, 185, 129, 0.12); border: 1px solid rgba(16, 185, 129, 0.3); padding: 2px 7px; border-radius: 999px; font-weight: 700; white-space: nowrap;">🔒 Locked</span>
-        </div>
-      `).join('');
+        `;
+      }).join('');
+
+      container.querySelectorAll('.cdt-check-toggle').forEach(cb => {
+        cb.addEventListener('change', () => {
+          const code = cb.dataset.code;
+          if (!code) return;
+          if (cb.checked) {
+            if (!activeEnabledCdtCodes.includes(code)) {
+              activeEnabledCdtCodes.push(code);
+            }
+          } else {
+            activeEnabledCdtCodes = activeEnabledCdtCodes.filter(c => c !== code);
+          }
+          renderCdtMemoryDictionary();
+        });
+      });
+
+      container.querySelectorAll('.cdt-move-up').forEach(btn => {
+        btn.addEventListener('click', () => {
+          const code = btn.dataset.code;
+          const idx = activeEnabledCdtCodes.indexOf(code);
+          if (idx > 0) {
+            const tmp = activeEnabledCdtCodes[idx - 1];
+            activeEnabledCdtCodes[idx - 1] = activeEnabledCdtCodes[idx];
+            activeEnabledCdtCodes[idx] = tmp;
+            renderCdtMemoryDictionary();
+          }
+        });
+      });
+
+      container.querySelectorAll('.cdt-move-down').forEach(btn => {
+        btn.addEventListener('click', () => {
+          const code = btn.dataset.code;
+          const idx = activeEnabledCdtCodes.indexOf(code);
+          if (idx !== -1 && idx < activeEnabledCdtCodes.length - 1) {
+            const tmp = activeEnabledCdtCodes[idx + 1];
+            activeEnabledCdtCodes[idx + 1] = activeEnabledCdtCodes[idx];
+            activeEnabledCdtCodes[idx] = tmp;
+            renderCdtMemoryDictionary();
+          }
+        });
+      });
     }
 
-    openSettingsBtn.addEventListener('click', () => {
-      loadPromptSettings();
+    if (btnSyncChecklistToPrompt) {
+      btnSyncChecklistToPrompt.addEventListener('click', () => {
+        if (!settingCustomPrompt) return;
+        const numberedLines = activeEnabledCdtCodes.map((code, idx) => {
+          const meaning = CDT_CODE_DICTIONARY[code] || 'Dental Procedure';
+          return `${idx + 1}. ${code} - ${meaning}`;
+        }).join('\n');
+
+        const curVal = settingCustomPrompt.value || '';
+        const listRegex = /1\.\s*D\d{4}[\s\S]*?(?=\n\nCRITICAL DATA GROUNDING|\nCRITICAL DATA GROUNDING|$)/i;
+        if (listRegex.test(curVal)) {
+          settingCustomPrompt.value = curVal.replace(listRegex, numberedLines);
+        } else {
+          settingCustomPrompt.value = numberedLines + '\n\n' + curVal;
+        }
+        displayToast(`Synced ${activeEnabledCdtCodes.length} checked CDT codes & sequence to AI Prompt!`);
+      });
+    }
+
+    openSettingsBtn?.addEventListener('click', async () => {
+      await loadPromptSettings();
       renderCdtMemoryDictionary();
       settingsModal.classList.add('active');
     });
 
     // Close Settings Modal
-    closeSettingsModalBtn.addEventListener('click', () => {
+    closeSettingsModalBtn?.addEventListener('click', () => {
       settingsModal.classList.remove('active');
     });
 
-    settingsModal.addEventListener('click', (e) => {
+    settingsModal?.addEventListener('click', (e) => {
       if (e.target === settingsModal) {
         settingsModal.classList.remove('active');
       }
     });
 
-    // Save Settings
-    btnSaveSettings.addEventListener('click', () => {
+    // Save Clinic CDT Checklist Sequence & AI Prompt Settings to PostgreSQL
+    btnSaveSettings?.addEventListener('click', async () => {
       const sysVal = settingSystemInstruction.value.trim();
       const prVal = settingCustomPrompt.value.trim();
       if (sysVal) localStorage.setItem('dentverify_system_instruction', sysVal);
       if (prVal) localStorage.setItem('dentverify_custom_prompt', prVal);
+
+      try {
+        await fetch('/api/clinic-settings', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            systemInstruction: sysVal,
+            customPrompt: prVal,
+            enabledCdtCodes: activeEnabledCdtCodes,
+          }),
+        });
+      } catch (e) {
+        console.warn('Could not persist clinic AI settings to server:', e);
+      }
+
+      if (currentAuditData) {
+        renderCdtTable();
+        renderExcelBreakdownSheet(currentAuditData);
+      }
       settingsModal.classList.remove('active');
-      displayToast('AI Directives saved! Applied to breakdown audits.');
+      displayToast('Saved Clinic CDT Checklist Sequence & AI Directives!');
     });
 
     // Restore Factory Defaults
-    btnRestoreDefaults.addEventListener('click', async () => {
+    btnRestoreDefaults?.addEventListener('click', async () => {
+      activeEnabledCdtCodes = DEFAULT_ENABLED_CDT_CODES.slice();
+      localStorage.removeItem('dentverify_system_instruction');
+      localStorage.removeItem('dentverify_custom_prompt');
       try {
-        const res = await fetch('/api/prompts/default');
-        if (res.ok) {
-          const data = await res.json();
-          settingSystemInstruction.value = data.systemInstruction || '';
-          settingCustomPrompt.value = data.customPrompt || '';
-          localStorage.removeItem('dentverify_system_instruction');
-          localStorage.removeItem('dentverify_custom_prompt');
-          displayToast('Restored default AI prompt directives.');
-        }
+        await fetch('/api/clinic-settings', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            systemInstruction: '',
+            customPrompt: '',
+            enabledCdtCodes: DEFAULT_ENABLED_CDT_CODES,
+          }),
+        });
+        await loadPromptSettings();
+        renderCdtMemoryDictionary();
+        displayToast('Restored default CDT Checklist Sequence & AI prompt directives.');
       } catch (e) {
-        displayToast('Could not fetch default prompts.');
+        displayToast('Could not restore default prompts.');
       }
     });
 
-    // Prompt values are loaded on-demand when an authenticated Owner opens Settings
-
     // ==========================================
-    // DEDICATED INSURANCE DIRECTORY & SUB-PORTALS UI
+    // DEDICATED INSURANCE DIRECTORY & MASTER CLAIMS HUBS UI
     // ==========================================
     const openInsuranceDirectoryBtn = document.getElementById('openInsuranceDirectoryBtn');
     const insuranceDirectoryModal = document.getElementById('insuranceDirectoryModal');
@@ -3315,6 +3957,8 @@
     const dirNewAddress = document.getElementById('dirNewAddress');
     const dirNewPhone = document.getElementById('dirNewPhone');
     const dirNewNetwork = document.getElementById('dirNewNetwork');
+    const dirNewFeeSchedule = document.getElementById('dirNewFeeSchedule');
+    const dirNewMatchKeys = document.getElementById('dirNewMatchKeys');
     const dirCancelAddBtn = document.getElementById('dirCancelAddBtn');
     const dirSavePayerBtn = document.getElementById('dirSavePayerBtn');
     const dirPayerListContainer = document.getElementById('dirPayerListContainer');
@@ -3332,6 +3976,7 @@
       const filtered = list.filter(p => {
         const parentStr = (p.parentCarrier || '').toLowerCase();
         const nameStr = (p.name || p.carrier || '').toLowerCase();
+        const keysStr = Array.isArray(p.matchKeys) ? p.matchKeys.join(' ').toLowerCase() : '';
 
         if (parentVal !== 'ALL') {
           const pv = parentVal.toLowerCase();
@@ -3347,22 +3992,25 @@
         if (!q) return true;
         return nameStr.includes(q) ||
                parentStr.includes(q) ||
+               keysStr.includes(q) ||
                (p.address || '').toLowerCase().includes(q) ||
                (p.payorId || '').toLowerCase().includes(q) ||
                (p.phone || '').toLowerCase().includes(q) ||
+               (p.feeSchedule || '').toLowerCase().includes(q) ||
                (p.network || '').toLowerCase().includes(q);
       });
 
       if (filtered.length === 0) {
         dirPayerListContainer.innerHTML = `
           <div style="text-align: center; padding: 2rem 1rem; color: var(--text-muted); font-size: 0.78rem;">
-            No insurance carriers or sub-portals found matching your filter.
+            No insurance hubs or sub-portals found matching your filter.
           </div>
         `;
         return;
       }
 
-      const canManageDirectory = Boolean(currentUser);
+      // Only Clinic Admin & Website Owner can edit/add/delete/reset Insurance Directory Hubs
+      const canManageDirectory = Boolean(currentUser && (currentUser.role === 'owner' || currentUser.role === 'clinic_admin'));
       if (dirToggleAddBtn) dirToggleAddBtn.style.display = canManageDirectory ? 'inline-flex' : 'none';
       if (dirToggleBulkImportBtn) dirToggleBulkImportBtn.style.display = canManageDirectory ? 'inline-flex' : 'none';
       if (dirResetDefaultsBtn) dirResetDefaultsBtn.style.display = canManageDirectory ? 'inline-flex' : 'none';
@@ -3376,6 +4024,8 @@
         const netLabel = isOut ? 'Out-of-Network' : 'In-Network';
         const parentGroup = p.parentCarrier || 'Standard Carrier';
         const isDelta = parentGroup.toLowerCase().includes('delta') || (p.name || '').toLowerCase().includes('delta');
+        const feeSched = p.feeSchedule || (p.name + ' PPO');
+        const matchKeysStr = Array.isArray(p.matchKeys) ? p.matchKeys.join(', ') : '';
 
         card.innerHTML = `
           <div style="display: flex; justify-content: space-between; align-items: center; gap: 0.75rem; width: 100%; flex-wrap: wrap;">
@@ -3383,24 +4033,26 @@
               <div class="payer-card-name" style="flex-wrap: wrap; gap: 0.45rem;">
                 <span class="payer-parent-badge ${isDelta ? 'delta' : ''}">${escapeHtml(parentGroup)}</span>
                 <span style="font-weight: 700; color: #fff;">${escapeHtml(p.name)}</span>
-                <button type="button" class="payer-network-toggle-badge ${isOut ? 'out' : 'in'}" data-id="${p.id}" title="${canManageDirectory ? 'Click to toggle In-Network / Out-of-Network for this portal' : 'Network participation status'}">
+                <button type="button" class="payer-network-toggle-badge ${isOut ? 'out' : 'in'}" data-id="${p.id}" title="${canManageDirectory ? 'Click to pre-set In-Network / Out-of-Network for this Insurance Hub' : 'Pre-set Network Status'}">
                   ${netLabel}
                 </button>
+                <span style="font-size: 0.68rem; color: #a78bfa; background: rgba(139, 92, 246, 0.14); border: 1px solid rgba(139, 92, 246, 0.35); padding: 1px 7px; border-radius: 999px; font-weight: 700;">Fee: ${escapeHtml(feeSched)}</span>
               </div>
               <div class="payer-card-addr">${escapeHtml(p.address)}</div>
-              <div class="payer-card-meta">
+              <div class="payer-card-meta" style="flex-wrap: wrap;">
                 <span>Ph: ${escapeHtml(p.phone || 'N/A')}</span>
                 <span>•</span>
                 <span>Payor ID: <strong style="color: #38bdf8;">${escapeHtml(p.payorId || 'N/A')}</strong></span>
+                ${matchKeysStr ? `<span>•</span><span style="color: #94a3b8; font-size: 0.68rem;">🔗 Wired States/Aliases: <strong style="color: #cbd5e1;">${escapeHtml(matchKeysStr.length > 75 ? matchKeysStr.slice(0, 75) + '...' : matchKeysStr)}</strong></span>` : ''}
               </div>
             </div>
             <div style="display: flex; gap: 0.4rem; align-items: center;">
               ${canManageDirectory ? `
-                <button type="button" class="btn-action-ghost btn-edit-payer" style="padding: 0.28rem 0.55rem; font-size: 0.7rem;" title="Edit portal details">
-                  ✏️ Edit
+                <button type="button" class="btn-action-ghost btn-edit-payer" style="padding: 0.28rem 0.55rem; font-size: 0.7rem;" title="Edit Master Hub details & wired states">
+                  ✏️ Edit Hub
                 </button>
               ` : ''}
-              <button type="button" class="btn-apply-payer" data-id="${p.id || ''}" title="Apply this sub-portal address, network status, and Payor ID to the active breakdown">
+              <button type="button" class="btn-apply-payer" data-id="${p.id || ''}" title="Apply this Master Hub's locked Address, Phone #, Payor ID, Network Status, and Fee Schedule to the active breakdown">
                 Apply to Policy
               </button>
               ${canManageDirectory ? `
@@ -3412,13 +4064,13 @@
           </div>
           ${canManageDirectory ? `
           <div class="payer-inline-edit-panel" style="display: none; margin-top: 0.65rem; padding-top: 0.65rem; border-top: 1px solid rgba(255,255,255,0.08);">
-            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 0.5rem; margin-bottom: 0.5rem;">
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(165px, 1fr)); gap: 0.5rem; margin-bottom: 0.5rem;">
               <div>
                 <label style="font-size: 0.66rem; color: #94a3b8; display: block; margin-bottom: 2px;">Parent Group</label>
                 <input type="text" class="table-search-input edit-p-parent" value="${escapeHtml(parentGroup)}" style="width: 100%; font-size: 0.74rem; padding: 0.3rem 0.5rem;">
               </div>
               <div>
-                <label style="font-size: 0.66rem; color: #94a3b8; display: block; margin-bottom: 2px;">Portal / Carrier Name</label>
+                <label style="font-size: 0.66rem; color: #94a3b8; display: block; margin-bottom: 2px;">Master Hub / Carrier Name</label>
                 <input type="text" class="table-search-input edit-p-name" value="${escapeHtml(p.name)}" style="width: 100%; font-size: 0.74rem; padding: 0.3rem 0.5rem;">
               </div>
               <div>
@@ -3429,13 +4081,21 @@
                 <label style="font-size: 0.66rem; color: #94a3b8; display: block; margin-bottom: 2px;">Phone Number</label>
                 <input type="text" class="table-search-input edit-p-phone" value="${escapeHtml(p.phone || '')}" style="width: 100%; font-size: 0.74rem; padding: 0.3rem 0.5rem;">
               </div>
+              <div>
+                <label style="font-size: 0.66rem; color: #94a3b8; display: block; margin-bottom: 2px;">Pre-Set Fee Schedule</label>
+                <input type="text" class="table-search-input edit-p-feesched" value="${escapeHtml(feeSched)}" style="width: 100%; font-size: 0.74rem; padding: 0.3rem 0.5rem;">
+              </div>
             </div>
             <div style="display: flex; gap: 0.5rem; align-items: flex-end; flex-wrap: wrap;">
-              <div style="flex: 1; min-width: 220px;">
-                <label style="font-size: 0.66rem; color: #94a3b8; display: block; margin-bottom: 2px;">Claims Mailing Address</label>
+              <div style="flex: 1; min-width: 210px;">
+                <label style="font-size: 0.66rem; color: #94a3b8; display: block; margin-bottom: 2px;">Claims Mailing Address (Locked on Breakdown)</label>
                 <input type="text" class="table-search-input edit-p-addr" value="${escapeHtml(p.address || '')}" style="width: 100%; font-size: 0.74rem; padding: 0.3rem 0.5rem;">
               </div>
-              <button type="button" class="btn-verify-primary btn-save-payer-edit" style="padding: 0.35rem 0.85rem; font-size: 0.72rem;">💾 Save Portal</button>
+              <div style="flex: 1; min-width: 210px;">
+                <label style="font-size: 0.66rem; color: #94a3b8; display: block; margin-bottom: 2px;">Wired States / Plan Aliases (comma-separated)</label>
+                <input type="text" class="table-search-input edit-p-matchkeys" value="${escapeHtml(matchKeysStr)}" style="width: 100%; font-size: 0.74rem; padding: 0.3rem 0.5rem;">
+              </div>
+              <button type="button" class="btn-verify-primary btn-save-payer-edit" style="padding: 0.35rem 0.85rem; font-size: 0.72rem;">💾 Save Hub</button>
             </div>
           </div>
           ` : ''}
@@ -3448,7 +4108,7 @@
             e.stopPropagation();
             const isHidden = editPanel.style.display === 'none';
             editPanel.style.display = isHidden ? 'block' : 'none';
-            editBtn.textContent = isHidden ? '✕ Close' : '✏️ Edit';
+            editBtn.textContent = isHidden ? '✕ Close' : '✏️ Edit Hub';
           });
         }
 
@@ -3464,15 +4124,23 @@
               targetPayer.carrier = targetPayer.name;
               targetPayer.payorId = card.querySelector('.edit-p-payorid').value.trim() || 'N/A';
               targetPayer.phone = card.querySelector('.edit-p-phone').value.trim() || 'N/A';
+              targetPayer.feeSchedule = card.querySelector('.edit-p-feesched').value.trim() || (targetPayer.name + ' PPO');
               targetPayer.address = card.querySelector('.edit-p-addr').value.trim() || 'N/A';
+              const rawKeys = card.querySelector('.edit-p-matchkeys').value.trim();
+              targetPayer.matchKeys = rawKeys
+                ? rawKeys.split(',').map(k => k.trim().toLowerCase()).filter(Boolean)
+                : [targetPayer.name.toLowerCase()];
               await savePayerDirectory(allPayers);
               renderDedicatedPayerDirectory();
-              displayToast(`Updated ${targetPayer.name}!`);
+              if (currentAuditData) {
+                renderReportDashboard(currentAuditData);
+              }
+              displayToast(`Updated Master Hub: ${targetPayer.name}!`);
             }
           });
         }
 
-        // Network toggle badge click
+        // Network toggle badge click (Clinic Admin / Owner)
         const netBtn = card.querySelector('.payer-network-toggle-badge');
         if (netBtn && canManageDirectory) {
           netBtn.addEventListener('click', async (e) => {
@@ -3496,7 +4164,7 @@
                   if (pmsModal && pmsModal.classList.contains('active')) buildPmsNote();
                 }
               }
-              displayToast(`${targetPayer.name} set to ${nextNet} for this clinic!`);
+              displayToast(`${targetPayer.name} pre-set to ${nextNet} for this clinic!`);
             }
           });
         }
@@ -3536,12 +4204,16 @@
       if (payer.network) {
         currentAuditData.insurance_details.network_status = payer.network;
       }
+      if (payer.feeSchedule) {
+        currentAuditData.insurance_details.fee_schedule = payer.feeSchedule;
+      }
 
       renderReportDashboard(currentAuditData);
       renderExcelBreakdownSheet(currentAuditData);
       if (pmsModal && pmsModal.classList.contains('active')) buildPmsNote();
+      persistActiveBreakdownToDb();
       if (insuranceDirectoryModal) insuranceDirectoryModal.classList.remove('active');
-      displayToast(`Applied ${payer.name} (${payer.network || 'In-Network'}) to active policy!`);
+      displayToast(`Wired to ${payer.name} (${payer.network || 'In-Network'} • Fee: ${payer.feeSchedule || 'PPO'})!`);
     }
 
     function openInsuranceDirectory() {
@@ -3585,20 +4257,20 @@
       payerParentFilter.addEventListener('change', renderDedicatedPayerDirectory);
     }
 
-    // Add Sub-Portal / Carrier Form
+    // Add Master Claims Hub / Sub-Portal Form
     if (dirToggleAddBtn && dirAddPayerFormPanel) {
       dirToggleAddBtn.addEventListener('click', () => {
         const isHidden = dirAddPayerFormPanel.style.display === 'none';
         dirAddPayerFormPanel.style.display = isHidden ? 'block' : 'none';
         if (dirBulkImportPanel) dirBulkImportPanel.style.display = 'none';
-        dirToggleAddBtn.textContent = isHidden ? '✕ Close Form' : '+ Add Sub-Portal / Carrier';
+        dirToggleAddBtn.textContent = isHidden ? '✕ Close Form' : '+ Add Master Hub / Portal';
       });
     }
 
     if (dirCancelAddBtn && dirAddPayerFormPanel) {
       dirCancelAddBtn.addEventListener('click', () => {
         dirAddPayerFormPanel.style.display = 'none';
-        if (dirToggleAddBtn) dirToggleAddBtn.textContent = '+ Add Sub-Portal / Carrier';
+        if (dirToggleAddBtn) dirToggleAddBtn.textContent = '+ Add Master Hub / Portal';
       });
     }
 
@@ -3610,9 +4282,14 @@
         const phone = dirNewPhone?.value.trim() || 'N/A';
         const payorId = dirNewPayorId?.value.trim() || 'N/A';
         const network = dirNewNetwork?.value || 'In-Network';
+        const feeSchedule = dirNewFeeSchedule?.value.trim() || (name ? name + ' PPO' : 'Delta Dental PPO');
+        const rawMatchKeys = dirNewMatchKeys?.value.trim() || '';
+        const matchKeys = rawMatchKeys
+          ? rawMatchKeys.split(',').map(k => k.trim().toLowerCase()).filter(Boolean)
+          : [String(name || '').toLowerCase()];
 
         if (!name || !address) {
-          await openCustomNotice('Missing Portal Details', 'Please enter both the Portal/Carrier Name and Claims Address.');
+          await openCustomNotice('Missing Hub Details', 'Please enter both the Master Hub/Carrier Name and Claims Address.');
           return;
         }
 
@@ -3624,7 +4301,8 @@
           carrier: name,
           network,
           networkStatus: network,
-          matchKeys: [name.toLowerCase()],
+          feeSchedule,
+          matchKeys,
           address,
           phone,
           payorId,
@@ -3633,14 +4311,16 @@
 
         await savePayerDirectory(list);
         if (dirAddPayerFormPanel) dirAddPayerFormPanel.style.display = 'none';
-        if (dirToggleAddBtn) dirToggleAddBtn.textContent = '+ Add Sub-Portal / Carrier';
+        if (dirToggleAddBtn) dirToggleAddBtn.textContent = '+ Add Master Hub / Portal';
         if (dirNewCarrierName) dirNewCarrierName.value = '';
         if (dirNewPayorId) dirNewPayorId.value = '';
         if (dirNewAddress) dirNewAddress.value = '';
         if (dirNewPhone) dirNewPhone.value = '';
+        if (dirNewFeeSchedule) dirNewFeeSchedule.value = '';
+        if (dirNewMatchKeys) dirNewMatchKeys.value = '';
 
         renderDedicatedPayerDirectory();
-        displayToast(`Added ${name} under ${parentCarrier} for this clinic!`);
+        displayToast(`Added Master Hub ${name} under ${parentCarrier}!`);
       });
     }
 
@@ -3723,6 +4403,7 @@
             carrier: name,
             network,
             networkStatus: network,
+            feeSchedule: name + ' PPO',
             matchKeys: [name.toLowerCase()],
             address,
             phone,
@@ -3736,7 +4417,7 @@
         dirBulkImportPanel.style.display = 'none';
         dirBulkImportTextarea.value = '';
         renderDedicatedPayerDirectory();
-        displayToast(`Imported ${importedCount} carrier portals into active clinic directory!`);
+        displayToast(`Imported ${importedCount} carrier hubs into active clinic directory!`);
       });
     }
 
@@ -3744,7 +4425,7 @@
       dirResetDefaultsBtn.addEventListener('click', async () => {
         const ok = await openCustomConfirm(
           'Reset Insurance Directory',
-          'Reset this clinic\'s insurance directory to default sub-portals (DD CA, DD FEP, DD PPO, MetLife, Cigna, etc.)?',
+          'Reset this clinic\'s insurance directory to default Master Hubs (DD Ins Multi-State Hub, DD FEP, DD PPO, MetLife, Cigna, etc.)?',
           'Reset Directory',
           'Cancel'
         );
@@ -3836,10 +4517,15 @@
       const isClinicAdmin = user.role === 'clinic_admin';
       const canManageClinic = isOwner || isClinicAdmin;
 
-      // Website Owner ONLY can access AI Settings (Website-level settings)
+      // Website Owner & Clinic Administrator can access Per-Clinic CDT Checklist & AI Prompt Settings
       if (openSettingsBtn) {
-        openSettingsBtn.style.display = isOwner ? 'inline-flex' : 'none';
+        openSettingsBtn.style.display = canManageClinic ? 'inline-flex' : 'none';
       }
+
+      // Restrict Add / Bulk Import / Reset in Insurance Hub Directory to Clinic Admin & Website Owner
+      if (dirToggleAddBtn) dirToggleAddBtn.style.display = canManageClinic ? 'inline-flex' : 'none';
+      if (dirToggleBulkImportBtn) dirToggleBulkImportBtn.style.display = canManageClinic ? 'inline-flex' : 'none';
+      if (dirResetDefaultsBtn) dirResetDefaultsBtn.style.display = canManageClinic ? 'inline-flex' : 'none';
 
       // Website Owner & Clinic Administrator can open Clinic/User Management Modal
       if (openClinicManagerBtn) {
@@ -3907,13 +4593,11 @@
         } catch (e) {}
         applyUserHeaderUI(user);
 
-        // Load isolated clinic data
+        // Load isolated clinic data & per-clinic CDT checklist/prompt
         await loadClinicPayersFromServer();
+        await loadPromptSettings();
         await syncHistoryFromBackend();
         renderHistoryList();
-        if (user.role === 'owner') {
-          loadPromptSettings();
-        }
         if (user.role === 'owner' || user.role === 'clinic_admin') {
           await loadOwnerClinicsAndUsers();
         }
@@ -4085,8 +4769,9 @@
           if (activeWorkspaceLabel) activeWorkspaceLabel.textContent = data.practice_name;
           if (authSessionPracticeName) authSessionPracticeName.textContent = `Active Workspace: ${data.practice_name}`;
 
-          // Reload isolated clinic data
+          // Reload isolated clinic data & per-clinic CDT checklist/prompt
           await loadClinicPayersFromServer();
+          await loadPromptSettings();
           await syncHistoryFromBackend();
           renderHistoryList();
           renderWorkspaceSwitcherDropdown();
@@ -4756,6 +5441,8 @@
               patientName: row.patient_name || 'Patient',
               carrier: row.carrier || 'Dental Insurance',
               networkStatus: row.network_status || 'In-Network',
+              verifiedBy: row.verified_by || 'Clinic Staff',
+              readinessStatus: row.readiness_status || 'Complete / Ready for Appointment',
               codesCount: 30,
               data: null,
             }));
@@ -4786,6 +5473,7 @@
         const pName = (d.patient_name && d.patient_name.trim() !== '') ? d.patient_name.trim() : 'Patient (Unspecified)';
         if (pName === 'Katherine Birdwell' || auditData.is_sample) return;
         const carrier = d.carrier || 'Dental Insurance';
+        const auditMeta = auditData.audit_meta || {};
 
         const historyRecord = {
           id: auditData.verification_id || ('hist_' + Date.now() + '_' + Math.random().toString(36).substr(2, 5)),
@@ -4795,6 +5483,8 @@
           patientName: pName,
           carrier: carrier,
           networkStatus: d.network_status || 'In-Network',
+          verifiedBy: auditMeta.verified_by_name || currentUser?.full_name || 'Clinic Staff',
+          readinessStatus: auditMeta.readiness_status || 'Complete / Ready for Appointment',
           codesCount: (auditData.procedure_codes || []).length,
           data: auditData,
         };
@@ -4863,6 +5553,8 @@
           (item.carrier && item.carrier.toLowerCase().includes(searchTerm)) ||
           (item.practiceName && item.practiceName.toLowerCase().includes(searchTerm)) ||
           (item.networkStatus && item.networkStatus.toLowerCase().includes(searchTerm)) ||
+          (item.verifiedBy && item.verifiedBy.toLowerCase().includes(searchTerm)) ||
+          (item.readinessStatus && item.readinessStatus.toLowerCase().includes(searchTerm)) ||
           (item.displayDate && item.displayDate.toLowerCase().includes(searchTerm))
         );
       }
@@ -4889,6 +5581,18 @@
       list.forEach((item) => {
         const card = document.createElement('div');
         card.className = 'history-card-item';
+        const statusStr = String(item.readinessStatus || 'Complete / Ready for Appointment');
+        const statusLow = statusStr.toLowerCase();
+        let statusStyle = 'background: rgba(16, 185, 129, 0.14); color: #34d399; border: 1px solid rgba(16, 185, 129, 0.35);';
+        let statusIcon = '✅';
+        if (statusLow.includes('pending')) {
+          statusStyle = 'background: rgba(245, 158, 11, 0.14); color: #fbbf24; border: 1px solid rgba(245, 158, 11, 0.35);';
+          statusIcon = '⏳';
+        } else if (statusLow.includes('termed') || statusLow.includes('inactive')) {
+          statusStyle = 'background: rgba(244, 63, 94, 0.14); color: #fda4af; border: 1px solid rgba(244, 63, 94, 0.35);';
+          statusIcon = '❌';
+        }
+
         card.innerHTML = `
           <div class="history-card-left">
             <div class="history-patient-row" style="flex-wrap: wrap;">
@@ -4898,9 +5602,14 @@
               </span>
               <span class="history-patient-title">${escapeHtml(item.carrier)}</span>
               ${item.practiceName ? `<span class="user-role-badge staff" style="font-size: 0.62rem;">🏥 ${escapeHtml(item.practiceName)}</span>` : ''}
+              <span style="padding: 0.15rem 0.5rem; border-radius: 999px; font-size: 0.65rem; font-weight: 700; ${statusStyle}">
+                ${statusIcon} ${escapeHtml(statusStr)}
+              </span>
             </div>
-            <div class="history-meta-info">
+            <div class="history-meta-info" style="flex-wrap: wrap;">
               <span>Verified: ${escapeHtml(item.displayDate)}</span>
+              <span>•</span>
+              <span style="color: #93c5fd;">👤 By: ${escapeHtml(item.verifiedBy || 'Clinic Staff')}</span>
               <span>•</span>
               <span style="color: ${(item.networkStatus || '').toLowerCase().includes('out') ? '#fda4af' : '#38bdf8'};">${escapeHtml(item.networkStatus || 'In-Network')}</span>
               <span>•</span>
