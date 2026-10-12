@@ -24,22 +24,15 @@ NEXT UP: BACKGROUND HEADLESS BROWSER VERIFICATION (PLAYWRIGHT AUTOMATION)
 
 2. Backend Playwright Automation Runner:
    - Headless browser runner hosted on VPS (`automation/payers/`).
-   - Loads encrypted clinic credentials for selected portal from PostgreSQL vault.
-   - Navigates to portal login URL and authenticates.
+   - Navigates to portal login URL and authenticates using saved vault credentials.
    - Enters Patient Subscriber ID and DOB into portal search form.
-   - Captures benefits summary (PDF download or HTML DOM snapshot).
-   - Hands document buffer directly into Gemini AI RCM audit pipeline.
+   - Captures benefits summary (PDF download or HTML DOM snapshot) and pipes it into the existing AI analysis pipeline.
 
 3. Human-in-the-Loop 2FA / OTP Relay Modal:
    - If portal prompts 2FA SMS or email code on login:
      * Runner pauses and triggers live OTP prompt in DentVerify frontend:
        "2FA Code Required: Enter code sent to clinic [phone/email]: [ _____ ] [Verify]"
      * Staff enters code -> runner resumes session and completes patient eligibility retrieval.
-
-4. Output Delivery:
-   - AI outputs formatted CDT codes table, shared frequencies, and deductible math.
-   - Automatically saves to persistent PostgreSQL history under active clinic workspace.
-   - Automatically generates instant Excel breakdown and PMS note.
 
 ================================================================================
 END OF ACTIVE ROADMAP
