@@ -1106,16 +1106,17 @@ app.post('/api/auth/login', loginLimiter, async (req, res) => {
       return res.status(400).json({ error: 'Email and password are required.' });
     }
 
+    const normalizedEmail = email.trim().toLowerCase().replace(/@+/g, '@');
     const userRes = await db.query(
       `SELECT u.id, u.email, u.password_hash, u.full_name, u.role, u.practice_id, u.is_active, p.name as practice_name 
        FROM dentverify.users u 
        LEFT JOIN dentverify.practices p ON u.practice_id = p.id 
        WHERE LOWER(u.email) = LOWER($1)`,
-      [email.trim()]
+      [normalizedEmail]
     );
 
     if (userRes.rows.length === 0) {
-      await recordAuditLog(req, 'LOGIN_FAILED', null, { email: email.trim(), reason: 'User not found' });
+      await recordAuditLog(req, 'LOGIN_FAILED', null, { email: normalizedEmail, reason: 'User not found' });
       return res.status(401).json({ error: 'Invalid email or password.' });
     }
 
@@ -1124,7 +1125,10 @@ app.post('/api/auth/login', loginLimiter, async (req, res) => {
       return res.status(403).json({ error: 'This clinic user account is deactivated.' });
     }
 
-    const isMatch = await bcrypt.compare(password, user.password_hash);
+    let isMatch = await bcrypt.compare(password, user.password_hash);
+    if (!isMatch && password.trim() !== password) {
+      isMatch = await bcrypt.compare(password.trim(), user.password_hash);
+    }
     if (!isMatch) {
       await recordAuditLog(req, 'LOGIN_FAILED', user.id, { reason: 'Password mismatch' });
       return res.status(401).json({ error: 'Invalid email or password.' });
@@ -1455,13 +1459,14 @@ app.post('/api/users', async (req, res) => {
     const salt = bcrypt.genSaltSync(12);
     const hash = bcrypt.hashSync(password, salt);
 
+    const cleanCreateEmail = email.trim().toLowerCase().replace(/@+/g, '@');
     const insertRes = await db.query(`
       INSERT INTO dentverify.users (practice_id, email, password_hash, full_name, role)
       VALUES ($1, $2, $3, $4, $5)
       RETURNING id, email, full_name, role, practice_id;
-    `, [assignedPracticeId, email.trim().toLowerCase(), hash, full_name.trim(), targetRole]);
+    `, [assignedPracticeId, cleanCreateEmail, hash, full_name.trim(), targetRole]);
 
-    await recordAuditLog(req, 'CREATE_USER', insertRes.rows[0].id, { email: email.trim(), role: targetRole, practice_id: assignedPracticeId });
+    await recordAuditLog(req, 'CREATE_USER', insertRes.rows[0].id, { email: cleanCreateEmail, role: targetRole, practice_id: assignedPracticeId });
     res.json({ success: true, user: insertRes.rows[0] });
   } catch (err) {
     if (err.code === '23505') {
@@ -1500,7 +1505,8 @@ app.put('/api/users/:id', async (req, res) => {
       fields.push(`full_name = $${params.length}`);
     }
     if (email && email.trim()) {
-      params.push(email.trim().toLowerCase());
+      const cleanEmail = email.trim().toLowerCase().replace(/@+/g, '@');
+      params.push(cleanEmail);
       fields.push(`email = $${params.length}`);
     }
     if (req.user.role === 'owner' && practice_id !== undefined) {
@@ -1518,7 +1524,7 @@ app.put('/api/users/:id', async (req, res) => {
     }
     if (password && password.trim()) {
       const salt = bcrypt.genSaltSync(12);
-      const hash = bcrypt.hashSync(password, salt);
+      const hash = bcrypt.hashSync(password.trim(), salt);
       params.push(hash);
       fields.push(`password_hash = $${params.length}`);
     }
@@ -2117,7 +2123,8 @@ app.use((err, req, res, next) => {
 });
 
 // Start Express server
-app.listen(PORT, process.env.HOST || '127.0.0.1', () => {
+app.listen(PORT, process.env.HOST || '127.0.0.1', async () => {
+  await db.initDb();
   console.log(`====================================================`);
   console.log(`Dental Insurance Verification Web App running!`);
   console.log(`Local URL: http://localhost:${PORT}`);

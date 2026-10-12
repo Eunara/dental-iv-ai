@@ -4070,22 +4070,37 @@
             </div>
           `;
 
-          // Save Name & Email button
+          // Save Name & Email (and pending password if filled) button
           const saveUserBtn = card.querySelector('.btn-save-user-info');
           const nameInput = card.querySelector('.user-edit-name');
           const emailInput = card.querySelector('.user-edit-email');
+          const pwBtn = card.querySelector('.btn-reset-user-pw');
+          const pwPanel = card.querySelector('.user-inline-pw-panel');
+          const pwInput = card.querySelector('.user-new-pw-input');
+          const pwConfirmBtn = card.querySelector('.btn-confirm-new-pw');
+          const pwCancelBtn = card.querySelector('.btn-cancel-new-pw');
+
           if (saveUserBtn && nameInput && emailInput) {
             saveUserBtn.addEventListener('click', async () => {
               const newFullName = nameInput.value.trim();
-              const newEmail = emailInput.value.trim().toLowerCase();
+              const newEmail = emailInput.value.trim().toLowerCase().replace(/@+/g, '@');
+              emailInput.value = newEmail;
               if (!newFullName || !newEmail) {
                 await openCustomNotice('Validation Notice', 'Name and Email cannot be empty.');
                 return;
               }
+              const payload = { full_name: newFullName, email: newEmail };
+              if (pwInput && pwInput.value.trim()) {
+                if (pwInput.value.trim().length < 8) {
+                  await openCustomNotice('Password Too Short', 'Password must be at least 8 characters.');
+                  return;
+                }
+                payload.password = pwInput.value.trim();
+              }
               const res = await fetch(`/api/users/${u.id}`, {
                 method: 'PUT',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ full_name: newFullName, email: newEmail })
+                body: JSON.stringify(payload)
               });
               const data = await res.json();
               if (res.ok && data.success) {
@@ -4096,7 +4111,7 @@
                   try { localStorage.setItem(CACHED_USER_KEY, JSON.stringify(currentUser)); } catch (e) {}
                 }
                 await loadOwnerClinicsAndUsers();
-                displayToast(`Saved changes for ${newEmail}!`);
+                displayToast(payload.password ? `Saved profile & password for ${newEmail}!` : `Saved changes for ${newEmail}!`);
               } else {
                 await openCustomNotice('Update Failed', data.error || 'Failed to update user.');
               }
@@ -4138,12 +4153,6 @@
           }
 
           // Inline Reset Password Panel
-          const pwBtn = card.querySelector('.btn-reset-user-pw');
-          const pwPanel = card.querySelector('.user-inline-pw-panel');
-          const pwInput = card.querySelector('.user-new-pw-input');
-          const pwConfirmBtn = card.querySelector('.btn-confirm-new-pw');
-          const pwCancelBtn = card.querySelector('.btn-cancel-new-pw');
-
           if (pwBtn && pwPanel) {
             pwBtn.addEventListener('click', () => {
               const isHidden = pwPanel.style.display === 'none';
@@ -4163,8 +4172,8 @@
           }
 
           if (pwConfirmBtn && pwInput && pwPanel) {
-            pwConfirmBtn.addEventListener('click', async () => {
-              const newPassword = pwInput.value;
+            const submitNewPassword = async () => {
+              const newPassword = pwInput.value.trim();
               if (!newPassword || newPassword.length < 8) {
                 await openCustomNotice('Password Too Short', 'Password must be at least 8 characters.');
                 return;
@@ -4181,6 +4190,13 @@
               } else {
                 const errData = await res.json().catch(() => ({}));
                 await openCustomNotice('Password Update Failed', errData.error || 'Could not update password.');
+              }
+            };
+            pwConfirmBtn.addEventListener('click', submitNewPassword);
+            pwInput.addEventListener('keydown', (e) => {
+              if (e.key === 'Enter') {
+                e.preventDefault();
+                submitNewPassword();
               }
             });
           }

@@ -277,14 +277,22 @@ async function initDb() {
     const bcrypt = require('bcryptjs');
     const salt = bcrypt.genSaltSync(12);
 
+    // Fix any accidental double-@ typo in user emails (e.g. admin@@dentverify.com -> admin@dentverify.com)
+    await client.query(`UPDATE dentverify.users SET email = REGEXP_REPLACE(email, '@+', '@', 'g') WHERE email LIKE '%@@%';`);
+
     // 1. Website Owner Account (NOT assigned to any clinic — manages all website settings, clinics & users)
-    const ownerHash = bcrypt.hashSync('ClinicAdmin2026!', salt);
-    await client.query(
-      `INSERT INTO dentverify.users (practice_id, email, password_hash, full_name, role)
-       VALUES (NULL, 'admin@dentverify.com', $1, 'Website Owner (Master Admin)', 'owner')
-       ON CONFLICT (email) DO UPDATE SET role = 'owner', practice_id = NULL;`,
-      [ownerHash]
-    );
+    const existingOwner = await client.query(`SELECT id FROM dentverify.users WHERE role = 'owner' LIMIT 1;`);
+    if (existingOwner.rows.length === 0) {
+      const ownerHash = bcrypt.hashSync('ClinicAdmin2026!', salt);
+      await client.query(
+        `INSERT INTO dentverify.users (practice_id, email, password_hash, full_name, role)
+         VALUES (NULL, 'admin@dentverify.com', $1, 'Website Owner (Master Admin)', 'owner')
+         ON CONFLICT (email) DO UPDATE SET role = 'owner', practice_id = NULL;`,
+        [ownerHash]
+      );
+    } else {
+      await client.query(`UPDATE dentverify.users SET practice_id = NULL WHERE role = 'owner';`);
+    }
 
     // 2. Clinic 1: Administrator + User 1 + User 2
     const clinic1Hash = bcrypt.hashSync('ClinicOne2026!', salt);
