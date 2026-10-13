@@ -3799,7 +3799,7 @@
                 <button type="button" class="btn-action-ghost cdt-move-up" data-code="${escapeHtml(code)}" ${enabledIdx === 0 ? 'disabled' : ''} style="padding: 3px 9px; font-size: 0.75rem; font-weight: 700;" title="Move Up in Sequence">↑</button>
                 <button type="button" class="btn-action-ghost cdt-move-down" data-code="${escapeHtml(code)}" ${enabledIdx === activeEnabledCdtCodes.length - 1 ? 'disabled' : ''} style="padding: 3px 9px; font-size: 0.75rem; font-weight: 700;" title="Move Down in Sequence">↓</button>
               ` : ''}
-              <span style="font-size: 0.66rem; color: #10b981; background: rgba(16, 185, 129, 0.12); border: 1px solid rgba(16, 185, 129, 0.3); padding: 3px 8px; border-radius: 999px; font-weight: 700; white-space: nowrap;">🔒 Locked</span>
+              <span style="font-size: 0.66rem; color: #10b981; background: rgba(16, 185, 129, 0.12); border: 1px solid rgba(16, 185, 129, 0.3); padding: 3px 8px; border-radius: 999px; font-weight: 700; white-space: nowrap;">Locked</span>
             </div>
           </div>
         `;
@@ -4066,7 +4066,7 @@
             <div style="display: flex; gap: 0.4rem; align-items: center;">
               ${canManageDirectory ? `
                 <button type="button" class="btn-action-ghost btn-edit-payer" style="padding: 0.28rem 0.55rem; font-size: 0.7rem;" title="Edit Master Hub details & wired states">
-                  ✏️ Edit Hub
+                  Edit Hub
                 </button>
               ` : ''}
               <button type="button" class="btn-apply-payer" data-id="${p.id || ''}" title="Apply this Master Hub's locked Address, Phone #, Payor ID, Network Status, and Fee Schedule to the active breakdown">
@@ -4112,7 +4112,7 @@
                 <label style="font-size: 0.66rem; color: #94a3b8; display: block; margin-bottom: 2px;">Wired States / Plan Aliases (comma-separated)</label>
                 <input type="text" class="table-search-input edit-p-matchkeys" value="${escapeHtml(matchKeysStr)}" style="width: 100%; font-size: 0.74rem; padding: 0.3rem 0.5rem;">
               </div>
-              <button type="button" class="btn-verify-primary btn-save-payer-edit" style="padding: 0.35rem 0.85rem; font-size: 0.72rem;">💾 Save Hub</button>
+              <button type="button" class="btn-verify-primary btn-save-payer-edit" style="padding: 0.35rem 0.85rem; font-size: 0.72rem;">Save Hub</button>
             </div>
           </div>
           ` : ''}
@@ -4125,7 +4125,7 @@
             e.stopPropagation();
             const isHidden = editPanel.style.display === 'none';
             editPanel.style.display = isHidden ? 'block' : 'none';
-            editBtn.textContent = isHidden ? '✕ Close' : '✏️ Edit Hub';
+            editBtn.textContent = isHidden ? '✕ Close' : 'Edit Hub';
           });
         }
 
@@ -4575,7 +4575,7 @@
 
       if (activeWorkspaceLabel) {
         activeWorkspaceLabel.textContent = showOwnerMasterScreen
-          ? '👑 Website Owner Settings'
+          ? 'Website Owner Settings'
           : (user.practice_name || 'Clinic Workspace');
       }
 
@@ -4788,7 +4788,7 @@
       masterBtn.className = `workspace-item-btn ${isMaster ? 'active' : ''}`;
       masterBtn.innerHTML = `
         <div style="display: flex; flex-direction: column; gap: 2px;">
-          <span>👑 Website Owner Settings Dashboard</span>
+          <span>Website Owner Settings Dashboard</span>
           <span style="font-size: 0.65rem; color: #fbbf24; font-weight: 400;">Manage All Clinics, Users, AI & Payers</span>
         </div>
         ${isMaster ? '<span style="color: #34d399; font-weight: 800;">✓</span>' : ''}
@@ -4806,7 +4806,7 @@
         btn.className = `workspace-item-btn ${isCurrent ? 'active' : ''}`;
         btn.innerHTML = `
           <div style="display: flex; flex-direction: column; gap: 2px;">
-            <span>👁️ Preview: ${escapeHtml(prac.name)}</span>
+            <span>Preview: ${escapeHtml(prac.name)}</span>
             <span style="font-size: 0.65rem; color: #94a3b8; font-weight: 400;">${prac.verification_count || 0} breakdowns • ${prac.user_count || 0} clinic accounts</span>
           </div>
           ${isCurrent ? '<span style="color: #34d399; font-weight: 800;">✓</span>' : ''}
@@ -4944,7 +4944,7 @@
         ownerDashNewUserPracticeSelect.innerHTML = practiceOptsHtml;
       }
 
-      // Reusable Helper: Create a Clean Read-Only User Row with an On-Demand "✏️ Edit" Drawer
+      // Reusable Helper: Create a Clean Read-Only User Row with an On-Demand Edit Drawer
       const createCleanUserRowElement = (u) => {
         const isOwnerAccount = u.role === 'owner';
         const isClinicAdminAccount = u.role === 'clinic_admin';
@@ -4989,7 +4989,7 @@
             <div style="display: flex; align-items: center; gap: 0.45rem; flex-wrap: wrap;">
               <span class="user-role-badge ${badgeClass}" style="font-size: 0.64rem; padding: 0.18rem 0.5rem;">${badgeLabel}</span>
               <button type="button" class="btn-action-ghost btn-toggle-user-edit" style="padding: 0.24rem 0.58rem; font-size: 0.69rem;" title="Edit account details, role, clinic, or password">
-                ✏️ Edit
+                Edit
               </button>
               ${!isOwnerAccount && u.id !== currentUser?.id ? `
                 <button type="button" class="del-payer-btn btn-del-user" title="Delete account" style="background: none; border: none; color: #ef4444; cursor: pointer; padding: 2px 5px; font-size: 0.78rem;">✕</button>
@@ -4997,9 +4997,9 @@
             </div>
           </div>
 
-          <!-- Hidden On-Demand Edit Drawer (Opens only when "✏️ Edit" is clicked) -->
+          <!-- Hidden On-Demand Edit Drawer (Opens only when "Edit" is clicked) -->
           <div class="user-edit-drawer" style="display: none; margin-top: 0.65rem; padding-top: 0.65rem; border-top: 1px dashed rgba(56, 189, 248, 0.3);">
-            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(155px, 1fr)); gap: 0.5rem; margin-bottom: 0.55rem;">
+            <div style="grid-template-columns: repeat(auto-fit, minmax(155px, 1fr)); gap: 0.5rem; margin-bottom: 0.55rem; display: grid;">
               <div>
                 <label style="display: block; font-size: 0.65rem; color: #94a3b8; margin-bottom: 0.18rem;">Full Name</label>
                 <input type="text" class="table-search-input user-edit-name" value="${escapeHtml(u.full_name)}" style="padding: 0.3rem 0.55rem; font-size: 0.75rem; color: #fff;">
@@ -5032,7 +5032,7 @@
             </div>
             <div style="display: flex; justify-content: flex-end; gap: 0.45rem;">
               <button type="button" class="btn-restore-defaults btn-cancel-user-edit" style="padding: 0.25rem 0.65rem; font-size: 0.7rem;">Cancel</button>
-              <button type="button" class="btn-verify-primary btn-save-user-info" style="padding: 0.25rem 0.75rem; font-size: 0.7rem;">💾 Save Changes</button>
+              <button type="button" class="btn-verify-primary btn-save-user-info" style="padding: 0.25rem 0.75rem; font-size: 0.7rem;">Save Changes</button>
             </div>
           </div>
         `;
@@ -5052,7 +5052,7 @@
           toggleEditBtn.addEventListener('click', () => {
             const isHidden = editDrawer.style.display === 'none';
             editDrawer.style.display = isHidden ? 'block' : 'none';
-            toggleEditBtn.textContent = isHidden ? '✕ Close' : '✏️ Edit';
+            toggleEditBtn.textContent = isHidden ? '✕ Close' : 'Edit';
             rowWrap.style.borderColor = isHidden ? 'rgba(56, 189, 248, 0.45)' : 'rgba(148, 163, 184, 0.14)';
           });
         }
@@ -5060,7 +5060,7 @@
         if (cancelEditBtn && editDrawer && toggleEditBtn) {
           cancelEditBtn.addEventListener('click', () => {
             editDrawer.style.display = 'none';
-            toggleEditBtn.textContent = '✏️ Edit';
+            toggleEditBtn.textContent = 'Edit';
             rowWrap.style.borderColor = 'rgba(148, 163, 184, 0.14)';
             if (pwInput) pwInput.value = '';
           });
@@ -5160,14 +5160,14 @@
             <!-- Clinic Card Header: Tier 1 (Title + Primary Actions) -->
             <div style="display: flex; justify-content: space-between; align-items: center; gap: 0.85rem; flex-wrap: wrap;">
               <div style="display: flex; align-items: center; gap: 0.55rem; flex-wrap: wrap;">
-                <span style="font-size: 1.08rem; font-weight: 800; color: #fff; letter-spacing: -0.01em;">🏥 ${escapeHtml(prac.name)}</span>
-                <button type="button" class="btn-action-ghost btn-toggle-clinic-rename" style="padding: 0.2rem 0.5rem; font-size: 0.68rem;" title="Rename this clinic">✏️ Rename</button>
+                <span style="font-size: 1.08rem; font-weight: 800; color: #fff; letter-spacing: -0.01em;">${escapeHtml(prac.name)}</span>
+                <button type="button" class="btn-action-ghost btn-toggle-clinic-rename" style="padding: 0.2rem 0.5rem; font-size: 0.68rem;" title="Rename this clinic">Rename</button>
                 ${isCurrent ? '<span class="user-role-badge staff" style="font-size: 0.64rem; padding: 0.16rem 0.5rem;">Active Context</span>' : ''}
               </div>
 
               <div style="display: flex; gap: 0.45rem; align-items: center; flex-wrap: wrap;">
                 <button type="button" class="btn-action-ghost btn-add-user-here" style="padding: 0.32rem 0.65rem; font-size: 0.72rem; border-color: rgba(16, 185, 129, 0.45); color: #34d399; font-weight: 700;" title="Add a user or admin to ${escapeHtml(prac.name)}">+ User</button>
-                <button type="button" class="btn-verify-primary btn-switch-here" style="padding: 0.32rem 0.75rem; font-size: 0.72rem; font-weight: 700;" title="Preview ${escapeHtml(prac.name)}'s upload workspace">👁️ Preview</button>
+                <button type="button" class="btn-verify-primary btn-switch-here" style="padding: 0.32rem 0.75rem; font-size: 0.72rem; font-weight: 700;" title="Preview ${escapeHtml(prac.name)}'s upload workspace">Preview</button>
                 <button type="button" class="del-payer-btn btn-del-clinic" title="Delete clinic workspace" style="background: none; border: none; color: #ef4444; cursor: pointer; padding: 4px 6px; font-size: 0.85rem;">✕</button>
               </div>
             </div>
@@ -5175,21 +5175,21 @@
             <!-- Clinic Card Header: Tier 2 (Stats Pill + Clinic Settings Links) -->
             <div style="display: flex; justify-content: space-between; align-items: center; gap: 0.75rem; flex-wrap: wrap; padding: 0.55rem 0.75rem; background: rgba(15, 23, 42, 0.65); border: 1px solid rgba(148, 163, 184, 0.12); border-radius: 8px;">
               <div style="display: flex; align-items: center; gap: 0.65rem; font-size: 0.73rem; color: #94a3b8;">
-                <span>📋 <strong style="color: #f8fafc;">${prac.verification_count || 0}</strong> Breakdowns</span>
+                <span><strong style="color: #f8fafc;">${prac.verification_count || 0}</strong> Breakdowns</span>
                 <span style="opacity: 0.35;">•</span>
-                <span>👥 <strong style="color: #f8fafc;">${clinicMembers.length}</strong> Accounts</span>
+                <span><strong style="color: #f8fafc;">${clinicMembers.length}</strong> Accounts</span>
               </div>
 
               <div style="display: flex; gap: 0.45rem; align-items: center; flex-wrap: wrap;">
-                <button type="button" class="btn-action-ghost btn-edit-clinic-payers" style="padding: 0.24rem 0.6rem; font-size: 0.7rem; border-color: rgba(56, 189, 248, 0.35); color: #38bdf8;" title="Edit ${escapeHtml(prac.name)}'s Insurance Hub Directory">🏥 Payer Hubs</button>
-                <button type="button" class="btn-action-ghost btn-edit-clinic-ai" style="padding: 0.24rem 0.6rem; font-size: 0.7rem; border-color: rgba(56, 189, 248, 0.35); color: #38bdf8;" title="Edit ${escapeHtml(prac.name)}'s CDT Checklist & AI Prompt">⚙️ CDT & AI</button>
+                <button type="button" class="btn-action-ghost btn-edit-clinic-payers" style="padding: 0.24rem 0.6rem; font-size: 0.7rem; border-color: rgba(56, 189, 248, 0.35); color: #38bdf8;" title="Edit ${escapeHtml(prac.name)}'s Insurance Hub Directory">Payer Hubs</button>
+                <button type="button" class="btn-action-ghost btn-edit-clinic-ai" style="padding: 0.24rem 0.6rem; font-size: 0.7rem; border-color: rgba(56, 189, 248, 0.35); color: #38bdf8;" title="Edit ${escapeHtml(prac.name)}'s CDT Checklist & AI Prompt">CDT & AI</button>
               </div>
             </div>
 
             <!-- Hidden Clinic Rename Drawer -->
             <div class="clinic-rename-drawer" style="display: none; align-items: center; gap: 0.45rem; background: rgba(15, 23, 42, 0.95); padding: 0.6rem 0.75rem; border-radius: 8px; border: 1px dashed rgba(56, 189, 248, 0.45);">
               <input type="text" class="table-search-input clinic-rename-input" value="${escapeHtml(prac.name)}" style="flex: 1; padding: 0.32rem 0.65rem; font-size: 0.8rem; color: #fff; font-weight: 700;">
-              <button type="button" class="btn-verify-primary btn-save-clinic-name" style="padding: 0.32rem 0.75rem; font-size: 0.72rem;">💾 Save Name</button>
+              <button type="button" class="btn-verify-primary btn-save-clinic-name" style="padding: 0.32rem 0.75rem; font-size: 0.72rem;">Save Name</button>
               <button type="button" class="btn-restore-defaults btn-cancel-clinic-rename" style="padding: 0.32rem 0.65rem; font-size: 0.72rem;">Cancel</button>
             </div>
 
@@ -5333,15 +5333,15 @@
                 <input type="text" class="table-search-input clinic-rename-input" value="${escapeHtml(prac.name)}" style="font-weight: 700; color: #fff; max-width: 260px; padding: 0.28rem 0.55rem; font-size: 0.8rem;">
               </div>
               <div class="clinic-mgmt-stats">
-                <span>📋 ${prac.verification_count || 0} Patient Breakdowns</span>
+                <span>${prac.verification_count || 0} Patient Breakdowns</span>
                 <span>•</span>
-                <span>👥 ${prac.user_count || 0} Clinic Accounts</span>
+                <span>${prac.user_count || 0} Clinic Accounts</span>
               </div>
             </div>
             <div style="display: flex; gap: 0.35rem; align-items: center; flex-wrap: wrap;">
-              <button type="button" class="btn-action-ghost btn-save-clinic-name" style="padding: 0.3rem 0.55rem; font-size: 0.69rem;">💾 Save Name</button>
-              <button type="button" class="btn-action-ghost btn-edit-clinic-payers" style="padding: 0.3rem 0.55rem; font-size: 0.69rem;">🏥 Payer Hubs</button>
-              <button type="button" class="btn-action-ghost btn-edit-clinic-ai" style="padding: 0.3rem 0.55rem; font-size: 0.69rem;">⚙️ CDT & AI</button>
+              <button type="button" class="btn-action-ghost btn-save-clinic-name" style="padding: 0.3rem 0.55rem; font-size: 0.69rem;">Save Name</button>
+              <button type="button" class="btn-action-ghost btn-edit-clinic-payers" style="padding: 0.3rem 0.55rem; font-size: 0.69rem;">Payer Hubs</button>
+              <button type="button" class="btn-action-ghost btn-edit-clinic-ai" style="padding: 0.3rem 0.55rem; font-size: 0.69rem;">CDT & AI</button>
             </div>
           `;
           const renameInput = card.querySelector('.clinic-rename-input');
@@ -5892,7 +5892,7 @@
                 ${escapeHtml(item.patientName)}
               </span>
               <span class="history-patient-title">${escapeHtml(item.carrier)}</span>
-              ${item.practiceName ? `<span class="user-role-badge staff" style="font-size: 0.62rem;">🏥 ${escapeHtml(item.practiceName)}</span>` : ''}
+              ${item.practiceName ? `<span class="user-role-badge staff" style="font-size: 0.62rem;">${escapeHtml(item.practiceName)}</span>` : ''}
               <span style="padding: 0.15rem 0.5rem; border-radius: 999px; font-size: 0.65rem; font-weight: 700; ${statusStyle}">
                 ${statusIcon} ${escapeHtml(statusStr)}
               </span>
@@ -5900,7 +5900,7 @@
             <div class="history-meta-info" style="flex-wrap: wrap;">
               <span>Verified: ${escapeHtml(item.displayDate)}</span>
               <span>•</span>
-              <span style="color: #93c5fd;">👤 By: ${escapeHtml(item.verifiedBy || 'Clinic Staff')}</span>
+              <span style="color: #93c5fd;">By: ${escapeHtml(item.verifiedBy || 'Clinic Staff')}</span>
               <span>•</span>
               <span style="color: ${(item.networkStatus || '').toLowerCase().includes('out') ? '#fda4af' : '#38bdf8'};">${escapeHtml(item.networkStatus || 'In-Network')}</span>
               <span>•</span>
