@@ -3787,19 +3787,19 @@
         const seqLabel = isChecked ? `#${enabledIdx + 1}` : 'Off';
 
         return `
-          <div class="cdt-checklist-row" data-code="${escapeHtml(code)}" style="display: flex; align-items: center; justify-content: space-between; gap: 0.65rem; padding: 0.44rem 0.65rem; border-bottom: 1px solid rgba(148, 163, 184, 0.12); font-size: 0.78rem; background: ${isChecked ? 'rgba(16, 185, 129, 0.05)' : 'transparent'};">
-            <div style="display: flex; align-items: center; gap: 0.55rem; flex: 1; min-width: 0;">
-              <input type="checkbox" class="cdt-check-toggle" data-code="${escapeHtml(code)}" ${isChecked ? 'checked' : ''} style="width: 15px; height: 15px; accent-color: #10b981; cursor: pointer;" title="Enable/Disable this CDT code for this clinic">
-              <span style="min-width: 30px; text-align: center; font-family: var(--font-mono); font-size: 0.7rem; font-weight: 800; color: ${isChecked ? '#34d399' : '#64748b'};">${seqLabel}</span>
-              <span class="cdt-badge" style="min-width: 105px; text-align: center;">${escapeHtml(code)}</span>
-              <span style="color: ${isChecked ? '#f8fafc' : '#94a3b8'}; font-weight: 600; overflow: hidden; text-overflow: ellipsis;">${escapeHtml(meaning)}</span>
+          <div class="cdt-checklist-row" data-code="${escapeHtml(code)}" style="display: flex; align-items: center; justify-content: space-between; gap: 0.85rem; padding: 0.55rem 0.85rem; border-bottom: 1px solid rgba(148, 163, 184, 0.12); font-size: 0.82rem; background: ${isChecked ? 'rgba(16, 185, 129, 0.06)' : 'transparent'}; border-radius: 6px; margin-bottom: 2px;">
+            <div style="display: flex; align-items: center; gap: 0.65rem; flex: 1; min-width: 0;">
+              <input type="checkbox" class="cdt-check-toggle" data-code="${escapeHtml(code)}" ${isChecked ? 'checked' : ''} style="width: 17px; height: 17px; accent-color: #10b981; cursor: pointer;" title="Enable/Disable this CDT code for this clinic">
+              <span style="min-width: 34px; text-align: center; font-family: var(--font-mono); font-size: 0.74rem; font-weight: 800; color: ${isChecked ? '#34d399' : '#64748b'};">${seqLabel}</span>
+              <span class="cdt-badge" style="min-width: 110px; text-align: center; font-size: 0.76rem; font-weight: 800;">${escapeHtml(code)}</span>
+              <span style="color: ${isChecked ? '#f8fafc' : '#94a3b8'}; font-weight: 600; font-size: 0.82rem;">${escapeHtml(meaning)}</span>
             </div>
-            <div style="display: flex; align-items: center; gap: 0.35rem; flex-shrink: 0;">
+            <div style="display: flex; align-items: center; gap: 0.45rem; flex-shrink: 0;">
               ${isChecked ? `
-                <button type="button" class="btn-action-ghost cdt-move-up" data-code="${escapeHtml(code)}" ${enabledIdx === 0 ? 'disabled' : ''} style="padding: 2px 7px; font-size: 0.7rem;" title="Move Up in Sequence">↑</button>
-                <button type="button" class="btn-action-ghost cdt-move-down" data-code="${escapeHtml(code)}" ${enabledIdx === activeEnabledCdtCodes.length - 1 ? 'disabled' : ''} style="padding: 2px 7px; font-size: 0.7rem;" title="Move Down in Sequence">↓</button>
+                <button type="button" class="btn-action-ghost cdt-move-up" data-code="${escapeHtml(code)}" ${enabledIdx === 0 ? 'disabled' : ''} style="padding: 3px 9px; font-size: 0.75rem; font-weight: 700;" title="Move Up in Sequence">↑</button>
+                <button type="button" class="btn-action-ghost cdt-move-down" data-code="${escapeHtml(code)}" ${enabledIdx === activeEnabledCdtCodes.length - 1 ? 'disabled' : ''} style="padding: 3px 9px; font-size: 0.75rem; font-weight: 700;" title="Move Down in Sequence">↓</button>
               ` : ''}
-              <span style="font-size: 0.64rem; color: #10b981; background: rgba(16, 185, 129, 0.12); border: 1px solid rgba(16, 185, 129, 0.3); padding: 2px 7px; border-radius: 999px; font-weight: 700; white-space: nowrap;">🔒 Locked</span>
+              <span style="font-size: 0.66rem; color: #10b981; background: rgba(16, 185, 129, 0.12); border: 1px solid rgba(16, 185, 129, 0.3); padding: 3px 8px; border-radius: 999px; font-weight: 700; white-space: nowrap;">🔒 Locked</span>
             </div>
           </div>
         `;
@@ -3865,6 +3865,23 @@
         displayToast(`Synced ${activeEnabledCdtCodes.length} checked CDT codes & sequence to AI Prompt!`);
       });
     }
+
+    // Universal Fullscreen / Full View Toggle for All Modals
+    document.querySelectorAll('.btn-modal-fullscreen-toggle').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const modalBox = btn.closest('.settings-modal-box') || btn.closest('.excel-modal-box');
+        if (!modalBox) return;
+        const isFs = modalBox.classList.toggle('is-fullscreen');
+        const iconExp = btn.querySelector('.icon-expand');
+        const iconComp = btn.querySelector('.icon-compress');
+        const textSpan = btn.querySelector('.fs-text');
+        if (iconExp) iconExp.style.display = isFs ? 'none' : 'inline-block';
+        if (iconComp) iconComp.style.display = isFs ? 'inline-block' : 'none';
+        if (textSpan) textSpan.textContent = isFs ? 'Exit Full View' : '⛶ Full View';
+        btn.title = isFs ? 'Exit Full View (Restore Size)' : 'Full View (Maximize)';
+      });
+    });
 
     openSettingsBtn?.addEventListener('click', async () => {
       await loadPromptSettings();
@@ -4952,7 +4969,9 @@
         ).join('');
 
         const rowWrap = document.createElement('div');
-        rowWrap.style.cssText = 'background: rgba(15, 23, 42, 0.65); border: 1px solid rgba(148, 163, 184, 0.14); border-radius: 8px; padding: 0.55rem 0.75rem; transition: border-color 0.15s ease;';
+        rowWrap.style.cssText = 'background: rgba(15, 23, 42, 0.75); border: 1px solid rgba(148, 163, 184, 0.16); border-radius: 9px; padding: 0.65rem 0.85rem; transition: all 0.15s ease;';
+        rowWrap.addEventListener('mouseenter', () => { rowWrap.style.borderColor = 'rgba(56, 189, 248, 0.4)'; });
+        rowWrap.addEventListener('mouseleave', () => { rowWrap.style.borderColor = 'rgba(148, 163, 184, 0.16)'; });
 
         rowWrap.innerHTML = `
           <!-- Clean 1-Line Read-Only Summary Row -->
@@ -5135,42 +5154,52 @@
             });
 
           const card = document.createElement('div');
-          card.style.cssText = `background: rgba(15, 23, 42, 0.78); border: 1px solid ${isCurrent ? 'rgba(56, 189, 248, 0.55)' : 'rgba(56, 189, 248, 0.22)'}; border-radius: 12px; padding: 1.05rem 1.15rem; display: flex; flex-direction: column; gap: 0.75rem;`;
+          card.style.cssText = `background: linear-gradient(180deg, rgba(18, 28, 51, 0.95) 0%, rgba(12, 19, 36, 0.95) 100%); border: 1px solid ${isCurrent ? 'rgba(56, 189, 248, 0.65)' : 'rgba(148, 163, 184, 0.18)'}; border-radius: 14px; padding: 1.4rem 1.55rem; display: flex; flex-direction: column; gap: 1rem; box-shadow: 0 8px 24px -4px rgba(0, 0, 0, 0.45); transition: border-color 0.2s ease;`;
 
           card.innerHTML = `
-            <!-- Clinic Card Header -->
-            <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 0.75rem; flex-wrap: wrap; padding-bottom: 0.65rem; border-bottom: 1px solid rgba(148, 163, 184, 0.14);">
-              <div>
-                <div style="display: flex; align-items: center; gap: 0.45rem; flex-wrap: wrap;">
-                  <span style="font-size: 1rem; font-weight: 800; color: #fff;">🏥 ${escapeHtml(prac.name)}</span>
-                  <button type="button" class="btn-action-ghost btn-toggle-clinic-rename" style="padding: 0.15rem 0.45rem; font-size: 0.65rem;" title="Rename this clinic">✏️ Rename</button>
-                  ${isCurrent ? '<span class="user-role-badge staff" style="font-size: 0.62rem;">Active Context</span>' : ''}
-                </div>
-                <div class="clinic-mgmt-stats" style="margin-top: 0.25rem;">
-                  <span>📋 ${prac.verification_count || 0} Patient Breakdowns</span>
-                  <span>•</span>
-                  <span>👥 ${clinicMembers.length} Assigned Accounts</span>
-                </div>
+            <!-- Clinic Card Header: Tier 1 (Title + Primary Actions) -->
+            <div style="display: flex; justify-content: space-between; align-items: center; gap: 0.85rem; flex-wrap: wrap;">
+              <div style="display: flex; align-items: center; gap: 0.55rem; flex-wrap: wrap;">
+                <span style="font-size: 1.08rem; font-weight: 800; color: #fff; letter-spacing: -0.01em;">🏥 ${escapeHtml(prac.name)}</span>
+                <button type="button" class="btn-action-ghost btn-toggle-clinic-rename" style="padding: 0.2rem 0.5rem; font-size: 0.68rem;" title="Rename this clinic">✏️ Rename</button>
+                ${isCurrent ? '<span class="user-role-badge staff" style="font-size: 0.64rem; padding: 0.16rem 0.5rem;">Active Context</span>' : ''}
               </div>
 
-              <div style="display: flex; gap: 0.35rem; align-items: center; flex-wrap: wrap;">
-                <button type="button" class="btn-action-ghost btn-add-user-here" style="padding: 0.28rem 0.58rem; font-size: 0.69rem; border-color: rgba(16, 185, 129, 0.4); color: #34d399;" title="Add a user or admin to ${escapeHtml(prac.name)}">+ User</button>
-                <button type="button" class="btn-action-ghost btn-edit-clinic-payers" style="padding: 0.28rem 0.58rem; font-size: 0.69rem;" title="Edit ${escapeHtml(prac.name)}'s Insurance Hub Directory">🏥 Payers</button>
-                <button type="button" class="btn-action-ghost btn-edit-clinic-ai" style="padding: 0.28rem 0.58rem; font-size: 0.69rem;" title="Edit ${escapeHtml(prac.name)}'s CDT Checklist & AI Prompt">⚙️ CDT & AI</button>
-                <button type="button" class="btn-verify-primary btn-switch-here" style="padding: 0.28rem 0.65rem; font-size: 0.69rem;" title="Preview ${escapeHtml(prac.name)}'s upload workspace">👁️ Preview</button>
-                <button type="button" class="del-payer-btn btn-del-clinic" title="Delete clinic workspace" style="background: none; border: none; color: #ef4444; cursor: pointer; padding: 2px 5px; font-size: 0.8rem;">✕</button>
+              <div style="display: flex; gap: 0.45rem; align-items: center; flex-wrap: wrap;">
+                <button type="button" class="btn-action-ghost btn-add-user-here" style="padding: 0.32rem 0.65rem; font-size: 0.72rem; border-color: rgba(16, 185, 129, 0.45); color: #34d399; font-weight: 700;" title="Add a user or admin to ${escapeHtml(prac.name)}">+ User</button>
+                <button type="button" class="btn-verify-primary btn-switch-here" style="padding: 0.32rem 0.75rem; font-size: 0.72rem; font-weight: 700;" title="Preview ${escapeHtml(prac.name)}'s upload workspace">👁️ Preview</button>
+                <button type="button" class="del-payer-btn btn-del-clinic" title="Delete clinic workspace" style="background: none; border: none; color: #ef4444; cursor: pointer; padding: 4px 6px; font-size: 0.85rem;">✕</button>
+              </div>
+            </div>
+
+            <!-- Clinic Card Header: Tier 2 (Stats Pill + Clinic Settings Links) -->
+            <div style="display: flex; justify-content: space-between; align-items: center; gap: 0.75rem; flex-wrap: wrap; padding: 0.55rem 0.75rem; background: rgba(15, 23, 42, 0.65); border: 1px solid rgba(148, 163, 184, 0.12); border-radius: 8px;">
+              <div style="display: flex; align-items: center; gap: 0.65rem; font-size: 0.73rem; color: #94a3b8;">
+                <span>📋 <strong style="color: #f8fafc;">${prac.verification_count || 0}</strong> Breakdowns</span>
+                <span style="opacity: 0.35;">•</span>
+                <span>👥 <strong style="color: #f8fafc;">${clinicMembers.length}</strong> Accounts</span>
+              </div>
+
+              <div style="display: flex; gap: 0.45rem; align-items: center; flex-wrap: wrap;">
+                <button type="button" class="btn-action-ghost btn-edit-clinic-payers" style="padding: 0.24rem 0.6rem; font-size: 0.7rem; border-color: rgba(56, 189, 248, 0.35); color: #38bdf8;" title="Edit ${escapeHtml(prac.name)}'s Insurance Hub Directory">🏥 Payer Hubs</button>
+                <button type="button" class="btn-action-ghost btn-edit-clinic-ai" style="padding: 0.24rem 0.6rem; font-size: 0.7rem; border-color: rgba(56, 189, 248, 0.35); color: #38bdf8;" title="Edit ${escapeHtml(prac.name)}'s CDT Checklist & AI Prompt">⚙️ CDT & AI</button>
               </div>
             </div>
 
             <!-- Hidden Clinic Rename Drawer -->
-            <div class="clinic-rename-drawer" style="display: none; align-items: center; gap: 0.45rem; background: rgba(15, 23, 42, 0.9); padding: 0.5rem 0.65rem; border-radius: 8px; border: 1px dashed rgba(56, 189, 248, 0.35);">
-              <input type="text" class="table-search-input clinic-rename-input" value="${escapeHtml(prac.name)}" style="flex: 1; padding: 0.28rem 0.55rem; font-size: 0.78rem; color: #fff; font-weight: 700;">
-              <button type="button" class="btn-verify-primary btn-save-clinic-name" style="padding: 0.28rem 0.65rem; font-size: 0.7rem;">💾 Save Name</button>
-              <button type="button" class="btn-restore-defaults btn-cancel-clinic-rename" style="padding: 0.28rem 0.55rem; font-size: 0.7rem;">Cancel</button>
+            <div class="clinic-rename-drawer" style="display: none; align-items: center; gap: 0.45rem; background: rgba(15, 23, 42, 0.95); padding: 0.6rem 0.75rem; border-radius: 8px; border: 1px dashed rgba(56, 189, 248, 0.45);">
+              <input type="text" class="table-search-input clinic-rename-input" value="${escapeHtml(prac.name)}" style="flex: 1; padding: 0.32rem 0.65rem; font-size: 0.8rem; color: #fff; font-weight: 700;">
+              <button type="button" class="btn-verify-primary btn-save-clinic-name" style="padding: 0.32rem 0.75rem; font-size: 0.72rem;">💾 Save Name</button>
+              <button type="button" class="btn-restore-defaults btn-cancel-clinic-rename" style="padding: 0.32rem 0.65rem; font-size: 0.72rem;">Cancel</button>
             </div>
 
-            <!-- Clinic Team Members List -->
-            <div class="clinic-members-container" style="display: flex; flex-direction: column; gap: 0.45rem;"></div>
+            <!-- Clinic Team Members Section: Tier 3 (Padded Box) -->
+            <div style="background: rgba(8, 14, 27, 0.65); border: 1px solid rgba(148, 163, 184, 0.12); border-radius: 10px; padding: 0.85rem; display: flex; flex-direction: column; gap: 0.6rem;">
+              <div style="display: flex; justify-content: space-between; align-items: center;">
+                <span style="font-size: 0.71rem; font-weight: 800; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.05em;">Assigned Staff & Admins (${clinicMembers.length})</span>
+              </div>
+              <div class="clinic-members-container" style="display: flex; flex-direction: column; gap: 0.5rem;"></div>
+            </div>
           `;
 
           const toggleRenameBtn = card.querySelector('.btn-toggle-clinic-rename');
@@ -5276,8 +5305,8 @@
           if (membersContainer) {
             if (clinicMembers.length === 0) {
               membersContainer.innerHTML = `
-                <div style="font-size: 0.74rem; color: #64748b; padding: 0.45rem 0.6rem; background: rgba(15, 23, 42, 0.45); border-radius: 6px; text-align: center;">
-                  No Clinic Admin or Staff assigned yet. Click <strong>+ User</strong> above to assign an account.
+                <div style="font-size: 0.74rem; color: #64748b; padding: 0.85rem 1rem; background: rgba(15, 23, 42, 0.45); border: 1px dashed rgba(148, 163, 184, 0.2); border-radius: 8px; text-align: center;">
+                  No Clinic Admin or Staff assigned yet. Click <strong style="color: #34d399;">+ User</strong> above to assign an account.
                 </div>
               `;
             } else {

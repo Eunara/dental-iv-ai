@@ -310,7 +310,7 @@
       </div>
 
       <!-- Grouped Clinic Cards Grid (Each Clinic Card contains its own Admin & Staff rows) -->
-      <div id="ownerDashClinicsList" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(500px, 1fr)); gap: 1.1rem; align-items: start;">
+      <div id="ownerDashClinicsList" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(540px, 1fr)); gap: 1.5rem; align-items: start; padding: 0.65rem 0.2rem 1.4rem;">
         <!-- Populated dynamically by JS -->
       </div>
     </div>
@@ -862,12 +862,19 @@
           </svg>
           Excel-Style Insurance Breakdown Sheet (Clean Bordered PDF)
         </h3>
-        <button type="button" class="btn-close-modal" id="closeExcelModalBtn">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <line x1="18" y1="6" x2="6" y2="18"></line>
-            <line x1="6" y1="6" x2="18" y2="18"></line>
-          </svg>
-        </button>
+        <div style="display: flex; align-items: center; gap: 0.45rem;">
+          <button type="button" class="btn-modal-fullscreen-toggle" title="Toggle Fullscreen / Full View">
+            <svg class="icon-expand" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"></path></svg>
+            <svg class="icon-compress" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="display: none;"><path d="M8 3v3a2 2 0 0 1-2 2H3m18 0h-3a2 2 0 0 1-2-2V3m0 18v-3a2 2 0 0 1 2-2h3M3 16h3a2 2 0 0 1 2 2v3"></path></svg>
+            <span class="fs-text">⛶ Full View</span>
+          </button>
+          <button type="button" class="btn-close-modal" id="closeExcelModalBtn">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <line x1="18" y1="6" x2="6" y2="18"></line>
+              <line x1="6" y1="6" x2="18" y2="18"></line>
+            </svg>
+          </button>
+        </div>
       </div>
       <div class="excel-sheet-viewport">
         <div id="excelSheetContainer">
@@ -959,7 +966,7 @@
 
   <!-- AI SETTINGS & PER-CLINIC CDT CHECKLIST MODAL -->
   <div class="settings-modal-backdrop" id="settingsModal">
-    <div class="settings-modal-box" style="max-width: 820px;">
+    <div class="settings-modal-box">
       <div class="pms-modal-header">
         <h3>
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#38bdf8" stroke-width="2">
@@ -968,12 +975,19 @@
           </svg>
           Per-Clinic AI Prompt & CDT Code Checklist Settings
         </h3>
-        <button type="button" class="btn-close-modal" id="closeSettingsModalBtn">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <line x1="18" y1="6" x2="6" y2="18"></line>
-            <line x1="6" y1="6" x2="18" y2="18"></line>
-          </svg>
-        </button>
+        <div style="display: flex; align-items: center; gap: 0.45rem;">
+          <button type="button" class="btn-modal-fullscreen-toggle" title="Toggle Fullscreen / Full View">
+            <svg class="icon-expand" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"></path></svg>
+            <svg class="icon-compress" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="display: none;"><path d="M8 3v3a2 2 0 0 1-2 2H3m18 0h-3a2 2 0 0 1-2-2V3m0 18v-3a2 2 0 0 1 2-2h3M3 16h3a2 2 0 0 1 2 2v3"></path></svg>
+            <span class="fs-text">⛶ Full View</span>
+          </button>
+          <button type="button" class="btn-close-modal" id="closeSettingsModalBtn">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <line x1="18" y1="6" x2="6" y2="18"></line>
+              <line x1="6" y1="6" x2="18" y2="18"></line>
+            </svg>
+          </button>
+        </div>
       </div>
 
       <div class="settings-tabs-row">
@@ -1012,7 +1026,7 @@
               🔄 Sync Checklist Order to AI Prompt
             </button>
           </div>
-          <div id="cdtMemoryDictionaryList" style="max-height: 360px; overflow-y: auto; border: 1px solid rgba(56, 189, 248, 0.2); border-radius: 8px; background: rgba(15, 23, 42, 0.65); padding: 0.5rem;"></div>
+          <div id="cdtMemoryDictionaryList" style="flex: 1; min-height: 520px; max-height: calc(88vh - 240px); overflow-y: auto; border: 1px solid rgba(56, 189, 248, 0.22); border-radius: 8px; background: rgba(15, 23, 42, 0.65); padding: 0.65rem;"></div>
         </div>
 
         <!-- Tab 2: Custom CDT Prompt -->
@@ -1050,7 +1064,7 @@
 
   <!-- DEDICATED INSURANCE HUB DIRECTORY & STATE-TO-ADDRESS WIRING MODAL -->
   <div class="settings-modal-backdrop" id="insuranceDirectoryModal">
-    <div class="settings-modal-box" style="max-width: 960px;">
+    <div class="settings-modal-box">
       <div class="pms-modal-header">
         <h3 style="display: flex; align-items: center; gap: 0.55rem; color: #fff; font-size: 1.05rem; font-weight: 700;">
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#38bdf8" stroke-width="2">
@@ -1059,12 +1073,19 @@
           </svg>
           Master Insurance Hub Directory & Multi-State Wiring (Locked on Breakdown)
         </h3>
-        <button type="button" class="btn-close-modal" id="closeInsuranceDirectoryModalBtn">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <line x1="18" y1="6" x2="6" y2="18"></line>
-            <line x1="6" y1="6" x2="18" y2="18"></line>
-          </svg>
-        </button>
+        <div style="display: flex; align-items: center; gap: 0.45rem;">
+          <button type="button" class="btn-modal-fullscreen-toggle" title="Toggle Fullscreen / Full View">
+            <svg class="icon-expand" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"></path></svg>
+            <svg class="icon-compress" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="display: none;"><path d="M8 3v3a2 2 0 0 1-2 2H3m18 0h-3a2 2 0 0 1-2-2V3m0 18v-3a2 2 0 0 1 2-2h3M3 16h3a2 2 0 0 1 2 2v3"></path></svg>
+            <span class="fs-text">⛶ Full View</span>
+          </button>
+          <button type="button" class="btn-close-modal" id="closeInsuranceDirectoryModalBtn">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <line x1="18" y1="6" x2="6" y2="18"></line>
+              <line x1="6" y1="6" x2="18" y2="18"></line>
+            </svg>
+          </button>
+        </div>
       </div>
 
       <div class="pms-modal-body" style="padding-top: 1rem;">
@@ -1157,7 +1178,7 @@
         </div>
 
         <!-- Dedicated Directory Grid Container -->
-        <div id="dirPayerListContainer" style="display: flex; flex-direction: column; gap: 0.6rem; max-height: 420px; overflow-y: auto; padding-right: 4px;">
+        <div id="dirPayerListContainer" style="display: flex; flex-direction: column; gap: 0.65rem; flex: 1; min-height: 480px; max-height: calc(88vh - 240px); overflow-y: auto; padding-right: 4px;">
           <!-- Rendered dynamically by JS -->
         </div>
       </div>
@@ -1175,7 +1196,7 @@
 
   <!-- OWNER CLINIC & USER MANAGEMENT MODAL -->
   <div class="settings-modal-backdrop" id="clinicManagerModal">
-    <div class="settings-modal-box" style="max-width: 760px;">
+    <div class="settings-modal-box">
       <div class="pms-modal-header">
         <h3 style="display: flex; align-items: center; gap: 0.55rem; color: #fff; font-size: 1.05rem; font-weight: 700;">
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#38bdf8" stroke-width="2">
@@ -1186,12 +1207,19 @@
           </svg>
           <span id="clinicManagerModalTitle">Clinic Workspaces & User Assignment (Owner Control)</span>
         </h3>
-        <button type="button" class="btn-close-modal" id="closeClinicManagerModalBtn">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <line x1="18" y1="6" x2="6" y2="18"></line>
-            <line x1="6" y1="6" x2="18" y2="18"></line>
-          </svg>
-        </button>
+        <div style="display: flex; align-items: center; gap: 0.45rem;">
+          <button type="button" class="btn-modal-fullscreen-toggle" title="Toggle Fullscreen / Full View">
+            <svg class="icon-expand" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"></path></svg>
+            <svg class="icon-compress" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="display: none;"><path d="M8 3v3a2 2 0 0 1-2 2H3m18 0h-3a2 2 0 0 1-2-2V3m0 18v-3a2 2 0 0 1 2-2h3M3 16h3a2 2 0 0 1 2 2v3"></path></svg>
+            <span class="fs-text">⛶ Full View</span>
+          </button>
+          <button type="button" class="btn-close-modal" id="closeClinicManagerModalBtn">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <line x1="18" y1="6" x2="6" y2="18"></line>
+              <line x1="6" y1="6" x2="18" y2="18"></line>
+            </svg>
+          </button>
+        </div>
       </div>
 
       <div class="settings-tabs-row">
@@ -1228,7 +1256,7 @@
           </div>
 
           <!-- List of Clinics -->
-          <div id="clinicWorkspacesList" style="display: flex; flex-direction: column; gap: 0.55rem; max-height: 340px; overflow-y: auto;">
+          <div id="clinicWorkspacesList" style="display: flex; flex-direction: column; gap: 0.65rem; flex: 1; min-height: 440px; max-height: calc(88vh - 240px); overflow-y: auto;">
             <!-- Populated by JS -->
           </div>
         </div>
@@ -1286,7 +1314,7 @@
           </div>
 
           <!-- List of Users -->
-          <div id="usersListContainer" style="display: flex; flex-direction: column; gap: 0.55rem; max-height: 340px; overflow-y: auto;">
+          <div id="usersListContainer" style="display: flex; flex-direction: column; gap: 0.65rem; flex: 1; min-height: 440px; max-height: calc(88vh - 240px); overflow-y: auto;">
             <!-- Populated by JS -->
           </div>
         </div>
