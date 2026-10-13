@@ -2631,16 +2631,16 @@ app.post('/api/verify', upload.array('files', 10), async (req, res) => {
 
     if (errStatus === 503 || rawMsg.includes('503') || rawMsg.includes('high demand') || rawMsg.includes('unavailable') || rawMsg.includes('overload')) {
       errorType = 'API_OVERLOAD';
-      userMessage = '⚠️ Google Gemini API Overload (503 High Demand): Temporaryong taas kaayo ang demand sa Google AI models karon. Palihug hulat og 5-15 segundos unya i-click usab ang "Analyze Breakdown".';
+      userMessage = 'Google Gemini API Overload (503 High Demand): High demand on Google AI models right now. Please wait 5-15 seconds and click "Analyze Breakdown" again.';
     } else if (errStatus === 429 || rawMsg.includes('429') || rawMsg.includes('quota') || rawMsg.includes('resource has been exhausted') || rawMsg.includes('rate limit')) {
       errorType = 'RATE_LIMIT';
-      userMessage = '⚠️ Gemini Free Quota / Rate Limit Reached (429): Naabot ang libreng request limit sa Google API key karon. Palihug pahuwayi kadiyot (1-2 minutos) sa dili pa mosulay pag-usab.';
+      userMessage = 'Gemini Quota / Rate Limit Reached (429): Free request limit reached for this API key. Please wait 1-2 minutes before retrying.';
     } else if (errStatus === 403 || rawMsg.includes('api_key_invalid') || rawMsg.includes('403') || rawMsg.includes('permission denied')) {
       errorType = 'AUTH_ERROR';
-      userMessage = '⚠️ Invalid API Key (403): Dili balido o kulang og permissions ang Gemini API key sa server .env.';
+      userMessage = 'Invalid API Key (403): The Gemini API key in the server configuration is invalid or missing required permissions.';
     } else if (rawMsg.includes('timeout') || errStatus === 504 || rawMsg.includes('etimedout') || rawMsg.includes('esockettimedout')) {
       errorType = 'TIMEOUT';
-      userMessage = '⏱️ Processing Timeout: Nadugay pag-proseso ang AI tungod sa kadako sa file o trapik sa internet. Palihug sulayi pag-usab.';
+      userMessage = 'Processing Timeout: Document processing took longer than expected due to file size or network latency. Please try again.';
     }
 
     res.status(500).json({

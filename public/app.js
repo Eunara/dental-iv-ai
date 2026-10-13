@@ -753,7 +753,7 @@
         return 'periodontal';
       }
 
-      // 3. Restorative (user: 2391 - mao rani nga code ang sa restorative)
+      // 3. Restorative (CDT: D2391 is primary restorative code)
       if (
         code.includes('D2391') ||
         code.includes('2391') ||
@@ -1636,7 +1636,7 @@
       hideAlert();
 
       if (selectedFiles.length === 0) {
-        showAlert('Palihug pag-upload o pag-drag ug dental breakdown file (PDF o Image) sa dili pa mag-analyze.', 'Wala pay File Gi-upload');
+        showAlert('Please upload or drag a dental breakdown document (PDF or Image) before analyzing.', 'No File Uploaded');
         return;
       }
 
@@ -1649,8 +1649,8 @@
         const recentDup = findRecentPatientDuplicateWithin7Days(patientNameVal);
         if (recentDup) {
           const verifyNewAnyway = await openCustomConfirm(
-            '⚠️ Na-Verify Na Sulod sa 7 Ka Adlaw (Weekly Duplicate Check)',
-            `Si "${recentDup.patientName}" na-verify na niadtong ${recentDup.displayDate} (${recentDup.carrier} • ${recentDup.networkStatus || 'In-Network'}).\n\nSulod sa 1 ka semana (7 days), dili na kinahanglan i-verify og balik gawas kung lahi nga insurance. Gusto ba nimo ablihan na lang ang existing breakdown o mag-verify gihapon og bag-o?`,
+            'Patient Verified Within Last 7 Days (Duplicate Check)',
+            `"${recentDup.patientName}" was already verified on ${recentDup.displayDate} (${recentDup.carrier} • ${recentDup.networkStatus || 'In-Network'}).\n\nWithin 7 days, re-verification is usually not needed unless it is a different insurance policy. Would you like to view the existing breakdown or proceed with a new verification?`,
             'Verify New Anyway',
             'Open Existing Breakdown'
           );
@@ -1704,15 +1704,15 @@
         // If HTTP status is not successful (e.g. 504 Timeout, 503 Overload, 502, 429, 500)
         if (!response.ok) {
           if (resData && resData.error) {
-            let errorTitle = 'AI Verification Notice';
+            let errorTitle = 'Verification Notice';
             if (resData.error_type === 'API_OVERLOAD') {
-              errorTitle = '⚠️ Google Gemini API Overload (503 High Demand)';
+              errorTitle = 'Google Gemini API Overload (503 High Demand)';
             } else if (resData.error_type === 'RATE_LIMIT') {
-              errorTitle = '⚠️ Gemini Free Quota / Rate Limit (429)';
+              errorTitle = 'Gemini Quota / Rate Limit (429)';
             } else if (resData.error_type === 'TIMEOUT') {
-              errorTitle = '⏱️ Processing Timeout';
+              errorTitle = 'Processing Timeout';
             } else if (resData.error_type === 'AUTH_ERROR') {
-              errorTitle = '⚠️ Gemini API Key Issue (403)';
+              errorTitle = 'Gemini API Key Issue (403)';
             }
             showAlert(resData.error, errorTitle);
             return;
@@ -1720,28 +1720,28 @@
 
           // If server or Nginx returned an HTML error page without JSON
           if (response.status === 504) {
-            showAlert('Nadugay pag-proseso ang Google Gemini tungod sa kadako sa dokumento o temporaryong taas nga trapik sa Google network. Dili kinahanglan i-reload ang panid — i-click lang ang "Sulayi Pag-usab" sa ubos.', '⏱️ 504 Gateway Timeout (Gemini AI Busy)');
+            showAlert('Google Gemini took longer than expected due to document complexity or high network traffic. You do not need to reload the page — simply click "Retry Verification" below.', '504 Gateway Timeout (Gemini AI Busy)');
             return;
           } else if (response.status === 503) {
-            showAlert('Temporaryong taas kaayo ang demand sa Google Gemini AI karon (Global demand spike). Palihug paghulat og 5-10 segundos unya i-click ang "Sulayi Pag-usab".', '⚠️ 503 Gemini API Overload');
+            showAlert('Google Gemini AI is experiencing temporary high demand (demand spike). Please wait 5-10 seconds and click "Retry Verification".', '503 Gemini API Overload');
             return;
           } else if (response.status === 429) {
-            showAlert('Nalapas ang libreng request limit sa Gemini API key karon. Palihug pahuwayi kadiyot (1-2 minutos) sa dili pa mosulay pag-usab.', '⚠️ 429 Rate Limit Reached');
+            showAlert('API rate limit reached for the Gemini API key. Please wait 1-2 minutes before trying again.', '429 Rate Limit Reached');
             return;
           } else if (response.status === 502) {
-            showAlert('Ang server nag-restart o temporaryong busy. Palihug paghulat og 5 ka segundo unya i-click ang "Sulayi Pag-usab".', '🔌 502 Bad Gateway');
+            showAlert('The server is restarting or temporarily busy. Please wait a few seconds and click "Retry Verification".', '502 Bad Gateway');
             return;
           } else if (response.status === 413) {
-            showAlert('Dako ra kaayo ang gi-upload nga file (maximum 30MB). Palihug pag-upload og mas gamay nga file o bahina ang mga pahina.', '📁 413 File Too Large');
+            showAlert('Uploaded file is too large (maximum 30MB). Please upload a smaller file or split the pages.', '413 File Too Large');
             return;
           } else {
-            showAlert(`Adunay problema sa server (HTTP Status ${response.status}). Palihug i-click ang "Sulayi Pag-usab".`, `⚠️ Server Error (${response.status})`);
+            showAlert(`A server error occurred (HTTP Status ${response.status}). Please click "Retry Verification".`, `Server Error (${response.status})`);
             return;
           }
         }
 
         if (!resData || !resData.success) {
-          showAlert(resData?.error || 'Wala nagmalampuson ang insurance verification. Palihug sulayi pag-usab.', 'Verification Notice');
+          showAlert(resData?.error || 'Insurance verification could not be completed. Please try again.', 'Verification Notice');
           return;
         }
 
@@ -1768,8 +1768,8 @@
 
         if (postDup) {
           const keepNew = await openCustomConfirm(
-            '⚠️ Duplicate Patient Detected (Verified Within Last 7 Days)',
-            `Si "${postDup.patientName}" naa nay existing verification niadtong ${postDup.displayDate} (${postDup.carrier}).\n\nGusto ba nimo ablihan ang naunang breakdown o magpabilin niining bag-ong gi-verify?`,
+            'Duplicate Patient Detected (Verified Within Last 7 Days)',
+            `"${postDup.patientName}" already has an existing verification from ${postDup.displayDate} (${postDup.carrier}).\n\nWould you like to open the previous breakdown or keep this newly verified breakdown?`,
             'Keep New Breakdown',
             'Open Previous Breakdown'
           );
@@ -1779,12 +1779,12 @@
         }
       } catch (err) {
         console.error('Audit verification error:', err);
-        let errorMsg = err.message || 'Adunay problema sa pagkonektar sa server.';
+        let errorMsg = err.message || 'There was an issue connecting to the server.';
         let errorTitle = 'Network / Server Error';
 
         if (errorMsg.includes('Unexpected token') || errorMsg.includes('JSON')) {
-          errorTitle = '⚠️ API Overload / Gateway Timeout (504)';
-          errorMsg = 'Nakadawat ang browser og HTML imbes JSON gikan sa server. Kasagaran kini mahitabo kung nag-timeout o busy ang Google Gemini API sa pag-proseso sa file. Dili kinahanglan i-reload ang panid — i-click lang ang "Sulayi Pag-usab" button sa ubos!';
+          errorTitle = 'API Overload / Gateway Timeout (504)';
+          errorMsg = 'Received an HTML response instead of JSON from the server. This typically happens when Google Gemini API times out or is busy processing the file. No need to reload the page — simply click the "Retry Verification" button below!';
         }
 
         showAlert(errorMsg, errorTitle);
