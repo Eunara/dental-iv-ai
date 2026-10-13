@@ -741,6 +741,22 @@ const DEFAULT_ENABLED_CDT_CODES = [
   'D6010',
 ];
 
+const DEFAULT_CATEGORY_CARDS = [
+  { id: 'preventative', code: 'PREVENTATIVE', name: 'Preventive / Diag', sourceKey: 'preventive', val: '100%', sub: 'Ded Applied: No', color: 'emerald', enabled: true },
+  { id: 'basic', code: 'BASIC', name: 'Basic Restorative', sourceKey: 'basic', val: '80%', sub: 'Ded Applied: Yes', color: 'cyan', enabled: true },
+  { id: 'major', code: 'MAJOR', name: 'Major Restorative', sourceKey: 'major', val: '60%', sub: 'Ded Applied: Yes', color: 'indigo', enabled: true },
+  { id: 'endo', code: 'ENDO', name: 'Endodontics', sourceKey: 'endo', val: '80%', sub: 'Root Canals', color: 'cyan', enabled: true },
+  { id: 'oral_surgery', code: 'ORAL SURGERY', name: 'Oral Surgery', sourceKey: 'oral_surgery', val: '80%', sub: 'Extractions', color: 'cyan', enabled: true },
+  { id: 'implants', code: 'IMPLANTS D6010', name: 'Implant Placement', sourceKey: 'implants', val: '60%', sub: 'Covered Benefit', color: 'cyan', enabled: true },
+  { id: 'night_guard', code: 'NIGHT GUARD', name: 'D9944 Guard', sourceKey: 'night_guard', val: '80%', sub: 'Covered Benefit', color: 'cyan', enabled: true },
+  { id: 'missing_tooth', code: 'MISSING TOOTH', name: 'Pre-existing Excl.', sourceKey: 'missing_tooth_clause', val: 'No', sub: 'Waived', color: 'emerald', enabled: true },
+  { id: 'waiting_period', code: 'WAITING PERIOD', name: 'Waiting Period', sourceKey: 'waiting_period', val: 'No', sub: 'No (Waived)', color: 'emerald', enabled: true },
+  { id: 'ortho', code: 'ORTHO', name: 'Orthodontics', sourceKey: 'ortho', val: '50%', sub: 'Braces / Aligners', color: 'purple', enabled: false },
+  { id: 'periodontics', code: 'PERIO', name: 'Periodontics', sourceKey: 'periodontics', val: '80%', sub: 'D4341 SRP / Maint', color: 'cyan', enabled: false },
+  { id: 'crowns', code: 'CROWNS', name: 'Crown & Bridge', sourceKey: 'crowns', val: '50%', sub: 'D2740 / D6240', color: 'indigo', enabled: false },
+  { id: 'dentures', code: 'DENTURES', name: 'Prosthodontics', sourceKey: 'dentures', val: '50%', sub: 'Full / Partial', color: 'amber', enabled: false },
+];
+
 function getCanonicalCdtMeaning(rawCode, fallbackDesc = '') {
   if (!rawCode) return fallbackDesc || '-';
   const upper = String(rawCode).trim().toUpperCase();
@@ -775,15 +791,22 @@ app.get('/api/prompts/default', async (req, res) => {
       const r = await db.query('SELECT clinic_ai_settings_json FROM dentverify.practices ORDER BY created_at ASC LIMIT 1');
       clinicSettings = r.rows[0]?.clinic_ai_settings_json || {};
     }
+    const resolvedCodes = Array.isArray(clinicSettings.enabledCodes) && clinicSettings.enabledCodes.length > 0
+      ? clinicSettings.enabledCodes
+      : (Array.isArray(clinicSettings.enabledCdtCodes) && clinicSettings.enabledCdtCodes.length > 0 ? clinicSettings.enabledCdtCodes : DEFAULT_ENABLED_CDT_CODES);
+
     res.json({
       systemInstruction: clinicSettings.systemInstruction || DEFAULT_SYSTEM_INSTRUCTION,
       customPrompt: clinicSettings.customPrompt || DEFAULT_CDT_CODES_PROMPT,
-      enabledCodes: Array.isArray(clinicSettings.enabledCodes) && clinicSettings.enabledCodes.length > 0
-        ? clinicSettings.enabledCodes
-        : DEFAULT_ENABLED_CDT_CODES,
+      enabledCodes: resolvedCodes,
+      enabledCdtCodes: resolvedCodes,
+      categoryCards: Array.isArray(clinicSettings.categoryCards) && clinicSettings.categoryCards.length > 0
+        ? clinicSettings.categoryCards
+        : DEFAULT_CATEGORY_CARDS,
       defaultSystemInstruction: DEFAULT_SYSTEM_INSTRUCTION,
       defaultCustomPrompt: DEFAULT_CDT_CODES_PROMPT,
       defaultEnabledCodes: DEFAULT_ENABLED_CDT_CODES,
+      defaultCategoryCards: DEFAULT_CATEGORY_CARDS,
       cdtDictionary: CDT_CODE_DICTIONARY,
     });
   } catch (err) {
@@ -791,27 +814,33 @@ app.get('/api/prompts/default', async (req, res) => {
       systemInstruction: DEFAULT_SYSTEM_INSTRUCTION,
       customPrompt: DEFAULT_CDT_CODES_PROMPT,
       enabledCodes: DEFAULT_ENABLED_CDT_CODES,
+      enabledCdtCodes: DEFAULT_ENABLED_CDT_CODES,
+      categoryCards: DEFAULT_CATEGORY_CARDS,
       defaultSystemInstruction: DEFAULT_SYSTEM_INSTRUCTION,
       defaultCustomPrompt: DEFAULT_CDT_CODES_PROMPT,
       defaultEnabledCodes: DEFAULT_ENABLED_CDT_CODES,
+      defaultCategoryCards: DEFAULT_CATEGORY_CARDS,
       cdtDictionary: CDT_CODE_DICTIONARY,
     });
   }
 });
 
-// Save Per-Clinic AI Prompt & CDT Code Checklist / Sequence Ordering
+// Save Per-Clinic AI Prompt, CDT Code Checklist / Sequence Ordering & Benefit Category Cards
 app.post('/api/clinic-settings', async (req, res) => {
   if (!req.user || (req.user.role !== 'owner' && req.user.role !== 'clinic_admin')) {
     return res.status(403).json({ error: 'Only Clinic Admin or Website Owner can update clinic AI settings and CDT checklist.' });
   }
   try {
-    const { systemInstruction, customPrompt, enabledCodes, resetDefaults } = req.body;
+    const { systemInstruction, customPrompt, enabledCodes, enabledCdtCodes, categoryCards, resetDefaults } = req.body;
+    const finalCodes = enabledCodes || enabledCdtCodes;
     const settingsPayload = resetDefaults
       ? {}
       : {
           systemInstruction: systemInstruction ? String(systemInstruction).trim() : DEFAULT_SYSTEM_INSTRUCTION,
           customPrompt: customPrompt ? String(customPrompt).trim() : DEFAULT_CDT_CODES_PROMPT,
-          enabledCodes: Array.isArray(enabledCodes) && enabledCodes.length > 0 ? enabledCodes : DEFAULT_ENABLED_CDT_CODES,
+          enabledCodes: Array.isArray(finalCodes) && finalCodes.length > 0 ? finalCodes : DEFAULT_ENABLED_CDT_CODES,
+          enabledCdtCodes: Array.isArray(finalCodes) && finalCodes.length > 0 ? finalCodes : DEFAULT_ENABLED_CDT_CODES,
+          categoryCards: Array.isArray(categoryCards) && categoryCards.length > 0 ? categoryCards : DEFAULT_CATEGORY_CARDS,
           updated_by: req.user.full_name || req.user.email,
           updated_at: new Date().toISOString(),
         };
@@ -832,6 +861,8 @@ app.post('/api/clinic-settings', async (req, res) => {
         systemInstruction: settingsPayload.systemInstruction || DEFAULT_SYSTEM_INSTRUCTION,
         customPrompt: settingsPayload.customPrompt || DEFAULT_CDT_CODES_PROMPT,
         enabledCodes: settingsPayload.enabledCodes || DEFAULT_ENABLED_CDT_CODES,
+        enabledCdtCodes: settingsPayload.enabledCodes || DEFAULT_ENABLED_CDT_CODES,
+        categoryCards: settingsPayload.categoryCards || DEFAULT_CATEGORY_CARDS,
       },
     });
   } catch (err) {

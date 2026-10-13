@@ -1309,11 +1309,44 @@
     .cat-card-cyan .category-percentage-num { color: #38bdf8; }
     .cat-card-indigo { border-color: rgba(99, 102, 241, 0.35); }
     .cat-card-indigo .category-percentage-num { color: #818cf8; }
+    .cat-card-purple { border-color: rgba(168, 85, 247, 0.35); }
+    .cat-card-purple .category-percentage-num { color: #c084fc; }
     .cat-card-amber { border-color: rgba(245, 158, 11, 0.35); }
     .cat-card-amber .category-percentage-num { color: #fbbf24; }
     .cat-card-rose { border-color: rgba(244, 63, 94, 0.35); }
     .cat-card-rose .category-percentage-num { color: #fda4af; }
     .cat-card-neutral { border-color: var(--border-subtle); }
+
+    .category-box {
+      position: relative;
+      transition: all 0.18s ease;
+    }
+    .category-box:hover {
+      border-color: rgba(56, 189, 248, 0.65);
+      transform: translateY(-2px);
+      box-shadow: 0 6px 16px rgba(0, 0, 0, 0.3);
+    }
+    .category-box .card-edit-trigger {
+      position: absolute;
+      top: 5px;
+      right: 5px;
+      opacity: 0;
+      transition: opacity 0.15s ease;
+      background: rgba(15, 23, 42, 0.85);
+      border: 1px solid rgba(148, 163, 184, 0.3);
+      color: #cbd5e1;
+      border-radius: 4px;
+      padding: 1px 5px;
+      font-size: 0.65rem;
+      cursor: pointer;
+    }
+    .category-box:hover .card-edit-trigger {
+      opacity: 1;
+    }
+    .category-box .card-edit-trigger:hover {
+      color: #38bdf8;
+      border-color: #38bdf8;
+    }
 
     /* Procedure Codes Table Card - Compact */
     .codes-table-panel {

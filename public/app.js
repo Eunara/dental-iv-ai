@@ -664,6 +664,23 @@
     ];
     let activeEnabledCdtCodes = DEFAULT_ENABLED_CDT_CODES.slice();
 
+    const DEFAULT_CATEGORY_CARDS = [
+      { id: 'preventative', code: 'PREVENTATIVE', name: 'Preventive / Diag', sourceKey: 'preventive', val: '100%', sub: 'Ded Applied: No', color: 'emerald', enabled: true },
+      { id: 'basic', code: 'BASIC', name: 'Basic Restorative', sourceKey: 'basic', val: '80%', sub: 'Ded Applied: Yes', color: 'cyan', enabled: true },
+      { id: 'major', code: 'MAJOR', name: 'Major Restorative', sourceKey: 'major', val: '60%', sub: 'Ded Applied: Yes', color: 'indigo', enabled: true },
+      { id: 'endo', code: 'ENDO', name: 'Endodontics', sourceKey: 'endo', val: '80%', sub: 'Root Canals', color: 'cyan', enabled: true },
+      { id: 'oral_surgery', code: 'ORAL SURGERY', name: 'Oral Surgery', sourceKey: 'oral_surgery', val: '80%', sub: 'Extractions', color: 'cyan', enabled: true },
+      { id: 'implants', code: 'IMPLANTS D6010', name: 'Implant Placement', sourceKey: 'implants', val: '60%', sub: 'Covered Benefit', color: 'cyan', enabled: true },
+      { id: 'night_guard', code: 'NIGHT GUARD', name: 'D9944 Guard', sourceKey: 'night_guard', val: '80%', sub: 'Covered Benefit', color: 'cyan', enabled: true },
+      { id: 'missing_tooth', code: 'MISSING TOOTH', name: 'Pre-existing Excl.', sourceKey: 'missing_tooth_clause', val: 'No', sub: 'Waived', color: 'emerald', enabled: true },
+      { id: 'waiting_period', code: 'WAITING PERIOD', name: 'Waiting Period', sourceKey: 'waiting_period', val: 'No', sub: 'No (Waived)', color: 'emerald', enabled: true },
+      { id: 'ortho', code: 'ORTHO', name: 'Orthodontics', sourceKey: 'ortho', val: '50%', sub: 'Braces / Aligners', color: 'purple', enabled: false },
+      { id: 'periodontics', code: 'PERIO', name: 'Periodontics', sourceKey: 'periodontics', val: '80%', sub: 'D4341 SRP / Maint', color: 'cyan', enabled: false },
+      { id: 'crowns', code: 'CROWNS', name: 'Crown & Bridge', sourceKey: 'crowns', val: '50%', sub: 'D2740 / D6240', color: 'indigo', enabled: false },
+      { id: 'dentures', code: 'DENTURES', name: 'Prosthodontics', sourceKey: 'dentures', val: '50%', sub: 'Full / Partial', color: 'amber', enabled: false },
+    ];
+    let activeCategoryCardsSettings = DEFAULT_CATEGORY_CARDS.map(c => ({ ...c }));
+
     // Exact Procedure Clinical Sequence Mapping (Prioritizes Active Clinic's Custom Sequence -> Fallback Default Order)
     function getProcedureOrderRank(code) {
       if (!code) return 999;
@@ -2228,133 +2245,66 @@
       if (implantBenefit.val && implantBenefit.val !== 'NC') levels.implants = implantBenefit.val;
       if (nightGuardBenefit.val && nightGuardBenefit.val !== 'NC') levels.night_guard = nightGuardBenefit.val;
 
-      const catMatrix = [
-        {
-          code: 'PREVENTATIVE',
-          name: 'Preventive / Diag',
-          val: levels.preventive || '100%',
-          sub: 'Ded Applied: No',
-          color: 'emerald'
-        },
-        {
-          code: 'BASIC',
-          name: 'Basic Restorative',
-          val: levels.basic || '80%',
-          sub: 'Ded Applied: Yes',
-          color: 'cyan'
-        },
-        {
-          code: 'MAJOR',
-          name: 'Major Restorative',
-          val: levels.major || '60%',
-          sub: 'Ded Applied: Yes',
-          color: 'indigo'
-        },
-        {
-          code: 'ENDO',
-          name: 'Endodontics',
-          val: endoBenefit.val,
-          sub: endoBenefit.isCovered ? 'Root Canals' : 'Not Covered (NC)',
-          color: endoBenefit.isCovered ? 'cyan' : 'rose'
-        },
-        {
-          code: 'ORAL SURGERY',
-          name: 'Oral Surgery',
-          val: oralSurgeryBenefit.val,
-          sub: oralSurgeryBenefit.isCovered ? 'Extractions' : 'Not Covered (NC)',
-          color: oralSurgeryBenefit.isCovered ? 'cyan' : 'rose'
-        },
-        {
-          code: 'IMPLANTS D6010',
-          name: 'Implant Placement',
-          val: implantBenefit.val,
-          sub: implantBenefit.isCovered ? 'Covered Benefit' : 'Not Covered (NC)',
-          color: implantBenefit.isCovered ? 'cyan' : 'rose'
-        },
-        {
-          code: 'NIGHT GUARD',
-          name: 'D9944 Guard',
-          val: nightGuardBenefit.val,
-          sub: nightGuardBenefit.isCovered ? 'Covered Benefit' : 'Not Covered (NC)',
-          color: nightGuardBenefit.isCovered ? 'cyan' : 'rose'
-        },
-        {
-          code: 'MISSING TOOTH',
-          name: 'Pre-existing Excl.',
-          val: hasMTC ? 'Yes' : 'No',
-          sub: hasMTC ? 'Clause Active' : 'Waived',
-          color: hasMTC ? 'amber' : 'emerald'
-        },
-        {
-          code: 'WAITING PERIOD',
-          name: 'Waiting Period',
-          val: hasWP ? 'Yes' : 'No',
-          sub: hasWP ? (levels.waiting_period_details || 'Basic/Major') : 'No (Waived)',
-          color: hasWP ? 'amber' : 'emerald'
-        },
-      ];
+      // Helper function to resolve dynamic card value from breakdown data
+      function resolveCategoryCardValue(card) {
+        const key = card.sourceKey;
+        if (key === 'preventive') return { val: levels.preventive || '100%', sub: card.sub || 'Ded Applied: No', color: card.color || 'emerald' };
+        if (key === 'basic') return { val: levels.basic || '80%', sub: card.sub || 'Ded Applied: Yes', color: card.color || 'cyan' };
+        if (key === 'major') return { val: levels.major || '60%', sub: card.sub || 'Ded Applied: Yes', color: card.color || 'indigo' };
+        if (key === 'endo') return { val: endoBenefit.val, sub: endoBenefit.isCovered ? (card.sub || 'Root Canals') : 'Not Covered (NC)', color: endoBenefit.isCovered ? (card.color || 'cyan') : 'rose' };
+        if (key === 'oral_surgery') return { val: oralSurgeryBenefit.val, sub: oralSurgeryBenefit.isCovered ? (card.sub || 'Extractions') : 'Not Covered (NC)', color: oralSurgeryBenefit.isCovered ? (card.color || 'cyan') : 'rose' };
+        if (key === 'implants') return { val: implantBenefit.val, sub: implantBenefit.isCovered ? (card.sub || 'Covered Benefit') : 'Not Covered (NC)', color: implantBenefit.isCovered ? (card.color || 'cyan') : 'rose' };
+        if (key === 'night_guard') return { val: nightGuardBenefit.val, sub: nightGuardBenefit.isCovered ? (card.sub || 'Covered Benefit') : 'Not Covered (NC)', color: nightGuardBenefit.isCovered ? (card.color || 'cyan') : 'rose' };
+        if (key === 'missing_tooth_clause') {
+          const hasMTC = Boolean(details.missing_tooth_clause);
+          return { val: hasMTC ? 'Yes' : 'No', sub: hasMTC ? 'Clause Active' : 'Waived', color: hasMTC ? 'amber' : 'emerald' };
+        }
+        if (key === 'waiting_period') {
+          const hasWP = Boolean(details.waiting_period);
+          return { val: hasWP ? 'Yes' : 'No', sub: hasWP ? (levels.waiting_period_details || 'Basic/Major') : 'No (Waived)', color: hasWP ? 'amber' : 'emerald' };
+        }
+        if (key === 'ortho') {
+          const oPct = data.orthodontic_coverage?.percentage ? `${data.orthodontic_coverage.percentage}%` : (levels.ortho || '50%');
+          return { val: oPct, sub: card.sub || 'Braces / Aligners', color: card.color || 'purple' };
+        }
+        if (key === 'periodontics') return { val: levels.periodontics || levels.basic || '80%', sub: card.sub || 'D4341 SRP / Maint', color: card.color || 'cyan' };
+        if (key === 'crowns') return { val: levels.crowns || levels.major || '50%', sub: card.sub || 'D2740 / D6240', color: card.color || 'indigo' };
+        if (key === 'dentures') return { val: levels.dentures || levels.major || '50%', sub: card.sub || 'Full / Partial', color: card.color || 'amber' };
+        return { val: card.val || '80%', sub: card.sub || '', color: card.color || 'cyan' };
+      }
 
-      catMatrix.forEach(item => {
+      // If breakdown has customized cards stored, use them; otherwise initialize from clinic defaults
+      if (!Array.isArray(data.custom_category_cards) || data.custom_category_cards.length === 0) {
+        const enabledSettingsCards = activeCategoryCardsSettings.filter(c => c.enabled !== false);
+        const seedCards = enabledSettingsCards.length > 0 ? enabledSettingsCards : DEFAULT_CATEGORY_CARDS.slice(0, 9);
+        data.custom_category_cards = seedCards.map(c => {
+          const resolved = resolveCategoryCardValue(c);
+          return {
+            id: c.id,
+            code: c.code,
+            name: c.name,
+            sourceKey: c.sourceKey,
+            val: resolved.val,
+            sub: resolved.sub,
+            color: resolved.color,
+          };
+        });
+      }
+
+      data.custom_category_cards.forEach((item, idx) => {
         const cBox = document.createElement('div');
-        cBox.className = `category-box cat-card-${item.color}`;
+        cBox.className = `category-box cat-card-${item.color || 'cyan'}`;
         cBox.style.cursor = 'pointer';
-        cBox.title = `Click to edit ${item.code} value`;
+        cBox.title = `Click to edit or customize ${item.code} card`;
         cBox.innerHTML = `
-          <div class="category-code-tag">${item.code}</div>
-          <div class="category-name-text">${item.name}</div>
-          <div class="category-percentage-num">${item.val}</div>
-          <div class="category-sub-note">${item.sub}</div>
+          <button type="button" class="card-edit-trigger" title="Edit this card">✎</button>
+          <div class="category-code-tag">${escapeHtml(item.code)}</div>
+          <div class="category-name-text">${escapeHtml(item.name)}</div>
+          <div class="category-percentage-num">${escapeHtml(item.val)}</div>
+          <div class="category-sub-note">${escapeHtml(item.sub)}</div>
         `;
-        cBox.addEventListener('click', async () => {
-          if (!currentAuditData) return;
-          if (!currentAuditData.coverage_levels) currentAuditData.coverage_levels = {};
-          if (!currentAuditData.insurance_details) currentAuditData.insurance_details = {};
-          const cl = currentAuditData.coverage_levels;
-          const idet = currentAuditData.insurance_details;
-
-          if (item.code === 'MISSING TOOTH') {
-            idet.missing_tooth_clause = !idet.missing_tooth_clause;
-            displayToast(`Missing Tooth Clause set to: ${idet.missing_tooth_clause ? 'Yes' : 'No'}`);
-          } else if (item.code === 'WAITING PERIOD') {
-            const newWp = await openCustomPrompt(
-              'Edit Waiting Period',
-              'Enter Waiting Period details (or "No" to waive):',
-              cl.waiting_period_details || (idet.waiting_period ? 'Yes' : 'No')
-            );
-            if (newWp === null) return;
-            const trimmed = newWp.trim();
-            if (/^(no|none|waived|0)$/i.test(trimmed)) {
-              idet.waiting_period = false;
-              cl.waiting_period_details = 'None';
-            } else {
-              idet.waiting_period = true;
-              cl.waiting_period_details = trimmed;
-            }
-            displayToast('Updated Waiting Period!');
-          } else {
-            const newVal = await openCustomPrompt(
-              `Edit ${item.code}`,
-              `Enter coverage percentage or status for ${item.code} (${item.name}):`,
-              item.val
-            );
-            if (newVal === null) return;
-            const v = newVal.trim() || 'NC';
-            if (item.code === 'PREVENTATIVE') cl.preventive = v;
-            else if (item.code === 'BASIC') cl.basic = v;
-            else if (item.code === 'MAJOR') cl.major = v;
-            else if (item.code === 'ENDO') cl.endo = v;
-            else if (item.code === 'ORAL SURGERY') cl.oral_surgery = v;
-            else if (item.code === 'IMPLANTS D6010') {
-              cl.implants = v;
-              if (d6010Code) d6010Code.coverage_percentage = v;
-            } else if (item.code === 'NIGHT GUARD') {
-              cl.night_guard = v;
-              if (d9944Code) d9944Code.coverage_percentage = v;
-            }
-            displayToast(`Updated ${item.code} to ${v}`);
-          }
-          renderReportDashboard(currentAuditData);
-          persistActiveBreakdownToDb();
+        cBox.addEventListener('click', () => {
+          openEditCategoryCardModal(item, idx, 'active_breakdown');
         });
         categoryCardsGrid.appendChild(cBox);
       });
@@ -3024,28 +2974,31 @@
 
       curY += 3;
 
-      // 3. 10-Box Category Summary Matrix
+      // 3. Category Summary Matrix (Dynamic to Custom / Configured Benefit Cards)
       const missingTooth = d.missing_tooth_clause ? 'Yes' : 'No';
       const waitingPeriod = d.waiting_period ? 'Yes' : 'No (Waived)';
-      const summaryBoxes = [
-        ['PREVENTATIVE', c.preventive || '100%'],
-        ['BASIC', c.basic || '80%'],
-        ['MAJOR', c.major || '60%'],
-        ['ENDO', c.endo || c.basic || '80%'],
-        ['ORAL SURG', c.oral_surgery || c.basic || '80%'],
-        ['IMPLANTS', c.implants || 'NC'],
-        ['NIGHT GUARD', c.night_guard || 'NC'],
-        ['MISSING TOOTH', missingTooth],
-        ['WAITING PER', waitingPeriod],
-        ['ORTHO (' + trunc(oTerms, 7) + ')', oCov],
-      ];
-      const boxW = contentW / 10;
+      const activePdfCards = (data.custom_category_cards && data.custom_category_cards.length > 0)
+        ? data.custom_category_cards
+        : [
+            { code: 'PREVENTATIVE', val: c.preventive || '100%' },
+            { code: 'BASIC', val: c.basic || '80%' },
+            { code: 'MAJOR', val: c.major || '60%' },
+            { code: 'ENDO', val: c.endo || c.basic || '80%' },
+            { code: 'ORAL SURG', val: c.oral_surgery || c.basic || '80%' },
+            { code: 'IMPLANTS', val: c.implants || 'NC' },
+            { code: 'NIGHT GUARD', val: c.night_guard || 'NC' },
+            { code: 'MISSING TOOTH', val: missingTooth },
+            { code: 'WAITING PER', val: waitingPeriod },
+          ];
+      const summaryBoxes = activePdfCards.map(b => [b.code || 'TIER', b.val || 'NC']);
+      const numBoxes = Math.max(summaryBoxes.length, 1);
+      const boxW = contentW / numBoxes;
       const boxH = 20;
       summaryBoxes.forEach((b, i) => {
         const bx = marginX + i * boxW;
         drawRect(bx, curY, boxW, boxH, [0.95, 0.97, 1.0], [0.75, 0.8, 0.86], 0.4);
-        drawText(trunc(b[0], 13), bx + 2.5, curY + 2.2, 5.5, true, [0.28, 0.33, 0.41]);
-        drawText(trunc(b[1], 12), bx + 2.5, curY + 10.2, 7.2, true, [0.02, 0.38, 0.62]);
+        drawText(trunc(b[0], 12), bx + 2.5, curY + 2.2, 5.2, true, [0.28, 0.33, 0.41]);
+        drawText(trunc(b[1], 12), bx + 2.5, curY + 10.2, 7.0, true, [0.02, 0.38, 0.62]);
       });
       curY += boxH + 4;
 
@@ -3756,6 +3709,11 @@
           } else {
             activeEnabledCdtCodes = DEFAULT_ENABLED_CDT_CODES.slice();
           }
+          if (Array.isArray(data.categoryCards) && data.categoryCards.length > 0) {
+            activeCategoryCardsSettings = data.categoryCards.map(c => ({ ...c }));
+          } else {
+            activeCategoryCardsSettings = DEFAULT_CATEGORY_CARDS.map(c => ({ ...c }));
+          }
           if (settingSystemInstruction) settingSystemInstruction.value = data.systemInstruction || '';
           if (settingCustomPrompt) settingCustomPrompt.value = data.customPrompt || '';
           try {
@@ -3847,6 +3805,312 @@
       });
     }
 
+    // Render Benefit Category Cards in Settings Modal
+    function renderSettingsCategoryCards() {
+      const container = document.getElementById('settingsCategoryCardsList');
+      if (!container) return;
+
+      container.innerHTML = activeCategoryCardsSettings.map((card, idx) => {
+        const isChecked = card.enabled !== false;
+        const colorClass = `cat-card-${card.color || 'cyan'}`;
+        return `
+          <div class="cdt-checklist-row" data-card-idx="${idx}" style="display: flex; align-items: center; justify-content: space-between; gap: 0.85rem; padding: 0.6rem 0.85rem; border-bottom: 1px solid rgba(148, 163, 184, 0.12); font-size: 0.82rem; background: ${isChecked ? 'rgba(56, 189, 248, 0.05)' : 'transparent'}; border-radius: 6px; margin-bottom: 3px;">
+            <div style="display: flex; align-items: center; gap: 0.65rem; flex: 1; min-width: 0;">
+              <input type="checkbox" class="cat-card-check-toggle" data-card-idx="${idx}" ${isChecked ? 'checked' : ''} style="width: 17px; height: 17px; accent-color: #38bdf8; cursor: pointer;" title="Enable/Disable this Category Card">
+              <span style="min-width: 28px; text-align: center; font-family: var(--font-mono); font-size: 0.74rem; font-weight: 800; color: ${isChecked ? '#38bdf8' : '#64748b'};">#${idx + 1}</span>
+              <div class="category-box ${colorClass}" style="padding: 0.35rem 0.65rem; min-width: 110px; max-width: 130px; margin: 0; pointer-events: none;">
+                <div class="category-code-tag" style="font-size: 0.62rem;">${escapeHtml(card.code)}</div>
+                <div class="category-name-text" style="font-size: 0.62rem;">${escapeHtml(card.name)}</div>
+                <div class="category-percentage-num" style="font-size: 0.82rem;">${escapeHtml(card.val || '80%')}</div>
+                <div class="category-sub-note" style="font-size: 0.58rem;">${escapeHtml(card.sub || '')}</div>
+              </div>
+              <div style="display: flex; flex-direction: column; line-height: 1.25; margin-left: 0.35rem;">
+                <span style="color: ${isChecked ? '#f8fafc' : '#94a3b8'}; font-weight: 700; font-size: 0.84rem;">${escapeHtml(card.code)} — ${escapeHtml(card.name)}</span>
+                <span style="color: #64748b; font-size: 0.72rem;">${escapeHtml(card.sub || 'Standard clinical tier')}</span>
+              </div>
+            </div>
+            <div style="display: flex; align-items: center; gap: 0.45rem; flex-shrink: 0;">
+              <button type="button" class="btn-action-ghost cat-card-move-up" data-card-idx="${idx}" ${idx === 0 ? 'disabled' : ''} style="padding: 3px 9px; font-size: 0.75rem; font-weight: 700;" title="Move Up">↑</button>
+              <button type="button" class="btn-action-ghost cat-card-move-down" data-card-idx="${idx}" ${idx === activeCategoryCardsSettings.length - 1 ? 'disabled' : ''} style="padding: 3px 9px; font-size: 0.75rem; font-weight: 700;" title="Move Down">↓</button>
+              <button type="button" class="btn-action-ghost cat-card-edit-btn" data-card-idx="${idx}" style="padding: 3px 9px; font-size: 0.72rem;" title="Edit Card details">Edit</button>
+              ${activeCategoryCardsSettings.length > 3 ? `
+                <button type="button" class="del-payer-btn cat-card-del-btn" data-card-idx="${idx}" style="background: none; border: none; color: #ef4444; cursor: pointer; padding: 3px 6px; font-size: 0.78rem;" title="Remove this Card">✕</button>
+              ` : ''}
+            </div>
+          </div>
+        `;
+      }).join('');
+
+      container.querySelectorAll('.cat-card-check-toggle').forEach(cb => {
+        cb.addEventListener('change', () => {
+          const idx = parseInt(cb.dataset.cardIdx, 10);
+          if (activeCategoryCardsSettings[idx]) {
+            activeCategoryCardsSettings[idx].enabled = cb.checked;
+            renderSettingsCategoryCards();
+          }
+        });
+      });
+
+      container.querySelectorAll('.cat-card-move-up').forEach(btn => {
+        btn.addEventListener('click', () => {
+          const idx = parseInt(btn.dataset.cardIdx, 10);
+          if (idx > 0) {
+            const item = activeCategoryCardsSettings.splice(idx, 1)[0];
+            activeCategoryCardsSettings.splice(idx - 1, 0, item);
+            renderSettingsCategoryCards();
+          }
+        });
+      });
+
+      container.querySelectorAll('.cat-card-move-down').forEach(btn => {
+        btn.addEventListener('click', () => {
+          const idx = parseInt(btn.dataset.cardIdx, 10);
+          if (idx < activeCategoryCardsSettings.length - 1) {
+            const item = activeCategoryCardsSettings.splice(idx, 1)[0];
+            activeCategoryCardsSettings.splice(idx + 1, 0, item);
+            renderSettingsCategoryCards();
+          }
+        });
+      });
+
+      container.querySelectorAll('.cat-card-edit-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+          const idx = parseInt(btn.dataset.cardIdx, 10);
+          openEditCategoryCardModal(activeCategoryCardsSettings[idx], idx, 'settings');
+        });
+      });
+
+      container.querySelectorAll('.cat-card-del-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+          const idx = parseInt(btn.dataset.cardIdx, 10);
+          activeCategoryCardsSettings.splice(idx, 1);
+          renderSettingsCategoryCards();
+          displayToast('Removed category card from clinic defaults.');
+        });
+      });
+    }
+
+    // ==========================================
+    // BENEFIT CATEGORY CARD EDIT / ADD MODAL LOGIC
+    // ==========================================
+    const editCategoryCardModal = document.getElementById('editCategoryCardModal');
+    const closeEditCategoryCardModalBtn = document.getElementById('closeEditCategoryCardModalBtn');
+    const cancelEditCategoryCardBtn = document.getElementById('cancelEditCategoryCardBtn');
+    const saveEditCategoryCardBtn = document.getElementById('saveEditCategoryCardBtn');
+    const btnDeleteCategoryCard = document.getElementById('btnDeleteCategoryCard');
+    const editCategoryCardModalTitle = document.getElementById('editCategoryCardModalTitle');
+    const cardPresetWrap = document.getElementById('cardPresetWrap');
+    const cardPresetSelect = document.getElementById('cardPresetSelect');
+    const cardCodeInput = document.getElementById('cardCodeInput');
+    const cardValInput = document.getElementById('cardValInput');
+    const cardNameInput = document.getElementById('cardNameInput');
+    const cardSubInput = document.getElementById('cardSubInput');
+    const cardColorSelect = document.getElementById('cardColorSelect');
+    const cardLivePreviewBox = document.getElementById('cardLivePreviewBox');
+    const previewCardCode = document.getElementById('previewCardCode');
+    const previewCardName = document.getElementById('previewCardName');
+    const previewCardVal = document.getElementById('previewCardVal');
+    const previewCardSub = document.getElementById('previewCardSub');
+
+    let currentCardModalContext = null; // 'active_breakdown' | 'settings'
+    let currentCardModalIndex = -1;
+    let currentCardModalItem = null;
+
+    function updateCardLivePreview() {
+      if (!cardLivePreviewBox) return;
+      const codeVal = (cardCodeInput?.value || '').trim().toUpperCase() || 'CODE';
+      const nameVal = (cardNameInput?.value || '').trim() || 'Category Name';
+      const pctVal = (cardValInput?.value || '').trim() || '80%';
+      const subVal = (cardSubInput?.value || '').trim() || 'Sub-note';
+      const colVal = cardColorSelect?.value || 'cyan';
+
+      if (previewCardCode) previewCardCode.textContent = codeVal;
+      if (previewCardName) previewCardName.textContent = nameVal;
+      if (previewCardVal) previewCardVal.textContent = pctVal;
+      if (previewCardSub) previewCardSub.textContent = subVal;
+
+      cardLivePreviewBox.className = `category-box cat-card-${colVal}`;
+    }
+
+    [cardCodeInput, cardValInput, cardNameInput, cardSubInput, cardColorSelect].forEach(input => {
+      input?.addEventListener('input', updateCardLivePreview);
+      input?.addEventListener('change', updateCardLivePreview);
+    });
+
+    const CARD_PRESETS = {
+      ORTHO: { code: 'ORTHO', name: 'Orthodontics', val: '50%', sub: 'Braces / Aligners', color: 'purple' },
+      PERIO: { code: 'PERIO', name: 'Periodontics', val: '80%', sub: 'D4341 SRP / Maint', color: 'cyan' },
+      CROWNS: { code: 'CROWNS', name: 'Crown & Bridge', val: '50%', sub: 'D2740 / D6240', color: 'indigo' },
+      DENTURES: { code: 'DENTURES', name: 'Prosthodontics', val: '50%', sub: 'Full / Partial', color: 'amber' },
+      IMPLANTS: { code: 'IMPLANTS D6010', name: 'Implant Placement', val: '60%', sub: 'Covered Benefit', color: 'cyan' },
+      NIGHT_GUARD: { code: 'NIGHT GUARD', name: 'D9944 Guard', val: '80%', sub: 'Covered Benefit', color: 'cyan' },
+      ENDO: { code: 'ENDO', name: 'Endodontics', val: '80%', sub: 'Root Canals', color: 'cyan' },
+      ORAL_SURGERY: { code: 'ORAL SURGERY', name: 'Oral Surgery', val: '80%', sub: 'Extractions', color: 'cyan' },
+    };
+
+    cardPresetSelect?.addEventListener('change', () => {
+      const presetKey = cardPresetSelect.value;
+      if (presetKey && CARD_PRESETS[presetKey]) {
+        const p = CARD_PRESETS[presetKey];
+        if (cardCodeInput) cardCodeInput.value = p.code;
+        if (cardNameInput) cardNameInput.value = p.name;
+        if (cardValInput) cardValInput.value = p.val;
+        if (cardSubInput) cardSubInput.value = p.sub;
+        if (cardColorSelect) cardColorSelect.value = p.color;
+        updateCardLivePreview();
+      }
+    });
+
+    function openEditCategoryCardModal(item, index, context) {
+      if (!editCategoryCardModal) return;
+      currentCardModalContext = context;
+      currentCardModalIndex = index;
+      currentCardModalItem = item;
+
+      const isAdd = !item || index === -1;
+      if (editCategoryCardModalTitle) {
+        editCategoryCardModalTitle.textContent = isAdd
+          ? (context === 'settings' ? 'Add Clinic Category Card' : 'Add Card to Breakdown')
+          : (context === 'settings' ? `Edit Clinic Category Card: ${item.code}` : `Edit Category Card: ${item.code}`);
+      }
+
+      if (cardPresetWrap) {
+        cardPresetWrap.style.display = isAdd ? 'block' : 'none';
+        if (cardPresetSelect) cardPresetSelect.value = '';
+      }
+
+      if (cardCodeInput) cardCodeInput.value = item ? (item.code || '') : '';
+      if (cardValInput) cardValInput.value = item ? (item.val || '80%') : '80%';
+      if (cardNameInput) cardNameInput.value = item ? (item.name || '') : '';
+      if (cardSubInput) cardSubInput.value = item ? (item.sub || '') : '';
+      if (cardColorSelect) cardColorSelect.value = item ? (item.color || 'cyan') : 'cyan';
+
+      if (btnDeleteCategoryCard) {
+        btnDeleteCategoryCard.style.display = isAdd ? 'none' : 'inline-block';
+      }
+
+      updateCardLivePreview();
+      editCategoryCardModal.classList.add('active');
+    }
+
+    function closeCardEditModal() {
+      editCategoryCardModal?.classList.remove('active');
+      currentCardModalContext = null;
+      currentCardModalIndex = -1;
+      currentCardModalItem = null;
+    }
+
+    closeEditCategoryCardModalBtn?.addEventListener('click', closeCardEditModal);
+    cancelEditCategoryCardBtn?.addEventListener('click', closeCardEditModal);
+    editCategoryCardModal?.addEventListener('click', (e) => {
+      if (e.target === editCategoryCardModal) closeCardEditModal();
+    });
+
+    saveEditCategoryCardBtn?.addEventListener('click', () => {
+      const codeVal = (cardCodeInput?.value || '').trim().toUpperCase();
+      const nameVal = (cardNameInput?.value || '').trim();
+      const valVal = (cardValInput?.value || '').trim() || '80%';
+      const subVal = (cardSubInput?.value || '').trim();
+      const colorVal = cardColorSelect?.value || 'cyan';
+
+      if (!codeVal || !nameVal) {
+        openCustomNotice('Validation Notice', 'Card Code (Tag) and Category Description cannot be empty.');
+        return;
+      }
+
+      const updatedCard = {
+        ...(currentCardModalItem || {}),
+        id: currentCardModalItem?.id || ('card_' + Date.now()),
+        code: codeVal,
+        name: nameVal,
+        val: valVal,
+        sub: subVal,
+        color: colorVal,
+        enabled: true,
+      };
+
+      if (currentCardModalContext === 'active_breakdown') {
+        if (!currentAuditData) return;
+        if (!Array.isArray(currentAuditData.custom_category_cards)) {
+          currentAuditData.custom_category_cards = [];
+        }
+        if (currentCardModalIndex >= 0 && currentCardModalIndex < currentAuditData.custom_category_cards.length) {
+          currentAuditData.custom_category_cards[currentCardModalIndex] = updatedCard;
+        } else {
+          currentAuditData.custom_category_cards.push(updatedCard);
+        }
+        renderReportDashboard(currentAuditData);
+        persistActiveBreakdownToDb();
+        displayToast(`Saved "${codeVal}" category card!`);
+      } else if (currentCardModalContext === 'settings') {
+        if (currentCardModalIndex >= 0 && currentCardModalIndex < activeCategoryCardsSettings.length) {
+          activeCategoryCardsSettings[currentCardModalIndex] = updatedCard;
+        } else {
+          activeCategoryCardsSettings.push(updatedCard);
+        }
+        renderSettingsCategoryCards();
+        displayToast(`Saved "${codeVal}" to clinic default category cards!`);
+      }
+
+      closeCardEditModal();
+    });
+
+    btnDeleteCategoryCard?.addEventListener('click', async () => {
+      if (!currentCardModalItem) return;
+      const code = currentCardModalItem.code || 'Card';
+      const ok = await openCustomConfirm(
+        'Remove Category Card',
+        `Are you sure you want to remove the "${code}" category card?`,
+        'Remove Card',
+        'Cancel'
+      );
+      if (!ok) return;
+
+      if (currentCardModalContext === 'active_breakdown') {
+        if (currentAuditData && Array.isArray(currentAuditData.custom_category_cards)) {
+          currentAuditData.custom_category_cards.splice(currentCardModalIndex, 1);
+          renderReportDashboard(currentAuditData);
+          persistActiveBreakdownToDb();
+          displayToast(`Removed "${code}" card from breakdown.`);
+        }
+      } else if (currentCardModalContext === 'settings') {
+        activeCategoryCardsSettings.splice(currentCardModalIndex, 1);
+        renderSettingsCategoryCards();
+        displayToast(`Removed "${code}" card from clinic defaults.`);
+      }
+
+      closeCardEditModal();
+    });
+
+    // Breakdown header buttons: Add Card & Settings
+    document.getElementById('btnAddCategoryCardBtn')?.addEventListener('click', () => {
+      openEditCategoryCardModal(null, -1, 'active_breakdown');
+    });
+
+    document.getElementById('btnCustomizeCategoryCardsBtn')?.addEventListener('click', async () => {
+      if (openSettingsBtn) {
+        await loadPromptSettings();
+        renderCdtMemoryDictionary();
+        renderSettingsCategoryCards();
+        settingsTabBtns.forEach(b => b.classList.remove('active'));
+        settingsTabPanes.forEach(p => p.classList.remove('active'));
+        const catTabBtn = document.querySelector('.settings-tab-btn[data-tab="tabCategoryCards"]');
+        catTabBtn?.classList.add('active');
+        document.getElementById('tabCategoryCards')?.classList.add('active');
+        settingsModal?.classList.add('active');
+      }
+    });
+
+    document.getElementById('btnSettingsAddCategoryCard')?.addEventListener('click', () => {
+      openEditCategoryCardModal(null, -1, 'settings');
+    });
+
+    document.getElementById('btnSettingsResetCategoryCards')?.addEventListener('click', () => {
+      activeCategoryCardsSettings = DEFAULT_CATEGORY_CARDS.map(c => ({ ...c }));
+      renderSettingsCategoryCards();
+      displayToast('Restored default Benefit Category Cards.');
+    });
+
     if (btnSyncChecklistToPrompt) {
       btnSyncChecklistToPrompt.addEventListener('click', () => {
         if (!settingCustomPrompt) return;
@@ -3886,6 +4150,7 @@
     openSettingsBtn?.addEventListener('click', async () => {
       await loadPromptSettings();
       renderCdtMemoryDictionary();
+      renderSettingsCategoryCards();
       settingsModal.classList.add('active');
     });
 
@@ -3900,7 +4165,7 @@
       }
     });
 
-    // Save Clinic CDT Checklist Sequence & AI Prompt Settings to PostgreSQL
+    // Save Clinic CDT Checklist Sequence, Category Cards & AI Prompt Settings to PostgreSQL
     btnSaveSettings?.addEventListener('click', async () => {
       const sysVal = settingSystemInstruction.value.trim();
       const prVal = settingCustomPrompt.value.trim();
@@ -3915,6 +4180,7 @@
             systemInstruction: sysVal,
             customPrompt: prVal,
             enabledCdtCodes: activeEnabledCdtCodes,
+            categoryCards: activeCategoryCardsSettings,
           }),
         });
       } catch (e) {
@@ -3922,16 +4188,19 @@
       }
 
       if (currentAuditData) {
+        // If current audit data exists, refresh custom_category_cards from updated settings unless already customized
+        renderReportDashboard(currentAuditData);
         renderCdtTable();
         renderExcelBreakdownSheet(currentAuditData);
       }
       settingsModal.classList.remove('active');
-      displayToast('Saved Clinic CDT Checklist Sequence & AI Directives!');
+      displayToast('Saved Clinic Category Cards, CDT Checklist & AI Directives!');
     });
 
     // Restore Factory Defaults
     btnRestoreDefaults?.addEventListener('click', async () => {
       activeEnabledCdtCodes = DEFAULT_ENABLED_CDT_CODES.slice();
+      activeCategoryCardsSettings = DEFAULT_CATEGORY_CARDS.map(c => ({ ...c }));
       localStorage.removeItem('dentverify_system_instruction');
       localStorage.removeItem('dentverify_custom_prompt');
       try {
@@ -3942,11 +4211,13 @@
             systemInstruction: '',
             customPrompt: '',
             enabledCdtCodes: DEFAULT_ENABLED_CDT_CODES,
+            categoryCards: DEFAULT_CATEGORY_CARDS,
           }),
         });
         await loadPromptSettings();
         renderCdtMemoryDictionary();
-        displayToast('Restored default CDT Checklist Sequence & AI prompt directives.');
+        renderSettingsCategoryCards();
+        displayToast('Restored default CDT Checklist, Category Cards & AI prompt directives.');
       } catch (e) {
         displayToast('Could not restore default prompts.');
       }
