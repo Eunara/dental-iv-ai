@@ -2320,7 +2320,115 @@ app.delete('/api/verifications/:id', async (req, res) => {
   }
 });
 
-// Verification Endpoint (Supports single or multiple files)
+// ==========================================
+// RESILIENT MULTI-KEY GEMINI POOL & FAILOVER
+// ==========================================
+const apiKeyStatusMap = new Map(); // key -> { exhaustedUntil: number, errorCount: number, successCount: number }
+let keyRotationCounter = 0;
+
+function maskApiKey(key) {
+  if (!key || typeof key !== 'string') return '***';
+  if (key.length <= 10) return `${key.slice(0, 3)}...`;
+  return `${key.slice(0, 7)}...${key.slice(-4)}`;
+}
+
+function getAllConfiguredGeminiApiKeys() {
+  const keys = [];
+  // 1. Check comma/semicolon/newline-separated GEMINI_API_KEYS
+  if (process.env.GEMINI_API_KEYS) {
+    process.env.GEMINI_API_KEYS.split(/[,;\n]+/).forEach((k) => {
+      const trimmed = k.trim();
+      if (trimmed && !trimmed.startsWith('your_') && !keys.includes(trimmed)) {
+        keys.push(trimmed);
+      }
+    });
+  }
+  // 2. Check GEMINI_API_KEY, GEMINI_API_KEY_1 to GEMINI_API_KEY_10
+  const candidateEnvNames = ['GEMINI_API_KEY', ...Array.from({ length: 10 }, (_, i) => `GEMINI_API_KEY_${i + 1}`)];
+  for (const envName of candidateEnvNames) {
+    const val = (process.env[envName] || '').trim();
+    if (val && !val.startsWith('your_') && !keys.includes(val)) {
+      keys.push(val);
+    }
+  }
+  return keys;
+}
+
+function getPrioritizedGeminiApiKeys() {
+  const allKeys = getAllConfiguredGeminiApiKeys();
+  if (allKeys.length <= 1) return allKeys;
+
+  const now = Date.now();
+  const healthyKeys = [];
+  const coolingKeys = [];
+
+  for (const k of allKeys) {
+    const stat = apiKeyStatusMap.get(k);
+    if (!stat || stat.exhaustedUntil <= now) {
+      healthyKeys.push(k);
+    } else {
+      coolingKeys.push({ key: k, expiresAt: stat.exhaustedUntil });
+    }
+  }
+
+  // Sort cooling keys by earliest expiration
+  coolingKeys.sort((a, b) => a.expiresAt - b.expiresAt);
+
+  // Round-robin rotate healthy keys across calls to balance RPM
+  let orderedHealthy = healthyKeys;
+  if (healthyKeys.length > 1) {
+    const startIdx = keyRotationCounter % healthyKeys.length;
+    keyRotationCounter = (keyRotationCounter + 1) % healthyKeys.length;
+    orderedHealthy = [...healthyKeys.slice(startIdx), ...healthyKeys.slice(0, startIdx)];
+  }
+
+  return [...orderedHealthy, ...coolingKeys.map((c) => c.key)];
+}
+
+function isGeminiQuotaOrKeyError(err) {
+  if (!err) return false;
+  const status = err.status || err.statusCode;
+  const msg = (err.message || '').toLowerCase();
+  if (
+    status === 429 ||
+    msg.includes('429') ||
+    msg.includes('resource_exhausted') ||
+    msg.includes('quota') ||
+    msg.includes('rate limit')
+  ) {
+    return true;
+  }
+  if (
+    status === 403 &&
+    (msg.includes('quota') ||
+      msg.includes('exhausted') ||
+      msg.includes('suspended') ||
+      msg.includes('billing') ||
+      msg.includes('compromised'))
+  ) {
+    return true;
+  }
+  return false;
+}
+
+function recordKeyFailure(key, cooldownSeconds = 60) {
+  const stat = apiKeyStatusMap.get(key) || { errorCount: 0, successCount: 0, exhaustedUntil: 0 };
+  stat.errorCount++;
+  stat.exhaustedUntil = Date.now() + cooldownSeconds * 1000;
+  apiKeyStatusMap.set(key, stat);
+  console.warn(
+    `⚠️ [Gemini Key Failover] Key [${maskApiKey(key)}] hit quota limit. Cooling down for ${cooldownSeconds}s (Errors: ${stat.errorCount}).`
+  );
+}
+
+function recordKeySuccess(key) {
+  const stat = apiKeyStatusMap.get(key) || { errorCount: 0, successCount: 0, exhaustedUntil: 0 };
+  stat.successCount++;
+  stat.exhaustedUntil = 0;
+  apiKeyStatusMap.set(key, stat);
+}
+
+// Verification Endpoint (Supports single or multiple files with resilient multi-key pool)
 app.post('/api/verify', upload.array('files', 10), async (req, res) => {
   if (!req.user) {
     return res.status(401).json({
@@ -2338,10 +2446,10 @@ app.post('/api/verify', upload.array('files', 10), async (req, res) => {
       });
     }
 
-    const apiKey = process.env.GEMINI_API_KEY;
-    if (!apiKey || apiKey.trim() === '' || apiKey === 'your_gemini_api_key_here') {
+    const availableKeys = getAllConfiguredGeminiApiKeys();
+    if (availableKeys.length === 0) {
       return res.status(500).json({
-        error: 'GEMINI_API_KEY is not configured on the server. Please add your Gemini API key to the .env file.',
+        error: 'No valid Gemini API key configured on the server. Please add GEMINI_API_KEY (or GEMINI_API_KEY_2, GEMINI_API_KEY_3) to .env.',
       });
     }
 
@@ -2414,9 +2522,6 @@ app.post('/api/verify', upload.array('files', 10), async (req, res) => {
 
     const userPrompt = `${networkInstruction}${multiFileNote}\n\n${basePrompt}${checklistDirective}`;
 
-    // Initialize Google Gen AI client
-    const ai = new GoogleGenAI({ apiKey });
-
     // Format all uploaded files as inlineData parts for Gemini
     const fileContentParts = uploadedFiles.map((file) => {
       let mimeType = file.mimetype;
@@ -2440,47 +2545,75 @@ app.post('/api/verify', upload.array('files', 10), async (req, res) => {
     const modelsToTry = [...new Set(candidateModels)];
 
     async function executeWithFallback() {
+      const keysToTry = getPrioritizedGeminiApiKeys();
+      if (keysToTry.length === 0) {
+        throw new Error('No valid Gemini API key configured in .env');
+      }
+
       let lastError;
-      for (const currentModel of modelsToTry) {
-        for (let attempt = 1; attempt <= 2; attempt++) {
-          try {
-            console.log(`[Gemini Request] Calling model: ${currentModel} (Attempt ${attempt}, Files: ${uploadedFiles.length})...`);
-            const res = await ai.models.generateContent({
-              model: currentModel,
-              contents: [
-                ...fileContentParts,
-                {
-                  text: userPrompt,
+      for (const currentKey of keysToTry) {
+        const ai = new GoogleGenAI({ apiKey: currentKey });
+        const keyLabel = maskApiKey(currentKey);
+
+        for (const currentModel of modelsToTry) {
+          for (let attempt = 1; attempt <= 2; attempt++) {
+            try {
+              console.log(
+                `[Gemini Request] Calling model: ${currentModel} via Key [${keyLabel}] (Attempt ${attempt}, Files: ${uploadedFiles.length})...`
+              );
+              const res = await ai.models.generateContent({
+                model: currentModel,
+                contents: [
+                  ...fileContentParts,
+                  {
+                    text: userPrompt,
+                  },
+                ],
+                config: {
+                  systemInstruction: systemInstruction,
+                  responseMimeType: 'application/json',
+                  responseSchema: dentalBreakdownSchema,
+                  temperature: 0.1,
                 },
-              ],
-              config: {
-                systemInstruction: systemInstruction,
-                responseMimeType: 'application/json',
-                responseSchema: dentalBreakdownSchema,
-                temperature: 0.1,
-              },
-            });
-            return { response: res, usedModel: currentModel };
-          } catch (err) {
-            lastError = err;
-            const errMsg = (err.message || '').toLowerCase();
-            const is503 = err.status === 503 || errMsg.includes('503') || errMsg.includes('high demand');
-            if (is503) {
-              console.warn(`[Gemini 503 Spike] Model ${currentModel} is experiencing high demand. Falling back to alternative model...`);
-              break; // Try next model immediately
+              });
+              recordKeySuccess(currentKey);
+              return { response: res, usedModel: currentModel, usedKey: keyLabel };
+            } catch (err) {
+              lastError = err;
+              const errMsg = (err.message || '').toLowerCase();
+              const isQuotaExhausted = isGeminiQuotaOrKeyError(err);
+
+              if (isQuotaExhausted) {
+                recordKeyFailure(currentKey, 60);
+                console.warn(
+                  `⚠️ [Gemini Quota Exceeded] Key [${keyLabel}] quota depleted or rate limited. Seamlessly failing over to next API key in pool...`
+                );
+                break; // Break out of model/attempt loop for this key to switch to next key immediately
+              }
+
+              const is503 = err.status === 503 || errMsg.includes('503') || errMsg.includes('high demand');
+              if (is503) {
+                console.warn(`[Gemini 503 Spike] Model ${currentModel} is experiencing high demand. Falling back to alternative model...`);
+                break; // Try next model immediately
+              }
+
+              if (err.status === 429 && attempt < 2) {
+                await new Promise((r) => setTimeout(r, 1200));
+                continue;
+              }
+              break;
             }
-            if (err.status === 429 && attempt < 2) {
-              await new Promise((r) => setTimeout(r, 1500));
-              continue;
-            }
-            throw err;
+          }
+          if (isGeminiQuotaOrKeyError(lastError)) {
+            // Key exhausted, proceed to next key in pool
+            break;
           }
         }
       }
       throw lastError;
     }
 
-    const { response, usedModel } = await executeWithFallback();
+    const { response, usedModel, usedKey } = await executeWithFallback();
 
     const responseText = response.text;
     if (!responseText) {
@@ -2708,5 +2841,7 @@ app.listen(PORT, process.env.HOST || '127.0.0.1', async () => {
   console.log(`Domain:    https://dentverify.com`);
   const activeModel = process.env.GEMINI_MODEL || 'gemini-3.8-flash';
   console.log(`Model:     ${activeModel} (Google Gen AI SDK)`);
+  const activeKeys = getAllConfiguredGeminiApiKeys();
+  console.log(`API Keys:  ${activeKeys.length} key(s) loaded into failover/rotation pool`);
   console.log(`====================================================`);
 });
