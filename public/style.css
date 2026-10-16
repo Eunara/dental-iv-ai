@@ -2989,8 +2989,67 @@
       text-align: center;
       font-size: 0.68rem;
       color: #64748b;
-      border-top: 1px solid rgba(255, 255, 255, 0.06);
+      border-top: 1px solid rgba(255, 255, 255, 0.08);
       padding-top: 0.85rem;
+    }
+
+    .btn-pw-toggle {
+      position: absolute;
+      right: 0.65rem;
+      top: 50%;
+      transform: translateY(-50%);
+      background: transparent;
+      border: none;
+      color: #64748b;
+      cursor: pointer;
+      padding: 0.25rem;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 4px;
+      transition: color 0.15s ease, background 0.15s ease;
+    }
+
+    .btn-pw-toggle:hover {
+      color: #38bdf8;
+      background: rgba(56, 189, 248, 0.1);
+    }
+
+    .gatekeeper-trust-badges {
+      display: flex;
+      justify-content: center;
+      flex-wrap: wrap;
+      gap: 0.45rem;
+      margin-top: 0.1rem;
+    }
+
+    .trust-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.28rem;
+      font-size: 0.66rem;
+      font-weight: 700;
+      color: #94a3b8;
+      background: rgba(15, 23, 42, 0.72);
+      border: 1px solid rgba(56, 189, 248, 0.22);
+      padding: 0.24rem 0.58rem;
+      border-radius: 999px;
+      letter-spacing: 0.01em;
+    }
+
+    .gatekeeper-statutory-note {
+      font-size: 0.63rem;
+      line-height: 1.48;
+      color: #64748b;
+      text-align: left;
+      background: rgba(2, 6, 23, 0.45);
+      border: 1px solid rgba(148, 163, 184, 0.12);
+      border-radius: 8px;
+      padding: 0.55rem 0.7rem;
+    }
+
+    .gatekeeper-statutory-note strong {
+      color: #94a3b8;
     }
 
     /* ==========================================================================

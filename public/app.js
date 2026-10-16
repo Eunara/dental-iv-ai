@@ -4996,7 +4996,7 @@
             }
           } else {
             if (gateErrorMsg) {
-              gateErrorMsg.textContent = data.error || 'Invalid clinic email or password.';
+              gateErrorMsg.textContent = data.error || 'Invalid practice email or password.';
               gateErrorMsg.style.display = 'block';
             }
           }
@@ -5009,12 +5009,190 @@
           if (btnGateSubmit) {
             btnGateSubmit.disabled = false;
             btnGateSubmit.innerHTML = `
-              <span>Sign In to Clinic Workspace</span>
+              <span>Secure Sign In to Practice Portal</span>
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
                 <polyline points="9 18 15 12 9 6"></polyline>
               </svg>
             `;
           }
+        }
+      });
+    }
+
+    // Show/Hide Password Toggle Buttons (Gatekeeper & Auth Modal)
+    const toggleGatePasswordBtn = document.getElementById('toggleGatePasswordBtn');
+    if (toggleGatePasswordBtn && gatePassword) {
+      toggleGatePasswordBtn.addEventListener('click', () => {
+        const isPw = gatePassword.type === 'password';
+        gatePassword.type = isPw ? 'text' : 'password';
+        const eyeOpen = document.getElementById('gatePwEyeOpen');
+        const eyeClosed = document.getElementById('gatePwEyeClosed');
+        if (eyeOpen) eyeOpen.style.display = isPw ? 'none' : 'block';
+        if (eyeClosed) eyeClosed.style.display = isPw ? 'block' : 'none';
+      });
+    }
+
+    const toggleModalPasswordBtn = document.getElementById('toggleModalPasswordBtn');
+    const modalLoginPassword = document.getElementById('loginPassword');
+    if (toggleModalPasswordBtn && modalLoginPassword) {
+      toggleModalPasswordBtn.addEventListener('click', () => {
+        const isPw = modalLoginPassword.type === 'password';
+        modalLoginPassword.type = isPw ? 'text' : 'password';
+        const eyeOpen = document.getElementById('modalPwEyeOpen');
+        const eyeClosed = document.getElementById('modalPwEyeClosed');
+        if (eyeOpen) eyeOpen.style.display = isPw ? 'none' : 'block';
+        if (eyeClosed) eyeClosed.style.display = isPw ? 'block' : 'none';
+      });
+    }
+
+    // Website Owner API Key Pool Monitor & Staff Productivity Telemetry
+    async function loadOwnerTelemetry() {
+      if (!currentUser || currentUser.role !== 'owner') return;
+      const keyPoolListEl = document.getElementById('ownerApiKeyPoolList');
+      const keySummaryBadgeEl = document.getElementById('ownerKeyPoolSummaryBadge');
+      const resetCooldownBtn = document.getElementById('btnResetKeyCooldowns');
+      const staffListEl = document.getElementById('ownerStaffLeaderboardList');
+      const staffTotalsStripEl = document.getElementById('ownerStaffTotalsStrip');
+
+      try {
+        const res = await fetch('/api/owner/telemetry');
+        if (!res.ok) return;
+        const data = await res.json();
+        if (!data.success) return;
+
+        const apiKeys = Array.isArray(data.apiKeys) ? data.apiKeys : [];
+        const staffRows = Array.isArray(data.staffLeaderboard) ? data.staffLeaderboard : [];
+        const summary = data.summary || {};
+
+        // 1. Render API Key Pool Monitor
+        const healthyCount = Number(summary.healthyKeysCount ?? apiKeys.filter(k => !k.inCooldown).length);
+        const totalKeys = Number(summary.totalKeysCount ?? apiKeys.length);
+        const anyInCooldown = apiKeys.some(k => k.inCooldown);
+
+        if (keySummaryBadgeEl) {
+          keySummaryBadgeEl.textContent = `${healthyCount} / ${totalKeys} Keys Ready`;
+          if (healthyCount === totalKeys && totalKeys > 0) {
+            keySummaryBadgeEl.style.background = 'rgba(16, 185, 129, 0.15)';
+            keySummaryBadgeEl.style.color = '#34d399';
+            keySummaryBadgeEl.style.borderColor = 'rgba(16, 185, 129, 0.35)';
+          } else if (healthyCount > 0) {
+            keySummaryBadgeEl.style.background = 'rgba(245, 158, 11, 0.16)';
+            keySummaryBadgeEl.style.color = '#fbbf24';
+            keySummaryBadgeEl.style.borderColor = 'rgba(245, 158, 11, 0.4)';
+          } else {
+            keySummaryBadgeEl.style.background = 'rgba(239, 68, 68, 0.16)';
+            keySummaryBadgeEl.style.color = '#f87171';
+            keySummaryBadgeEl.style.borderColor = 'rgba(239, 68, 68, 0.4)';
+          }
+        }
+
+        if (resetCooldownBtn) {
+          resetCooldownBtn.style.display = anyInCooldown ? 'inline-flex' : 'none';
+        }
+
+        if (keyPoolListEl) {
+          if (apiKeys.length === 0) {
+            keyPoolListEl.innerHTML = `<div style="color: #f87171; font-size: 0.76rem;">No Gemini API keys configured in .env or database.</div>`;
+          } else {
+            keyPoolListEl.innerHTML = apiKeys.map(k => {
+              const isCooldown = Boolean(k.inCooldown);
+              const statusBadge = isCooldown
+                ? `<span style="font-size: 0.65rem; font-weight: 800; padding: 0.16rem 0.5rem; border-radius: 999px; background: rgba(245, 158, 11, 0.16); color: #fbbf24; border: 1px solid rgba(245, 158, 11, 0.38);">⏳ COOLDOWN (${k.cooldownRemainingSec}s)</span>`
+                : `<span style="font-size: 0.65rem; font-weight: 800; padding: 0.16rem 0.5rem; border-radius: 999px; background: rgba(16, 185, 129, 0.15); color: #34d399; border: 1px solid rgba(16, 185, 129, 0.35);">● ACTIVE &amp; READY</span>`;
+
+              const lastUsedText = k.lastUsedAt
+                ? `Last used ${new Date(k.lastUsedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`
+                : 'Standby (0 calls since restart)';
+
+              return `
+                <div style="display: flex; justify-content: space-between; align-items: center; gap: 0.6rem; flex-wrap: wrap; padding: 0.6rem 0.8rem; border-radius: 9px; background: rgba(2, 6, 23, 0.55); border: 1px solid ${isCooldown ? 'rgba(245, 158, 11, 0.35)' : 'rgba(148, 163, 184, 0.15)'};">
+                  <div style="display: flex; flex-direction: column; gap: 0.15rem;">
+                    <div style="display: flex; align-items: center; gap: 0.45rem;">
+                      <span style="font-size: 0.8rem; font-weight: 800; color: #f8fafc;">${escapeHtml(k.slotLabel)}</span>
+                      <code style="font-size: 0.7rem; color: #38bdf8; background: rgba(56, 189, 248, 0.1); padding: 0.08rem 0.4rem; border-radius: 4px;">${escapeHtml(k.maskedKey)}</code>
+                      ${statusBadge}
+                    </div>
+                    <div style="font-size: 0.67rem; color: #64748b;">
+                      ${escapeHtml(lastUsedText)}${k.lastError ? ` • <span style="color: #f87171;">Last 429/Err: ${escapeHtml(k.lastError.slice(0, 55))}</span>` : ''}
+                    </div>
+                  </div>
+                  <div style="display: flex; align-items: center; gap: 0.4rem; flex-wrap: wrap;">
+                    <span style="font-size: 0.68rem; font-weight: 700; color: #e2e8f0; background: rgba(30, 41, 59, 0.85); border: 1px solid rgba(148, 163, 184, 0.2); padding: 0.2rem 0.5rem; border-radius: 6px;">Today: <strong style="color: #38bdf8;">${Number(k.todayCount || 0)}</strong></span>
+                    <span style="font-size: 0.68rem; font-weight: 700; color: #e2e8f0; background: rgba(30, 41, 59, 0.85); border: 1px solid rgba(148, 163, 184, 0.2); padding: 0.2rem 0.5rem; border-radius: 6px;">Total OK: <strong style="color: #34d399;">${Number(k.totalSuccess || 0)}</strong></span>
+                    <span style="font-size: 0.68rem; font-weight: 700; color: #e2e8f0; background: rgba(30, 41, 59, 0.85); border: 1px solid rgba(148, 163, 184, 0.2); padding: 0.2rem 0.5rem; border-radius: 6px;">429s: <strong style="color: ${k.quotaErrors > 0 ? '#fbbf24' : '#94a3b8'};">${Number(k.quotaErrors || 0)}</strong></span>
+                  </div>
+                </div>
+              `;
+            }).join('');
+          }
+        }
+
+        // 2. Render Staff Verification Output Counter
+        if (staffTotalsStripEl) {
+          staffTotalsStripEl.innerHTML = `
+            <span style="font-size: 0.68rem; font-weight: 700; padding: 0.18rem 0.55rem; border-radius: 6px; background: rgba(56, 189, 248, 0.14); color: #38bdf8; border: 1px solid rgba(56, 189, 248, 0.3);">Today: ${Number(summary.totalToday || 0)}</span>
+            <span style="font-size: 0.68rem; font-weight: 700; padding: 0.18rem 0.55rem; border-radius: 6px; background: rgba(168, 85, 247, 0.14); color: #c084fc; border: 1px solid rgba(168, 85, 247, 0.3);">7d: ${Number(summary.totalWeek || 0)}</span>
+            <span style="font-size: 0.68rem; font-weight: 700; padding: 0.18rem 0.55rem; border-radius: 6px; background: rgba(16, 185, 129, 0.14); color: #34d399; border: 1px solid rgba(16, 185, 129, 0.3);">Total: ${Number(summary.totalAllTime || 0)}</span>
+          `;
+        }
+
+        if (staffListEl) {
+          const nonOwnerStaff = staffRows.filter(s => s.role !== 'owner');
+          if (nonOwnerStaff.length === 0) {
+            staffListEl.innerHTML = `<div style="color: #64748b; font-size: 0.76rem;">No clinic staff accounts found.</div>`;
+          } else {
+            staffListEl.innerHTML = nonOwnerStaff.map((s, idx) => {
+              const todayVal = Number(s.verified_today || 0);
+              const weekVal = Number(s.verified_week || 0);
+              const totalVal = Number(s.verified_total || 0);
+              const lastVer = s.last_verified_at
+                ? `Last verified ${new Date(s.last_verified_at).toLocaleDateString([], { month: 'short', day: 'numeric' })}`
+                : 'No verifications yet';
+
+              return `
+                <div style="display: flex; justify-content: space-between; align-items: center; gap: 0.6rem; flex-wrap: wrap; padding: 0.52rem 0.75rem; border-radius: 8px; background: rgba(2, 6, 23, 0.52); border: 1px solid rgba(148, 163, 184, 0.14);">
+                  <div style="display: flex; align-items: center; gap: 0.55rem; min-width: 170px;">
+                    <span style="font-size: 0.7rem; font-weight: 800; color: ${idx === 0 && totalVal > 0 ? '#fbbf24' : '#64748b'}; width: 18px;">#${idx + 1}</span>
+                    <div style="display: flex; flex-direction: column; line-height: 1.22;">
+                      <span style="font-size: 0.79rem; font-weight: 700; color: #f8fafc;">${escapeHtml(s.full_name || s.email)}</span>
+                      <span style="font-size: 0.66rem; color: #94a3b8;">${escapeHtml(s.practice_name || 'Unassigned')} • <span style="color: #64748b;">${escapeHtml(lastVer)}</span></span>
+                    </div>
+                  </div>
+                  <div style="display: flex; align-items: center; gap: 0.38rem; flex-wrap: wrap;">
+                    <span style="font-size: 0.67rem; font-weight: 700; padding: 0.16rem 0.48rem; border-radius: 5px; background: ${todayVal > 0 ? 'rgba(56, 189, 248, 0.16)' : 'rgba(30, 41, 59, 0.7)'}; color: ${todayVal > 0 ? '#38bdf8' : '#64748b'}; border: 1px solid ${todayVal > 0 ? 'rgba(56, 189, 248, 0.35)' : 'rgba(148, 163, 184, 0.15)'};">Today: <strong>${todayVal}</strong></span>
+                    <span style="font-size: 0.67rem; font-weight: 700; padding: 0.16rem 0.48rem; border-radius: 5px; background: rgba(30, 41, 59, 0.85); color: #c084fc; border: 1px solid rgba(168, 85, 247, 0.28);">7d: <strong>${weekVal}</strong></span>
+                    <span style="font-size: 0.67rem; font-weight: 700; padding: 0.16rem 0.48rem; border-radius: 5px; background: rgba(16, 185, 129, 0.14); color: #34d399; border: 1px solid rgba(16, 185, 129, 0.3);">Total: <strong>${totalVal}</strong></span>
+                  </div>
+                </div>
+              `;
+            }).join('');
+          }
+        }
+      } catch (err) {
+        console.warn('Could not load owner telemetry:', err);
+      }
+    }
+
+    const btnRefreshTelemetry = document.getElementById('btnRefreshTelemetry');
+    if (btnRefreshTelemetry) {
+      btnRefreshTelemetry.addEventListener('click', () => {
+        loadOwnerTelemetry();
+        displayToast('Refreshed API Key Pool & Staff Output Telemetry.');
+      });
+    }
+
+    const btnResetKeyCooldowns = document.getElementById('btnResetKeyCooldowns');
+    if (btnResetKeyCooldowns) {
+      btnResetKeyCooldowns.addEventListener('click', async () => {
+        try {
+          const res = await fetch('/api/owner/api-keys/reset-cooldown', { method: 'POST' });
+          const data = await res.json();
+          if (res.ok && data.success) {
+            displayToast(data.message || 'API key cooldowns cleared.');
+            await loadOwnerTelemetry();
+          }
+        } catch (err) {
+          displayToast('Failed to reset API key cooldowns.');
         }
       });
     }
@@ -5037,6 +5215,7 @@
         }
         if (currentUser.role === 'owner') {
           renderWorkspaceSwitcherDropdown();
+          loadOwnerTelemetry();
         }
         renderClinicManagerModalContent();
       } catch (e) {
@@ -5239,6 +5418,15 @@
           `<option value="${escapeHtml(p.id)}" ${p.id === u.practice_id ? 'selected' : ''}>${escapeHtml(p.name)}</option>`
         ).join('');
 
+        const uToday = Number(u.verified_today || 0);
+        const uWeek = Number(u.verified_week || 0);
+        const uTotal = Number(u.verified_total || 0);
+        const staffStatsBadgesHtml = !isOwnerAccount ? `
+          <span title="Patients verified today" style="font-size: 0.63rem; font-weight: 700; padding: 0.15rem 0.45rem; border-radius: 5px; background: ${uToday > 0 ? 'rgba(56, 189, 248, 0.15)' : 'rgba(30, 41, 59, 0.7)'}; color: ${uToday > 0 ? '#38bdf8' : '#64748b'}; border: 1px solid ${uToday > 0 ? 'rgba(56, 189, 248, 0.35)' : 'rgba(148, 163, 184, 0.14)'};">Today: ${uToday}</span>
+          <span title="Patients verified in the last 7 days" style="font-size: 0.63rem; font-weight: 700; padding: 0.15rem 0.45rem; border-radius: 5px; background: rgba(30, 41, 59, 0.8); color: #c084fc; border: 1px solid rgba(168, 85, 247, 0.25);">7d: ${uWeek}</span>
+          <span title="All-time patients verified by this user" style="font-size: 0.63rem; font-weight: 700; padding: 0.15rem 0.45rem; border-radius: 5px; background: rgba(16, 185, 129, 0.12); color: #34d399; border: 1px solid rgba(16, 185, 129, 0.28);">Total: ${uTotal}</span>
+        ` : '';
+
         const rowWrap = document.createElement('div');
         rowWrap.style.cssText = 'background: rgba(15, 23, 42, 0.75); border: 1px solid rgba(148, 163, 184, 0.16); border-radius: 9px; padding: 0.65rem 0.85rem; transition: all 0.15s ease;';
         rowWrap.addEventListener('mouseenter', () => { rowWrap.style.borderColor = 'rgba(56, 189, 248, 0.4)'; });
@@ -5258,6 +5446,7 @@
             </div>
 
             <div style="display: flex; align-items: center; gap: 0.45rem; flex-wrap: wrap;">
+              ${staffStatsBadgesHtml}
               <span class="user-role-badge ${badgeClass}" style="font-size: 0.64rem; padding: 0.18rem 0.5rem;">${badgeLabel}</span>
               <button type="button" class="btn-action-ghost btn-toggle-user-edit" style="padding: 0.24rem 0.58rem; font-size: 0.69rem;" title="Edit account details, role, clinic, or password">
                 Edit

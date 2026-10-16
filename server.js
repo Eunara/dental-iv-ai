@@ -1706,7 +1706,10 @@ app.get('/api/users', async (req, res) => {
   try {
     if (req.user.role === 'owner') {
       const result = await db.query(`
-        SELECT u.id, u.email, u.full_name, u.role, u.is_active, u.practice_id, p.name as practice_name, u.last_login_at, u.created_at
+        SELECT u.id, u.email, u.full_name, u.role, u.is_active, u.practice_id, p.name as practice_name, u.last_login_at, u.created_at,
+               (SELECT count(*)::int FROM dentverify.verifications v WHERE v.user_id = u.id AND v.created_at >= CURRENT_DATE) as verified_today,
+               (SELECT count(*)::int FROM dentverify.verifications v WHERE v.user_id = u.id AND v.created_at >= NOW() - INTERVAL '7 days') as verified_week,
+               (SELECT count(*)::int FROM dentverify.verifications v WHERE v.user_id = u.id) as verified_total
         FROM dentverify.users u
         LEFT JOIN dentverify.practices p ON u.practice_id = p.id
         ORDER BY CASE WHEN u.role = 'owner' THEN 0 ELSE 1 END, p.name ASC NULLS FIRST,
@@ -1715,7 +1718,10 @@ app.get('/api/users', async (req, res) => {
       return res.json({ success: true, users: result.rows });
     } else {
       const result = await db.query(`
-        SELECT u.id, u.email, u.full_name, u.role, u.is_active, u.practice_id, p.name as practice_name, u.last_login_at, u.created_at
+        SELECT u.id, u.email, u.full_name, u.role, u.is_active, u.practice_id, p.name as practice_name, u.last_login_at, u.created_at,
+               (SELECT count(*)::int FROM dentverify.verifications v WHERE v.user_id = u.id AND v.created_at >= CURRENT_DATE) as verified_today,
+               (SELECT count(*)::int FROM dentverify.verifications v WHERE v.user_id = u.id AND v.created_at >= NOW() - INTERVAL '7 days') as verified_week,
+               (SELECT count(*)::int FROM dentverify.verifications v WHERE v.user_id = u.id) as verified_total
         FROM dentverify.users u
         LEFT JOIN dentverify.practices p ON u.practice_id = p.id
         WHERE u.practice_id = $1 AND u.role != 'owner'
@@ -2411,10 +2417,25 @@ function isGeminiQuotaOrKeyError(err) {
   return false;
 }
 
-function recordKeyFailure(key, cooldownSeconds = 60) {
-  const stat = apiKeyStatusMap.get(key) || { errorCount: 0, successCount: 0, exhaustedUntil: 0 };
+function recordKeyFailure(key, cooldownSeconds = 60, errReason = '429 Quota / Rate Limit') {
+  const todayStr = new Date().toISOString().slice(0, 10);
+  const stat = apiKeyStatusMap.get(key) || {
+    errorCount: 0,
+    successCount: 0,
+    todayCount: 0,
+    todayDate: todayStr,
+    exhaustedUntil: 0,
+    lastUsedAt: null,
+    lastError: null,
+  };
+  if (stat.todayDate !== todayStr) {
+    stat.todayCount = 0;
+    stat.todayDate = todayStr;
+  }
   stat.errorCount++;
   stat.exhaustedUntil = Date.now() + cooldownSeconds * 1000;
+  stat.lastUsedAt = new Date().toISOString();
+  stat.lastError = errReason;
   apiKeyStatusMap.set(key, stat);
   console.warn(
     `⚠️ [Gemini Key Failover] Key [${maskApiKey(key)}] hit quota limit. Cooling down for ${cooldownSeconds}s (Errors: ${stat.errorCount}).`
@@ -2422,11 +2443,117 @@ function recordKeyFailure(key, cooldownSeconds = 60) {
 }
 
 function recordKeySuccess(key) {
-  const stat = apiKeyStatusMap.get(key) || { errorCount: 0, successCount: 0, exhaustedUntil: 0 };
+  const todayStr = new Date().toISOString().slice(0, 10);
+  const stat = apiKeyStatusMap.get(key) || {
+    errorCount: 0,
+    successCount: 0,
+    todayCount: 0,
+    todayDate: todayStr,
+    exhaustedUntil: 0,
+    lastUsedAt: null,
+    lastError: null,
+  };
+  if (stat.todayDate !== todayStr) {
+    stat.todayCount = 0;
+    stat.todayDate = todayStr;
+  }
   stat.successCount++;
+  stat.todayCount++;
   stat.exhaustedUntil = 0;
+  stat.lastUsedAt = new Date().toISOString();
   apiKeyStatusMap.set(key, stat);
 }
+
+// GET /api/owner/telemetry (Owner API Key Pool Monitor & Staff Productivity Leaderboard)
+app.get('/api/owner/telemetry', async (req, res) => {
+  if (!req.user || req.user.role !== 'owner') {
+    return res.status(403).json({ error: 'Only Website Owner can access system telemetry.' });
+  }
+  try {
+    const allKeys = getAllConfiguredGeminiApiKeys();
+    const now = Date.now();
+    const todayStr = new Date().toISOString().slice(0, 10);
+
+    const apiKeys = allKeys.map((key, idx) => {
+      const stat = apiKeyStatusMap.get(key) || {
+        errorCount: 0,
+        successCount: 0,
+        todayCount: 0,
+        todayDate: todayStr,
+        exhaustedUntil: 0,
+        lastUsedAt: null,
+        lastError: null,
+      };
+      const isCooling = stat.exhaustedUntil > now;
+      const cooldownSec = isCooling ? Math.max(1, Math.ceil((stat.exhaustedUntil - now) / 1000)) : 0;
+      const requestsToday = stat.todayDate === todayStr ? stat.todayCount : 0;
+
+      return {
+        slot: idx + 1,
+        label: idx === 0 ? 'GEMINI_API_KEY (Primary)' : `GEMINI_API_KEY_${idx + 1} (Backup #${idx})`,
+        maskedKey: maskApiKey(key),
+        status: isCooling ? 'cooling' : 'active',
+        cooldownRemainingSec: cooldownSec,
+        requestsToday,
+        totalSuccess: stat.successCount,
+        quotaErrors: stat.errorCount,
+        lastUsedAt: stat.lastUsedAt,
+        lastError: stat.lastError,
+      };
+    });
+
+    const staffRes = await db.query(`
+      SELECT u.id, u.full_name, u.email, u.role, p.name as practice_name,
+             (SELECT count(*)::int FROM dentverify.verifications v WHERE v.user_id = u.id AND v.created_at >= CURRENT_DATE) as verified_today,
+             (SELECT count(*)::int FROM dentverify.verifications v WHERE v.user_id = u.id AND v.created_at >= NOW() - INTERVAL '7 days') as verified_week,
+             (SELECT count(*)::int FROM dentverify.verifications v WHERE v.user_id = u.id) as verified_total,
+             (SELECT max(v.created_at) FROM dentverify.verifications v WHERE v.user_id = u.id) as last_verified_at
+      FROM dentverify.users u
+      LEFT JOIN dentverify.practices p ON u.practice_id = p.id
+      WHERE u.role != 'owner' OR EXISTS (SELECT 1 FROM dentverify.verifications v2 WHERE v2.user_id = u.id)
+      ORDER BY verified_today DESC, verified_week DESC, verified_total DESC, u.full_name ASC;
+    `);
+
+    const totalsRes = await db.query(`
+      SELECT
+        count(*) FILTER (WHERE created_at >= CURRENT_DATE)::int as total_today,
+        count(*) FILTER (WHERE created_at >= NOW() - INTERVAL '7 days')::int as total_week,
+        count(*)::int as total_all_time
+      FROM dentverify.verifications;
+    `);
+
+    const totals = totalsRes.rows[0] || { total_today: 0, total_week: 0, total_all_time: 0 };
+
+    res.json({
+      success: true,
+      activeModel: process.env.GEMINI_MODEL || 'gemini-3.8-flash',
+      apiKeys,
+      staffLeaderboard: staffRes.rows,
+      summary: {
+        totalToday: totals.total_today || 0,
+        totalWeek: totals.total_week || 0,
+        totalAllTime: totals.total_all_time || 0,
+        healthyKeysCount: apiKeys.filter((k) => k.status === 'active').length,
+        totalKeysCount: apiKeys.length,
+      },
+    });
+  } catch (err) {
+    console.error('Error fetching owner telemetry:', err);
+    res.status(500).json({ error: 'Failed to load telemetry.' });
+  }
+});
+
+// POST /api/owner/api-keys/reset-cooldown (Owner resets cooldown status on all Gemini API keys)
+app.post('/api/owner/api-keys/reset-cooldown', async (req, res) => {
+  if (!req.user || req.user.role !== 'owner') {
+    return res.status(403).json({ error: 'Only Website Owner can reset API key cooldowns.' });
+  }
+  for (const [k, stat] of apiKeyStatusMap.entries()) {
+    stat.exhaustedUntil = 0;
+    apiKeyStatusMap.set(k, stat);
+  }
+  res.json({ success: true, message: 'All Gemini API key cooldowns have been cleared.' });
+});
 
 // Verification Endpoint (Supports single or multiple files with resilient multi-key pool)
 app.post('/api/verify', upload.array('files', 10), async (req, res) => {
