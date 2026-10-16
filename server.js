@@ -2338,7 +2338,25 @@ function maskApiKey(key) {
   return `${key.slice(0, 7)}...${key.slice(-4)}`;
 }
 
+const fs = require('fs');
+const dotenv = require('dotenv');
+let lastEnvMtimeMs = 0;
+
+function syncEnvFileIfModified() {
+  try {
+    const envPath = path.join(__dirname, '.env');
+    const stat = fs.statSync(envPath);
+    if (stat.mtimeMs !== lastEnvMtimeMs) {
+      lastEnvMtimeMs = stat.mtimeMs;
+      dotenv.config({ path: envPath, override: true });
+    }
+  } catch (e) {
+    // Ignore if .env is temporarily unavailable
+  }
+}
+
 function getAllConfiguredGeminiApiKeys() {
+  syncEnvFileIfModified();
   const keys = [];
   // 1. Check comma/semicolon/newline-separated GEMINI_API_KEYS
   if (process.env.GEMINI_API_KEYS) {
@@ -2349,8 +2367,8 @@ function getAllConfiguredGeminiApiKeys() {
       }
     });
   }
-  // 2. Check GEMINI_API_KEY, GEMINI_API_KEY_1 to GEMINI_API_KEY_10
-  const candidateEnvNames = ['GEMINI_API_KEY', ...Array.from({ length: 10 }, (_, i) => `GEMINI_API_KEY_${i + 1}`)];
+  // 2. Check GEMINI_API_KEY, GEMINI_API_KEY_1 to GEMINI_API_KEY_20
+  const candidateEnvNames = ['GEMINI_API_KEY', ...Array.from({ length: 20 }, (_, i) => `GEMINI_API_KEY_${i + 1}`)];
   for (const envName of candidateEnvNames) {
     const val = (process.env[envName] || '').trim();
     if (val && !val.startsWith('your_') && !keys.includes(val)) {
