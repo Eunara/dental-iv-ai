@@ -106,68 +106,93 @@
     // DATE & ELIGIBILITY UTILITY FUNCTIONS
     // ==========================================
 
-    function parseDate(str) {
-      if (!str) return null;
+    function extractAllDates(str) {
+      if (!str) return [];
       const s = String(str).trim();
-      if (/^(none|no|n\/a|na|history|null|undefined|-)$/i.test(s)) return null;
+      if (/^(none|no|n\/a|na|history|null|undefined|-|date not found|not found)$/i.test(s)) return [];
 
-      // MM/DD/YYYY or M/D/YYYY
-      const mdy = s.match(/^(\d{1,2})[\/\-\.](\d{1,2})[\/\-\.](\d{2,4})$/);
-      if (mdy) {
-        let m = parseInt(mdy[1], 10) - 1;
-        let d = parseInt(mdy[2], 10);
-        let y = parseInt(mdy[3], 10);
-        if (y < 100) y += 2000;
-        const dt = new Date(y, m, d);
-        return isNaN(dt.getTime()) ? null : dt;
+      const foundDates = [];
+      const seenTimes = new Set();
+
+      const pushValidDate = (y, mZeroIndexed, d) => {
+        let year = y;
+        if (year < 100) year += year >= 50 ? 1900 : 2000;
+        if (year < 1920 || year > 2100) return;
+        if (mZeroIndexed < 0 || mZeroIndexed > 11) return;
+        if (d < 1 || d > 31) return;
+        const dt = new Date(year, mZeroIndexed, d);
+        if (!isNaN(dt.getTime()) && dt.getMonth() === mZeroIndexed) {
+          const t = dt.getTime();
+          if (!seenTimes.has(t)) {
+            seenTimes.add(t);
+            foundDates.push(dt);
+          }
+        }
+      };
+
+      // 1. YYYY-MM-DD or YYYY/MM/DD anywhere in string
+      const ymdRegex = /\b(\d{4})[\/\-\.](\d{1,2})[\/\-\.](\d{1,2})\b/g;
+      let match;
+      while ((match = ymdRegex.exec(s)) !== null) {
+        pushValidDate(parseInt(match[1], 10), parseInt(match[2], 10) - 1, parseInt(match[3], 10));
       }
 
-      // YYYY-MM-DD
-      const ymd = s.match(/^(\d{4})[\/\-\.](\d{1,2})[\/\-\.](\d{1,2})$/);
-      if (ymd) {
-        let y = parseInt(ymd[1], 10);
-        const m = parseInt(ymd[2], 10) - 1;
-        const d = parseInt(ymd[3], 10);
-        const dt = new Date(y, m, d);
-        return isNaN(dt.getTime()) ? null : dt;
+      // 2. MM/DD/YYYY or M/D/YYYY or MM/DD/YY anywhere in string
+      const mdyRegex = /\b(\d{1,2})[\/\-\.](\d{1,2})[\/\-\.](\d{2,4})\b/g;
+      while ((match = mdyRegex.exec(s)) !== null) {
+        const first = parseInt(match[1], 10);
+        const second = parseInt(match[2], 10);
+        const third = parseInt(match[3], 10);
+        if (first > 31) continue;
+        pushValidDate(third, first - 1, second);
       }
 
-      // MM/YYYY or M/YYYY
-      const my = s.match(/^(\d{1,2})[\/\-\.](\d{2,4})$/);
-      if (my) {
-        let m = parseInt(my[1], 10) - 1;
-        let y = parseInt(my[2], 10);
-        if (y < 100) y += 2000;
-        const dt = new Date(y, m, 1);
-        return isNaN(dt.getTime()) ? null : dt;
+      // 3. MM/YYYY or M/YYYY fallback
+      if (foundDates.length === 0) {
+        const myRegex = /(?:^|[^\d\/\-])(\d{1,2})[\/\-](\d{4})(?!\d|[\/\-])/g;
+        while ((match = myRegex.exec(s)) !== null) {
+          pushValidDate(parseInt(match[2], 10), parseInt(match[1], 10) - 1, 1);
+        }
       }
 
-      const parsed = Date.parse(s);
-      if (!isNaN(parsed)) {
-        return new Date(parsed);
+      if (foundDates.length === 0 && /[a-z]{3,9}\s+\d{1,2},?\s+\d{4}/i.test(s)) {
+        const parsed = Date.parse(s);
+        if (!isNaN(parsed)) {
+          foundDates.push(new Date(parsed));
+        }
       }
-      return null;
+
+      foundDates.sort((a, b) => b.getTime() - a.getTime());
+      return foundDates;
+    }
+
+    function parseDate(str) {
+      const all = extractAllDates(str);
+      return all.length > 0 ? all[0] : null;
+    }
+
+    function addMonthsToDate(dateObj, months) {
+      const d = new Date(dateObj.getTime());
+      d.setMonth(d.getMonth() + months);
+      return d;
     }
 
     function parseFrequencyMonths(freqStr) {
       if (!freqStr) return 60;
       const str = String(freqStr).toLowerCase();
 
-      // Months: "60 months", "1 in 36m", "36mo", "24m"
-      const mMatch = str.match(/(\d+)\s*(?:m|mo|mos|month|months)\b/);
+      const mMatch = str.match(/(?:x|\b)(\d+)\s*(?:m|mo|mos|month|months)\b/);
       if (mMatch) {
         const m = parseInt(mMatch[1], 10);
         if (m > 0) return m;
       }
 
-      // Years: "1x5yr", "1 in 5 years", "3 years", "1/5yr", "5y"
-      const yMatch = str.match(/(\d+)\s*(?:y|yr|yrs|year|years)\b/);
+      const yMatch = str.match(/(?:x|\b)(\d+)\s*(?:y|yr|yrs|year|years)\b/);
       if (yMatch) {
         const y = parseInt(yMatch[1], 10);
         if (y > 0) return y * 12;
       }
 
-      // Generic "1 in 60" or "1/36"
       const numMatch = str.match(/1\s*(?:in|\/|x)\s*(\d+)/);
       if (numMatch) {
         const n = parseInt(numMatch[1], 10);
@@ -178,31 +203,29 @@
       return 60;
     }
 
-    // Helper: standardizes long frequency sentences into concise clinical dental notation
     function formatFrequencyNotation(freqStr) {
       if (!freqStr) return '-';
       const raw = String(freqStr).trim();
       const s = raw.toLowerCase();
 
-      // If already standard compact notation (e.g. 2x1yr, 2x12m, 1x5yr, 1x24m, NF, 1/LT)
       if (/^\d+x\d+(?:yr|y|m|mo)$/i.test(raw) || /^(nf|none|n\/a|1\/lt|1\/tooth lt)$/i.test(raw)) {
         return raw;
       }
 
-      // Check for "no frequency" / "unlimited"
-      if (/no\s*frequency|unlimited|none|no\s*limit/i.test(s)) {
+      if (/no\s*frequency|unlimited|none|no\s*limit|^nl$/i.test(s)) {
         return 'NF';
       }
 
-      // Lifetime
-      if (/lifetime/i.test(s)) {
+      if (/lifetime|^1\/lt|^1\/tooth/i.test(s)) {
         if (/tooth/i.test(s)) return '1/tooth LT';
         return '1/LT';
       }
 
-      // Count determination
       let count = 1;
-      if (/two|twice|\b2\b/i.test(s)) {
+      const compactPrefix = s.match(/^(\d+)\s*(?:x|in|per|\/)\b/);
+      if (compactPrefix) {
+        count = parseInt(compactPrefix[1], 10) || 1;
+      } else if (/two|twice|\b2\b/i.test(s)) {
         count = 2;
       } else if (/four|\b4\b/i.test(s)) {
         count = 4;
@@ -212,31 +235,20 @@
         count = 1;
       }
 
-      // Period determination: Calendar year vs rolling months vs years
       if (/calendar\s*year/i.test(s)) {
         return `${count}x1yr`;
       }
 
-      // Months pattern (e.g. "within 12 months", "in 12 months", "12m", "24m", "60 months", "36 months")
       const mMatch = s.match(/(\d+)\s*(?:m|mo|mos|month|months)\b/);
       if (mMatch) {
         const months = parseInt(mMatch[1], 10);
-        if (months === 12) {
-          return `${count}x12m`;
-        }
-        if (months === 24) {
-          return `${count}x24m`;
-        }
-        if (months === 36) {
-          return `${count}x36m`;
-        }
-        if (months === 60) {
-          return `${count}x5yr`;
-        }
+        if (months === 12) return `${count}x12m`;
+        if (months === 24) return `${count}x24m`;
+        if (months === 36) return `${count}x36m`;
+        if (months === 60) return `${count}x5yr`;
         return `${count}x${months}m`;
       }
 
-      // Years pattern (e.g. "within 1 year", "per year", "every 5 years", "in 3 years")
       const yMatch = s.match(/(\d+)\s*(?:y|yr|yrs|year|years)\b/);
       if (yMatch) {
         const years = parseInt(yMatch[1], 10);
@@ -255,6 +267,59 @@
       if (/12\s*m/i.test(s)) return `${count}x12m`;
 
       return raw;
+    }
+
+    function parseFrequencyRule(freqStr, isCalendarYearPlan = true) {
+      if (!freqStr) return { mode: 'unlimited', maxCount: 999, windowMonths: 0 };
+      const raw = String(freqStr).trim();
+      const s = raw.toLowerCase();
+
+      if (/^(nf|nl|none|no\s*frequency|no\s*limit|unlimited|-|n\/a)$/i.test(raw) || /no\s*frequency|unlimited|per\s*date\s*of\s*service|xdos/i.test(s)) {
+        return { mode: 'unlimited', maxCount: 999, windowMonths: 0 };
+      }
+      if (/^(nc|0%|not\s*covered)$/i.test(raw)) {
+        return { mode: 'not_covered', maxCount: 0, windowMonths: 0 };
+      }
+      if (/lifetime|1\/lt|1\/tooth\s*lt/i.test(s)) {
+        return { mode: /tooth/i.test(s) ? 'tooth_lifetime' : 'lifetime', maxCount: 1, windowMonths: 1200 };
+      }
+
+      const compactMatch = s.match(/(\d+)\s*x\s*(\d+)\s*(yr|yrs|y|year|years|m|mo|mos|month|months)\b/);
+      if (compactMatch) {
+        const maxCount = parseInt(compactMatch[1], 10) || 1;
+        const num = parseInt(compactMatch[2], 10) || 1;
+        const unit = compactMatch[3];
+        const isYearUnit = unit.startsWith('y');
+        const windowMonths = isYearUnit ? num * 12 : num;
+        const mode = (isYearUnit && num === 1 && isCalendarYearPlan && !/rolling/i.test(s))
+          ? 'calendar_year'
+          : 'rolling_months';
+        return { mode, maxCount, windowMonths };
+      }
+
+      let maxCount = 1;
+      if (/four|\b4\b/i.test(s)) maxCount = 4;
+      else if (/three|\b3\b.*\b(?:year|calendar|12)/i.test(s)) maxCount = 3;
+      else if (/two|twice|\b2\b.*\b(?:year|calendar|12|6)/i.test(s)) maxCount = 2;
+
+      const mMatch = s.match(/(\d+)\s*(?:m|mo|mos|month|months)\b/);
+      if (mMatch) {
+        const windowMonths = parseInt(mMatch[1], 10) || 12;
+        return { mode: 'rolling_months', maxCount, windowMonths };
+      }
+
+      const yMatch = s.match(/(\d+)\s*(?:y|yr|yrs|year|years)\b/);
+      if (yMatch) {
+        const yrs = parseInt(yMatch[1], 10) || 1;
+        const mode = (yrs === 1 && isCalendarYearPlan) ? 'calendar_year' : 'rolling_months';
+        return { mode, maxCount, windowMonths: yrs * 12 };
+      }
+
+      if (/calendar\s*year|per\s*year|annual/i.test(s)) {
+        return { mode: isCalendarYearPlan ? 'calendar_year' : 'rolling_months', maxCount, windowMonths: 12 };
+      }
+
+      return { mode: 'unlimited', maxCount: 999, windowMonths: 0 };
     }
 
     function formatDate(d) {
@@ -306,7 +371,7 @@
     }
 
     // ==========================================
-    // 2. AGE LIMIT & CALENDAR YEAR FREQUENCY VALIDATOR
+    // 2. STRICT AGE LIMIT, HISTORY & FREQUENCY ELIGIBILITY VALIDATOR
     // ==========================================
     function enforceAgeLimitAndFrequencyRules(procedureCodes, insuranceDetails = {}) {
       if (!Array.isArray(procedureCodes) || procedureCodes.length === 0) {
@@ -322,99 +387,213 @@
 
       procedureCodes.forEach(item => {
         if (!item) return;
+        if (item.manual_eligibility_override) return;
+
         const code = String(item.code || '').toUpperCase();
+        if (code.includes('D0210') || code.includes('D0330')) {
+          return;
+        }
+
+        let covStr = String(item.coverage_percentage || '').trim().toUpperCase();
+        const planCoversMatch = String(item.notes || '').match(/plan\s*(?:covers|pays)\s*(\d+%)/i);
+        if (covStr === '0%' && planCoversMatch) {
+          item.coverage_percentage = planCoversMatch[1];
+          covStr = planCoversMatch[1].toUpperCase();
+        }
+        const isCoveredBenefit = covStr !== '0%' && covStr !== 'NC' && !covStr.includes('NOT COVERED');
+        if (!isCoveredBenefit) {
+          item.is_eligible = false;
+          return;
+        }
+
         const ageLimStr = String(item.age_limit || '').trim();
-        const freqStr = String(item.frequency_limitation || '').trim().toLowerCase();
         const histStr = String(item.history_dates || '').trim();
+        const notesStr = String(item.notes || '');
 
-        // 1. AGE LIMITATION CHECK (Minimum vs Maximum Age Thresholds)
-        if (patientAge !== null && ageLimStr && !/^(none|nl|no limit|n\/a|-)$/i.test(ageLimStr)) {
-          const match = ageLimStr.match(/(\d+)/);
-          if (match) {
-            const targetAge = parseInt(match[1], 10);
+        let ageIneligible = false;
 
-            const hasMinKeywords = /(and\s*over|and\s*older|&\s*over|&\s*older|\+|and\s*up|or\s*older|or\s*over|min\b|minimum|>=|>|over)/i.test(ageLimStr);
-            const isAdultCode = code.includes('D1110') || code.includes('D4346');
-            const hasMaxKeywords = /(under|through|up\s*to|to\s*age|and\s*under|&\s*under|or\s*younger|max\b|maximum|<=|<)/i.test(ageLimStr);
-
-            const isMinAge = hasMinKeywords || (isAdultCode && !hasMaxKeywords);
-
-            if (isMinAge) {
-              // Minimum Age Requirement (e.g. D1110, D4346: 14 and over)
-              if (patientAge < targetAge) {
-                item.is_eligible = false;
-                const ageNote = `Ineligible: Patient age (${patientAge}) is below plan minimum age requirement (${targetAge})`;
-                if (!item.notes || !item.notes.includes('below plan minimum age')) {
-                  item.notes = item.notes ? `${item.notes} • ${ageNote}` : ageNote;
-                }
-              } else {
-                // Patient meets or exceeds minimum age (e.g. 27 >= 14 -> ELIGIBLE!)
-                if (item.notes && item.notes.includes('exceeds plan age limit')) {
-                  item.notes = item.notes
-                    .replace(/\s*•\s*Ineligible:\s*Patient age \(\d+\) exceeds plan age limit \(\d+\)/gi, '')
-                    .replace(/Ineligible:\s*Patient age \(\d+\) exceeds plan age limit \(\d+\)\s*•\s*/gi, '')
-                    .replace(/Ineligible:\s*Patient age \(\d+\) exceeds plan age limit \(\d+\)/gi, '')
-                    .trim();
-                }
-                if (!histStr || /^(none|n\/a|-)$/i.test(histStr)) {
-                  item.is_eligible = true;
-                }
+        // 1. AGE LIMITATION CHECK
+        if (patientAge !== null && ageLimStr && !/^(none|nl|no limit|n\/a|-|all|all ages)$/i.test(ageLimStr)) {
+          const rangeMatch = ageLimStr.match(/(\d+)\s*(?:-|to|through)\s*(\d+)/i);
+          if (rangeMatch) {
+            const minA = parseInt(rangeMatch[1], 10);
+            const maxA = parseInt(rangeMatch[2], 10);
+            if (patientAge < minA) {
+              ageIneligible = true;
+              item.is_eligible = false;
+              const ageNote = `Ineligible: Patient age (${patientAge}) is below plan minimum age requirement (${minA})`;
+              if (!item.notes || !item.notes.includes('below plan minimum age')) {
+                item.notes = item.notes ? `${item.notes} • ${ageNote}` : ageNote;
               }
-            } else {
-              // Maximum Age Limitation (e.g. D1206 Fluoride, D1351 Sealants, Ortho, D1120 Child Prophy)
-              const isStrictlyUnder = /under\s*\d+|<\s*\d+/i.test(ageLimStr);
-              const exceedsMax = isStrictlyUnder ? (patientAge >= targetAge) : (patientAge > targetAge);
+            } else if (maxA < 95 && patientAge > maxA) {
+              ageIneligible = true;
+              item.is_eligible = false;
+              const ageNote = `Ineligible: Patient age (${patientAge}) exceeds plan age limit (${maxA})`;
+              if (!item.notes || !item.notes.includes('exceeds plan age limit')) {
+                item.notes = item.notes ? `${item.notes} • ${ageNote}` : ageNote;
+              }
+            }
+          } else {
+            const match = ageLimStr.match(/(\d+)/);
+            if (match) {
+              const targetAge = parseInt(match[1], 10);
+              if (targetAge < 95) {
+                const hasMinKeywords = /(and\s*over|and\s*older|&\s*over|&\s*older|\+|and\s*up|or\s*older|or\s*over|min\b|minimum|>=|>|over)/i.test(ageLimStr);
+                const hasMaxKeywords = /(under|through|up\s*to|to\s*age|and\s*under|&\s*under|or\s*younger|max\b|maximum|<=|<)/i.test(ageLimStr);
+                const isAdultCode = (code.includes('D1110') || code.includes('D4346')) && targetAge <= 21;
+                const isMinAge = hasMinKeywords || (isAdultCode && !hasMaxKeywords);
 
-              if (exceedsMax) {
-                item.is_eligible = false;
-                const ageNote = `Ineligible: Patient age (${patientAge}) exceeds plan age limit (${targetAge})`;
-                if (!item.notes || !item.notes.includes('exceeds plan age limit')) {
-                  item.notes = item.notes ? `${item.notes} • ${ageNote}` : ageNote;
+                if (isMinAge) {
+                  if (patientAge < targetAge) {
+                    ageIneligible = true;
+                    item.is_eligible = false;
+                    const ageNote = `Ineligible: Patient age (${patientAge}) is below plan minimum age requirement (${targetAge})`;
+                    if (!item.notes || !item.notes.includes('below plan minimum age')) {
+                      item.notes = item.notes ? `${item.notes} • ${ageNote}` : ageNote;
+                    }
+                  } else {
+                    if (item.notes && item.notes.includes('exceeds plan age limit')) {
+                      item.notes = item.notes
+                        .replace(/\s*•\s*Ineligible:\s*Patient age \(\d+\) exceeds plan age limit \(\d+\)/gi, '')
+                        .replace(/Ineligible:\s*Patient age \(\d+\) exceeds plan age limit \(\d+\)\s*•\s*/gi, '')
+                        .replace(/Ineligible:\s*Patient age \(\d+\) exceeds plan age limit \(\d+\)/gi, '')
+                        .trim();
+                    }
+                  }
+                } else {
+                  const isStrictlyUnder = /under\s*\d+|<\s*\d+/i.test(ageLimStr);
+                  const exceedsMax = isStrictlyUnder ? (patientAge >= targetAge) : (patientAge > targetAge);
+                  if (exceedsMax) {
+                    ageIneligible = true;
+                    item.is_eligible = false;
+                    const ageNote = `Ineligible: Patient age (${patientAge}) exceeds plan age limit (${targetAge})`;
+                    if (!item.notes || !item.notes.includes('exceeds plan age limit')) {
+                      item.notes = item.notes ? `${item.notes} • ${ageNote}` : ageNote;
+                    }
+                  }
                 }
               }
             }
           }
         }
 
-        // Skip D0210/D0330 as it has its own shared handler
-        if (code.includes('D0210') || code.includes('D0330')) {
+        if (item.frequency_limitation) {
+          item.frequency_limitation = formatFrequencyNotation(item.frequency_limitation);
+        }
+        const cleanFreq = String(item.frequency_limitation || '').trim();
+        const freqRule = parseFrequencyRule(cleanFreq, isCalendarYearPlan);
+
+        if (ageIneligible) return;
+
+        // 2. STRICT HISTORY + FREQUENCY ELIGIBILITY CALCULATION
+        const allDates = extractAllDates(histStr);
+        const hasSixMonthSpacingRule = /6\s*(?:-|to\s*)?month\s*(?:apart|interval|wait|separation)|1\s*(?:per|every|in)\s*6\s*m/i.test(notesStr);
+
+        if (/0\s*(?:service\/procedures|procedures|visits|units)?\s*remaining|exhausted/i.test(histStr) || /0\s*(?:service\/procedures|procedures|visits|units)\s*remaining/i.test(notesStr)) {
+          item.is_eligible = false;
           return;
         }
+        const unitUsedMatch = histStr.match(/^(\d+)\s*(?:visit|visits|unit|units|used)\b/i);
+        if (unitUsedMatch && freqRule.maxCount < 999) {
+          const usedUnits = parseInt(unitUsedMatch[1], 10);
+          if (usedUnits >= freqRule.maxCount) {
+            item.is_eligible = false;
+            const unitNote = `Ineligible: Frequency limit met (${usedUnits} of ${freqRule.maxCount} used)`;
+            if (!item.notes || !item.notes.toLowerCase().includes('ineligible')) {
+              item.notes = item.notes ? `${item.notes} • ${unitNote}` : unitNote;
+            }
+            return;
+          }
+        }
 
-        // 2. CALENDAR YEAR VS ROLLING MONTHS FREQUENCY LOGIC
-        const histDate = parseDate(histStr);
-        if (histDate) {
-          const isYearlyFreq = /2x1yr|1x1yr|2xyr|1xyr|2\s*in\s*1\s*year|1\s*in\s*1\s*year|calendar/i.test(freqStr);
-          const isRollingFreq = /2x12m|1x12m|12\s*m|12\s*mo|rolling/i.test(freqStr);
+        if (allDates.length > 0) {
+          const latestDate = allDates[0];
 
-          if (isCalendarYearPlan && isYearlyFreq) {
-            // Calendar Year basis: resets on January 1st!
-            if (histDate.getFullYear() < currentYear) {
+          if (freqRule.mode === 'lifetime') {
+            item.is_eligible = false;
+            const ltNote = `Ineligible: Lifetime limit (1/LT) already used on ${formatDate(latestDate)}`;
+            if (!item.notes || !item.notes.toLowerCase().includes('ineligible')) {
+              item.notes = item.notes ? `${item.notes} • ${ltNote}` : ltNote;
+            }
+            return;
+          }
+
+          if (freqRule.mode === 'calendar_year') {
+            const datesInCurrentYear = allDates.filter(d => d.getFullYear() === currentYear);
+
+            if (datesInCurrentYear.length >= freqRule.maxCount) {
+              item.is_eligible = false;
+              const nextJan1 = `01/01/${currentYear + 1}`;
+              const ineligNote = `Ineligible until ${nextJan1} (${datesInCurrentYear.length} of ${freqRule.maxCount} used in Calendar Year ${currentYear}; Last: ${formatDate(latestDate)})`;
+              if (!item.notes || !item.notes.includes(nextJan1)) {
+                item.notes = item.notes ? `${item.notes} • ${ineligNote}` : ineligNote;
+              }
+              return;
+            }
+
+            if (hasSixMonthSpacingRule) {
+              const sixMoNext = addMonthsToDate(latestDate, 6);
+              if (today < sixMoNext) {
+                item.is_eligible = false;
+                const spaceNote = `Ineligible until ${formatDate(sixMoNext)} (6-month interval from ${formatDate(latestDate)})`;
+                if (!item.notes || !item.notes.includes(formatDate(sixMoNext))) {
+                  item.notes = item.notes ? `${item.notes} • ${spaceNote}` : spaceNote;
+                }
+                return;
+              }
+            }
+
+            if (latestDate.getFullYear() < currentYear) {
               item.is_eligible = true;
-              const resetNote = `Eligible (Benefit reset for Calendar Year ${currentYear}; Last service: ${formatDate(histDate)})`;
+              const resetNote = `Eligible (Benefit reset for Calendar Year ${currentYear}; Last service: ${formatDate(latestDate)})`;
               if (!item.notes || !item.notes.includes('Calendar Year')) {
                 item.notes = item.notes ? `${item.notes} • ${resetNote}` : resetNote;
               }
-            }
-          } else if (isRollingFreq) {
-            const twelveMonthsAgo = new Date(today);
-            twelveMonthsAgo.setMonth(twelveMonthsAgo.getMonth() - 12);
-
-            if (histDate >= twelveMonthsAgo) {
-              if (/2x12m|2\s*in\s*12/i.test(freqStr)) {
+            } else if (datesInCurrentYear.length < freqRule.maxCount) {
+              if (!/ineligible|exhausted|frequency\s*met|0\s*remaining/i.test(notesStr)) {
                 item.is_eligible = true;
-                const rollNote = `Eligible: 1 of 2 procedures remaining in rolling 12m (Last service: ${formatDate(histDate)})`;
-                if (!item.notes || !item.notes.includes('rolling 12m')) {
+              }
+            }
+          } else if (freqRule.mode === 'rolling_months' && freqRule.windowMonths > 0) {
+            const activeWindowDates = allDates.filter(d => addMonthsToDate(d, freqRule.windowMonths) > today);
+
+            if (activeWindowDates.length >= freqRule.maxCount) {
+              item.is_eligible = false;
+              const limitingDate = activeWindowDates[freqRule.maxCount - 1] || latestDate;
+              const nextEligibleDt = addMonthsToDate(limitingDate, freqRule.windowMonths);
+              const nextEligibleStr = formatDate(nextEligibleDt);
+              const ineligNote = `Ineligible until ${nextEligibleStr} (Last: ${formatDate(latestDate)}, Freq: ${cleanFreq})`;
+              if (!item.notes || (!item.notes.includes(nextEligibleStr) && !item.notes.toLowerCase().includes('ineligible until'))) {
+                item.notes = item.notes ? `${item.notes} • ${ineligNote}` : ineligNote;
+              }
+              return;
+            }
+
+            if (hasSixMonthSpacingRule) {
+              const sixMoNext = addMonthsToDate(latestDate, 6);
+              if (today < sixMoNext) {
+                item.is_eligible = false;
+                return;
+              }
+            }
+
+            if (activeWindowDates.length === 0) {
+              item.is_eligible = true;
+              const satNote = `Eligible (Frequency satisfied: Last service ${formatDate(latestDate)})`;
+              if (!item.notes || !item.notes.includes('Frequency satisfied')) {
+                item.notes = item.notes ? `${item.notes} • ${satNote}` : satNote;
+              }
+            } else if (activeWindowDates.length < freqRule.maxCount) {
+              const rem = freqRule.maxCount - activeWindowDates.length;
+              if (!/ineligible|exhausted|frequency\s*met|0\s*remaining/i.test(notesStr)) {
+                item.is_eligible = true;
+                const rollNote = `Eligible: ${rem} of ${freqRule.maxCount} remaining in rolling ${freqRule.windowMonths}m (Last service: ${formatDate(latestDate)})`;
+                if (!item.notes || !item.notes.includes('remaining in rolling')) {
                   item.notes = item.notes ? `${item.notes} • ${rollNote}` : rollNote;
                 }
               }
             }
           }
-        }
-
-        // 3. Compact Frequency String Normalization
-        if (item.frequency_limitation) {
-          item.frequency_limitation = formatFrequencyNotation(item.frequency_limitation);
         }
       });
 
@@ -422,9 +601,9 @@
     }
 
     // ==========================================
-    // 3. D0210 & D0330 SHARED FREQUENCY & ELIGIBILITY VALIDATOR
+    // 3. D0210 & D0330 SHARED FREQUENCY & ELIGIBILITY VALIDATOR (STRICT)
     // ==========================================
-    function enforceSharedFmxPanoRules(procedureCodes) {
+    function enforceSharedFmxPanoRules(procedureCodes, insuranceDetails = {}) {
       if (!Array.isArray(procedureCodes) || procedureCodes.length === 0) {
         return procedureCodes;
       }
@@ -448,34 +627,70 @@
         return procedureCodes;
       }
 
+      const carrierName = String(insuranceDetails?.carrier || '').toLowerCase();
+      const isDeltaDental = carrierName.includes('delta');
+
       let sharedFreqText = '';
-      let foundFreqMonths = null;
+      let maxFreqMonths = 0;
 
       for (const item of fmxPanoItems) {
-        const freq = String(item.frequency_limitation || '').trim();
-        if (freq && !/^(nf|none|no|n\/a|-)$/i.test(freq)) {
-          sharedFreqText = freq;
-          foundFreqMonths = parseFrequencyMonths(freq);
-          break;
+        const rawFreq = String(item.frequency_limitation || '').trim();
+        const cleanFreq = rawFreq.replace(/\s*\(shared[^)]*\)/gi, '').trim();
+        if (cleanFreq && !/^(nf|nl|none|no|n\/a|-)$/i.test(cleanFreq)) {
+          const m = parseFrequencyMonths(cleanFreq);
+          if (m > maxFreqMonths) {
+            maxFreqMonths = m;
+            sharedFreqText = formatFrequencyNotation(cleanFreq);
+          }
+        }
+        const notesLower = String(item.notes || '').toLowerCase();
+        if (/60\s*(?:m|mo|mos|month|months)|5\s*(?:y|yr|yrs|year|years)/i.test(notesLower) && maxFreqMonths < 60) {
+          maxFreqMonths = 60;
+          sharedFreqText = '1x5yr';
         }
       }
 
-      if (!sharedFreqText) {
-        sharedFreqText = '1x5yr';
-        foundFreqMonths = 60;
+      if (isDeltaDental && maxFreqMonths === 36) {
+        const anyExplicit3YrInNotes = fmxPanoItems.some(it => {
+          const n = String(it.notes || '').replace(/freq:\s*1x3yr/gi, '').toLowerCase();
+          return /36\s*(?:m|mo|mos|month|months)|(?:within|every|in|per)\s*(?:a\s*)?(?:3|three)\s*(?:-| )?(?:yr|year)/i.test(n);
+        });
+        if (!anyExplicit3YrInNotes) {
+          maxFreqMonths = 60;
+          sharedFreqText = '1x5yr';
+        }
       }
-      const frequencyMonths = foundFreqMonths || 60;
+
+      if (!sharedFreqText || maxFreqMonths <= 0) {
+        sharedFreqText = '1x5yr';
+        maxFreqMonths = 60;
+      }
+      const frequencyMonths = maxFreqMonths || 60;
 
       let latestHistoryDate = null;
-      let rawHistoryStr = 'None';
+      let preservedNonDateHistory = '';
 
       for (const item of fmxPanoItems) {
         const histStr = String(item.history_dates || '').trim();
-        const parsed = parseDate(histStr);
-        if (parsed) {
-          if (!latestHistoryDate || parsed > latestHistoryDate) {
-            latestHistoryDate = parsed;
-            rawHistoryStr = histStr;
+        const datesFromHist = extractAllDates(histStr);
+        if (datesFromHist.length > 0) {
+          if (!latestHistoryDate || datesFromHist[0] > latestHistoryDate) {
+            latestHistoryDate = datesFromHist[0];
+          }
+        } else if (histStr && !/^(none|no|n\/a|na|-|date not found|not found)$/i.test(histStr)) {
+          preservedNonDateHistory = histStr;
+        }
+
+        if (!latestHistoryDate && item.notes) {
+          const rawNoteOnly = String(item.notes)
+            .replace(/Shared freq[^•]*•\s*(?:Ineligible until|Eligible \(Frequency satisfied)[^•]*/gi, '')
+            .trim();
+          const noteHistMatch = rawNoteOnly.match(/(?:last(?:\s*service)?|history|done|claimed|fmx|pano|d0210|d0330)\s*(?:on|date|:)?\s*(\d{1,2}[\/\-\.]\d{1,2}[\/\-\.]\d{2,4}|\d{4}[\/\-\.]\d{1,2}[\/\-\.]\d{1,2})/i);
+          if (noteHistMatch) {
+            const dtFromNote = parseDate(noteHistMatch[1]);
+            if (dtFromNote) {
+              latestHistoryDate = dtFromNote;
+            }
           }
         }
       }
@@ -488,8 +703,7 @@
 
       if (latestHistoryDate) {
         formattedHistDate = formatDate(latestHistoryDate);
-        nextEligibleDate = new Date(latestHistoryDate.getTime());
-        nextEligibleDate.setMonth(nextEligibleDate.getMonth() + frequencyMonths);
+        nextEligibleDate = addMonthsToDate(latestHistoryDate, frequencyMonths);
         formattedNextDate = formatDate(nextEligibleDate);
 
         if (today < nextEligibleDate) {
@@ -497,9 +711,18 @@
         } else {
           isEligible = true;
         }
+      } else {
+        const anyExhausted = fmxPanoItems.some(it =>
+          /0\s*(?:service\/procedures|procedures|visits|units)?\s*remaining|exhausted|1\s*of\s*1\s*used/i.test(`${it.history_dates || ''} ${it.notes || ''}`)
+        );
+        if (anyExhausted) {
+          isEligible = false;
+        }
       }
 
       fmxPanoItems.forEach(item => {
+        if (item.manual_eligibility_override) return;
+
         const codeUpper = String(item.code || '').toUpperCase();
         const isCombo = codeUpper.includes('D0210') && codeUpper.includes('D0330');
         const isFmxOnly = codeUpper.includes('D0210') && !codeUpper.includes('D0330');
@@ -519,34 +742,38 @@
         }
         item.frequency_limitation = sharedFreqLabel;
 
-        const covStr = String(item.coverage_percentage || '').trim().toUpperCase();
+        let covStr = String(item.coverage_percentage || '').trim().toUpperCase();
+        const planCoversMatch = String(item.notes || '').match(/plan\s*(?:covers|pays)\s*(\d+%)/i);
+        if (covStr === '0%' && planCoversMatch) {
+          item.coverage_percentage = planCoversMatch[1];
+          covStr = planCoversMatch[1].toUpperCase();
+        }
         const isCoveredBenefit = covStr !== '0%' && covStr !== 'NC' && !covStr.includes('NOT COVERED');
 
         if (!isCoveredBenefit) {
           item.is_eligible = false;
-          item.notes = item.notes ? `${item.notes} • Not Covered` : 'Not Covered by Plan';
+          if (!item.notes || !/not\s*covered/i.test(item.notes)) {
+            item.notes = item.notes ? `${item.notes} • Not Covered` : 'Not Covered by Plan';
+          }
           return;
         }
+
+        const partnerNote = isCombo
+          ? 'Shared freq D0210 & D0330'
+          : (isFmxOnly ? 'Shared freq with D0330 Pano' : 'Shared freq with D0210 FMX');
 
         if (latestHistoryDate) {
           item.history_dates = formattedHistDate;
           item.is_eligible = isEligible;
 
-          const partnerNote = isCombo
-            ? 'Shared freq D0210 & D0330'
-            : (isFmxOnly ? 'Shared freq with D0330 Pano' : 'Shared freq with D0210 FMX');
-
           if (!isEligible) {
             item.notes = `${partnerNote} • Ineligible until ${formattedNextDate} (Last: ${formattedHistDate}, Freq: ${sharedFreqText})`;
           } else {
-            item.notes = `${partnerNote} • Eligible (Frequency satisfied: Last service ${formattedHistDate})`;
+            item.notes = `${partnerNote} • Eligible (Frequency satisfied: Last service ${formattedHistDate}, Next eligible was ${formattedNextDate})`;
           }
         } else {
-          item.history_dates = 'None';
-          item.is_eligible = true;
-          const partnerNote = isCombo
-            ? 'Shared freq D0210 & D0330'
-            : (isFmxOnly ? 'Shared freq with D0330' : 'Shared freq with D0210');
+          item.history_dates = preservedNonDateHistory || 'None';
+          item.is_eligible = isEligible;
 
           if (!item.notes || !item.notes.toLowerCase().includes('shared')) {
             item.notes = item.notes ? `${partnerNote} • ${item.notes}` : partnerNote;
@@ -1846,7 +2073,7 @@
         }
         if (Array.isArray(data.procedure_codes)) {
           data.procedure_codes = enforceCanonicalCdtMeanings(data.procedure_codes);
-          data.procedure_codes = enforceSharedFmxPanoRules(data.procedure_codes);
+          data.procedure_codes = enforceSharedFmxPanoRules(data.procedure_codes, data.insurance_details || {});
           data.procedure_codes = enforceAgeLimitAndFrequencyRules(data.procedure_codes, data.insurance_details || {});
         }
       }
@@ -2541,7 +2768,8 @@
           displayToast(`${code} Deductible: ${p.deductible_applied ? 'Applies' : 'Waived'}`);
         } else if (field === 'is_eligible') {
           p.is_eligible = !p.is_eligible;
-          displayToast(`${code} Eligibility: ${p.is_eligible ? 'Eligible' : 'Ineligible'}`);
+          p.manual_eligibility_override = true;
+          displayToast(`${code} Eligibility: ${p.is_eligible ? 'Eligible' : 'Ineligible'} (Manual Override)`);
         }
         renderCdtTable();
         renderExcelBreakdownSheet(currentAuditData);
@@ -2582,6 +2810,32 @@
             }
             if (field === 'coverage_percentage' && !val) val = '0%';
             p[field] = val;
+
+            // If user edited history, frequency, age limit, or coverage, re-run strict eligibility calculator
+            if (['history_dates', 'frequency_limitation', 'age_limit', 'coverage_percentage'].includes(field)) {
+              p.manual_eligibility_override = false;
+              const codeUpper = String(p.code || '').toUpperCase();
+              if (codeUpper.includes('D0210') || codeUpper.includes('D0330')) {
+                currentAuditData.procedure_codes.forEach(other => {
+                  const oc = String(other?.code || '').toUpperCase();
+                  if (oc.includes('D0210') || oc.includes('D0330')) {
+                    other.manual_eligibility_override = false;
+                    if (field === 'history_dates' || field === 'frequency_limitation') {
+                      other[field] = val;
+                    }
+                  }
+                });
+              }
+              currentAuditData.procedure_codes = enforceSharedFmxPanoRules(
+                currentAuditData.procedure_codes,
+                currentAuditData.insurance_details || {}
+              );
+              currentAuditData.procedure_codes = enforceAgeLimitAndFrequencyRules(
+                currentAuditData.procedure_codes,
+                currentAuditData.insurance_details || {}
+              );
+            }
+
             displayToast(`Updated ${code} ${field.replace('_', ' ')}`);
             persistActiveBreakdownToDb();
           }
