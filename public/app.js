@@ -1478,13 +1478,148 @@
       }
     });
 
-    dropzoneField.addEventListener('click', () => {
+    dropzoneField.addEventListener('click', (e) => {
+      if (e.target.closest('#pasteClipboardDropzoneBtn')) return;
       fileInput.click();
     });
 
     addMoreFilesBtn.addEventListener('click', () => {
       fileInput.click();
     });
+
+    const clearAllFilesBtn = document.getElementById('clearAllFilesBtn');
+    if (clearAllFilesBtn) {
+      clearAllFilesBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        selectedFiles = [];
+        if (fileInput) fileInput.value = '';
+        renderFilesList();
+        displayToast('Cleared all attached files');
+      });
+    }
+
+    let pastedScreenshotCounter = 0;
+
+    function buildNamedClipboardFile(blob, idxOffset = 0) {
+      pastedScreenshotCounter += 1;
+      const mime = (blob && blob.type) ? blob.type : 'image/png';
+      let ext = 'png';
+      if (mime.includes('jpeg') || mime.includes('jpg')) ext = 'jpg';
+      else if (mime.includes('webp')) ext = 'webp';
+      else if (mime.includes('pdf')) ext = 'pdf';
+      const now = new Date();
+      const stamp = [
+        String(now.getHours()).padStart(2, '0'),
+        String(now.getMinutes()).padStart(2, '0'),
+        String(now.getSeconds()).padStart(2, '0')
+      ].join('');
+      const seqNum = selectedFiles.length + idxOffset + 1;
+      const fileName = `Portal_Screenshot_${seqNum}_${stamp}_${pastedScreenshotCounter}.${ext}`;
+      return new File([blob], fileName, { type: mime, lastModified: Date.now() });
+    }
+
+    function flashPasteHighlight() {
+      const targetEl = (filesListContainer && filesListContainer.classList.contains('active'))
+        ? filesListContainer
+        : dropzoneField;
+      if (!targetEl) return;
+      const prevOutline = targetEl.style.boxShadow;
+      targetEl.style.boxShadow = '0 0 0 2px #38bdf8, 0 0 24px rgba(56, 189, 248, 0.35)';
+      setTimeout(() => {
+        targetEl.style.boxShadow = prevOutline || '';
+      }, 650);
+    }
+
+    // Global Ctrl+V Clipboard Screenshot Paste Listener
+    window.addEventListener('paste', (e) => {
+      if (!currentUser) return;
+      const cd = e.clipboardData || window.clipboardData;
+      if (!cd) return;
+
+      const pastedFiles = [];
+      if (cd.items && cd.items.length > 0) {
+        for (let i = 0; i < cd.items.length; i++) {
+          const item = cd.items[i];
+          if (item.kind === 'file' && (/^image\/(png|jpe?g|webp)$/i.test(item.type) || item.type === 'application/pdf')) {
+            const rawFile = item.getAsFile();
+            if (rawFile) {
+              const isGenericClipboardName = !rawFile.name || /^image\.(png|jpe?g|webp)$/i.test(rawFile.name);
+              pastedFiles.push(isGenericClipboardName ? buildNamedClipboardFile(rawFile, pastedFiles.length) : rawFile);
+            }
+          }
+        }
+      } else if (cd.files && cd.files.length > 0) {
+        for (let i = 0; i < cd.files.length; i++) {
+          const rawFile = cd.files[i];
+          if (/^image\/(png|jpe?g|webp)$/i.test(rawFile.type) || rawFile.type === 'application/pdf') {
+            const isGenericClipboardName = !rawFile.name || /^image\.(png|jpe?g|webp)$/i.test(rawFile.name);
+            pastedFiles.push(isGenericClipboardName ? buildNamedClipboardFile(rawFile, pastedFiles.length) : rawFile);
+          }
+        }
+      }
+
+      if (pastedFiles.length > 0) {
+        e.preventDefault();
+        // If user is currently viewing a finished breakdown and presses Ctrl+V, switch to upload panel or append
+        const formPan = document.getElementById('formPanel');
+        if (formPan && formPan.style.display === 'none') {
+          resetVerificationState();
+        }
+        const beforeCount = selectedFiles.length;
+        handleIncomingFiles(pastedFiles, { fromClipboard: true });
+        const addedCount = selectedFiles.length - beforeCount;
+        if (addedCount > 0) {
+          flashPasteHighlight();
+          displayToast(`📋 Pasted ${addedCount} portal screenshot${addedCount > 1 ? 's' : ''} (${selectedFiles.length} total attached)`);
+        }
+      }
+    });
+
+    async function triggerClipboardButtonPaste(e) {
+      if (e) {
+        e.preventDefault();
+        e.stopPropagation();
+      }
+      if (!navigator.clipboard || typeof navigator.clipboard.read !== 'function') {
+        displayToast('Press Ctrl + V (or Cmd + V) on your keyboard to paste your screenshot.');
+        return;
+      }
+      try {
+        const clipboardItems = await navigator.clipboard.read();
+        const extracted = [];
+        for (const clipItem of clipboardItems) {
+          const matchedType = clipItem.types.find(t => /^image\/(png|jpe?g|webp)$/i.test(t) || t === 'application/pdf');
+          if (matchedType) {
+            const blob = await clipItem.getType(matchedType);
+            if (blob) {
+              extracted.push(buildNamedClipboardFile(blob, extracted.length));
+            }
+          }
+        }
+        if (extracted.length > 0) {
+          const beforeCount = selectedFiles.length;
+          handleIncomingFiles(extracted, { fromClipboard: true });
+          const addedCount = selectedFiles.length - beforeCount;
+          if (addedCount > 0) {
+            flashPasteHighlight();
+            displayToast(`📋 Pasted ${addedCount} portal screenshot${addedCount > 1 ? 's' : ''} (${selectedFiles.length} total attached)`);
+          }
+        } else {
+          displayToast('No screenshot image found in clipboard. Take a snip (Win+Shift+S) then press Ctrl+V!');
+        }
+      } catch (err) {
+        displayToast('Press Ctrl + V on your keyboard to paste your copied portal screenshot.');
+      }
+    }
+
+    const pasteClipboardDropzoneBtn = document.getElementById('pasteClipboardDropzoneBtn');
+    if (pasteClipboardDropzoneBtn) {
+      pasteClipboardDropzoneBtn.addEventListener('click', triggerClipboardButtonPaste);
+    }
+    const pasteMoreClipboardBtn = document.getElementById('pasteMoreClipboardBtn');
+    if (pasteMoreClipboardBtn) {
+      pasteMoreClipboardBtn.addEventListener('click', triggerClipboardButtonPaste);
+    }
 
     fileInput.addEventListener('change', (e) => {
       if (e.target.files && e.target.files.length > 0) {
@@ -1501,7 +1636,7 @@
       return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
     }
 
-    function handleIncomingFiles(newFiles) {
+    function handleIncomingFiles(newFiles, opts = {}) {
       hideAlert();
       const validTypes = ['application/pdf', 'image/png', 'image/jpeg', 'image/jpg', 'image/webp'];
 
@@ -1511,8 +1646,8 @@
           continue;
         }
 
-        // Check if already added
-        const exists = selectedFiles.some(existing => existing.name === f.name && existing.size === f.size);
+        // Check if already added (allow distinct clipboard pastes even if same resolution/byte size)
+        const exists = !opts.fromClipboard && selectedFiles.some(existing => existing.name === f.name && existing.size === f.size);
         if (!exists) {
           if (selectedFiles.length >= 10) {
             showAlert('Maximum 10 files allowed at once.');
@@ -1541,14 +1676,32 @@
       filesItemsGrid.innerHTML = '';
       selectedFiles.forEach((file, index) => {
         const ext = file.name.split('.').pop().toUpperCase().slice(0, 4) || 'DOC';
-        
+        const isImg = /^image\//i.test(file.type) || /\.(png|jpe?g|webp)$/i.test(file.name);
+        const isClip = file.name.startsWith('Portal_Screenshot_');
+
         const row = document.createElement('div');
         row.className = 'file-item-row';
+
+        let thumbHtml = `<div class="file-item-badge">${escapeHtml(ext)}</div>`;
+        if (isImg) {
+          try {
+            const objUrl = URL.createObjectURL(file);
+            thumbHtml = `
+              <div style="width: 38px; height: 38px; border-radius: 7px; overflow: hidden; border: 1px solid rgba(56, 189, 248, 0.4); flex-shrink: 0; background: #0f172a; display: flex; align-items: center; justify-content: center;">
+                <img src="${objUrl}" alt="${escapeHtml(file.name)}" style="width: 100%; height: 100%; object-fit: cover;" onload="URL.revokeObjectURL(this.src)">
+              </div>
+            `;
+          } catch (e) {}
+        }
+
         row.innerHTML = `
           <div class="file-item-left">
-            <div class="file-item-badge">${escapeHtml(ext)}</div>
+            ${thumbHtml}
             <div class="file-item-info">
-              <div class="file-item-name" title="${escapeHtml(file.name)}">${escapeHtml(file.name)}</div>
+              <div class="file-item-name" title="${escapeHtml(file.name)}" style="display: flex; align-items: center; gap: 0.4rem;">
+                <span>${escapeHtml(file.name)}</span>
+                ${isClip ? '<span style="font-size: 0.62rem; background: rgba(56, 189, 248, 0.16); color: #38bdf8; border: 1px solid rgba(56, 189, 248, 0.35); border-radius: 4px; padding: 1px 5px; font-weight: 700;">CLIPBOARD</span>' : ''}
+              </div>
               <div class="file-item-meta">${formatFileSize(file.size)} • Page/File #${index + 1}</div>
             </div>
           </div>
@@ -2390,6 +2543,9 @@
         }
       }
 
+      // Render Smart Clinical Red Flags & Front-Desk Chairside Alerts Banner
+      renderClinicalRedFlags(data);
+
       // Rules Row
       const rulesRow = document.getElementById('rulesRow');
       rulesRow.innerHTML = '';
@@ -2611,6 +2767,266 @@
       reportDashboard.style.display = 'block';
     }
 
+    function jumpToCdtCodeRow(targetCode) {
+      if (!targetCode) return;
+      const cleanTarget = String(targetCode).trim().toUpperCase();
+      // Reset filter/search if row is currently hidden
+      let rowEl = cdtTableBody.querySelector(`tr[data-cdt-code*="${cleanTarget}"]`);
+      if (!rowEl && (currentFilter !== 'all' || currentSearch !== '')) {
+        currentFilter = 'all';
+        currentSearch = '';
+        if (cdtSearchInput) cdtSearchInput.value = '';
+        filterChips.forEach(c => c.classList.toggle('active', c.dataset.filter === 'all'));
+        renderCdtTable();
+        rowEl = cdtTableBody.querySelector(`tr[data-cdt-code*="${cleanTarget}"]`);
+      }
+      if (rowEl) {
+        rowEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        const origBg = rowEl.style.background;
+        const origOutline = rowEl.style.outline;
+        rowEl.style.background = 'rgba(56, 189, 248, 0.22)';
+        rowEl.style.outline = '2px solid #38bdf8';
+        setTimeout(() => {
+          rowEl.style.background = origBg || '';
+          rowEl.style.outline = origOutline || '';
+        }, 1800);
+      }
+    }
+
+    // Smart Clinical Red Flags & Front-Desk Chairside Alerts Engine
+    function renderClinicalRedFlags(data) {
+      const bannerEl = document.getElementById('clinicalRedFlagsBanner');
+      if (!bannerEl || !data) return;
+
+      const details = data.insurance_details || {};
+      const levels = data.coverage_levels || {};
+      const codes = Array.isArray(data.procedure_codes) ? data.procedure_codes : [];
+
+      const criticalFlags = []; // Red / Rose critical chairside blockers
+      const warningFlags = [];  // Amber billing / clinical warnings
+
+      // 1. Policy Termed / Inactive Check
+      const polStatus = String(details.policy_status || 'Active').toLowerCase();
+      const isTermed = polStatus.includes('term') || polStatus.includes('inact');
+      if (isTermed) {
+        criticalFlags.push({
+          icon: '🔴',
+          title: 'POLICY TERMED / INACTIVE',
+          detail: `Coverage is inactive (${escapeHtml(details.termed_date || 'Termed')}). Do not seat patient under insurance — verify updated policy or collect fee upfront.`,
+          code: null,
+        });
+      }
+
+      // 2. Annual Maximum Exhausted or Critically Low (<= $350)
+      const annMax = typeof details.annual_maximum === 'number' ? details.annual_maximum : parseFloat(String(details.annual_maximum || '').replace(/[^0-9.]/g, ''));
+      const remMax = typeof details.remaining_maximum === 'number' ? details.remaining_maximum : parseFloat(String(details.remaining_maximum || '').replace(/[^0-9.]/g, ''));
+      if (!isNaN(annMax) && annMax > 0 && !isNaN(remMax)) {
+        if (remMax <= 0) {
+          criticalFlags.push({
+            icon: '🔴',
+            title: 'ANNUAL MAXIMUM EXHAUSTED ($0 LEFT)',
+            detail: `$0.00 remaining out of $${annMax.toLocaleString()} Annual Max. Insurance will not pay for non-exempt services this benefit period.`,
+            code: null,
+          });
+        } else if (remMax <= 350) {
+          criticalFlags.push({
+            icon: '🔴',
+            title: `LOW ANNUAL MAXIMUM ($${remMax.toLocaleString()} REMAINING)`,
+            detail: `Only $${remMax.toLocaleString()} remaining out of $${annMax.toLocaleString()} Annual Max. Check before starting SRP or Major restorative work.`,
+            code: null,
+          });
+        }
+      }
+
+      // 3. Scan CDT Procedure Codes for Ineligible Core Preventive/Diagnostic vs Other Codes & Downgrades
+      const coreDiagPrevSet = ['D0120', 'D0150', 'D0140', 'D1110', 'D4346', 'D0274', 'D0210', 'D0330', 'D0220'];
+      let handledFmxPanoGroup = false;
+
+      const extractShortIneligibleReason = (item) => {
+        const cov = String(item.coverage_percentage || '').trim().toUpperCase();
+        if (cov === '0%' || cov === 'NC' || cov.includes('NOT COVERED')) {
+          return 'Not Covered (0%)';
+        }
+        const notes = String(item.notes || '');
+        const untilMatch = notes.match(/Ineligible until\s+(\d{1,2}[\/\-]\d{1,2}[\/\-]\d{2,4})/i);
+        const hist = (item.history_dates && !/^(none|-|n\/a)$/i.test(item.history_dates)) ? item.history_dates : '';
+        if (untilMatch) {
+          return `Until ${untilMatch[1]}${hist ? ` (Last: ${hist})` : ''}`;
+        }
+        if (/age limit|minimum age/i.test(notes) || (item.age_limit && !/^(none|nl|-|n\/a)$/i.test(item.age_limit) && (!hist || hist === 'None'))) {
+          return `Age Limit (${item.age_limit || 'Exceeded'})`;
+        }
+        if (hist) {
+          return `History: ${hist} (${item.frequency_limitation || 'Freq Met'})`;
+        }
+        return item.frequency_limitation ? `Freq: ${item.frequency_limitation}` : 'Ineligible Today';
+      };
+
+      codes.forEach(item => {
+        if (!item || !item.code) return;
+        const codeUpper = String(item.code).toUpperCase();
+
+        // Check Downgrade Rules (e.g. D2391 Composite -> Amalgam, D2740 Crown -> Base Metal)
+        const dg = String(item.downgrade_rule || '').trim();
+        if (dg && !/^(none|no|n\/a|-|no downgrade)$/i.test(dg)) {
+          warningFlags.push({
+            icon: '🟡',
+            title: `${escapeHtml(item.code)} DOWNGRADE`,
+            detail: `${escapeHtml(dg)} — collect fee difference from patient.`,
+            code: codeUpper.match(/D\d{4}/)?.[0] || item.code,
+          });
+        }
+
+        // Check Ineligible status
+        if (item.is_eligible === false) {
+          const isFmxOrPano = codeUpper.includes('D0210') || codeUpper.includes('D0330');
+          if (isFmxOrPano) {
+            if (handledFmxPanoGroup) return;
+            handledFmxPanoGroup = true;
+            const reason = extractShortIneligibleReason(item);
+            criticalFlags.push({
+              icon: '🔴',
+              title: 'D0210 / D0330 (FMX / PANO) INELIGIBLE TODAY',
+              detail: `${escapeHtml(reason)} — Do not take FMX/Pano today without patient financial consent.`,
+              code: 'D0210',
+            });
+            return;
+          }
+
+          const matchedCore = coreDiagPrevSet.find(c => codeUpper.includes(c));
+          const reason = extractShortIneligibleReason(item);
+          const shortMeaning = String(item.description || '').split('(')[0].trim() || item.code;
+
+          if (matchedCore) {
+            criticalFlags.push({
+              icon: '🔴',
+              title: `${escapeHtml(item.code)} (${escapeHtml(shortMeaning)}) INELIGIBLE`,
+              detail: escapeHtml(reason),
+              code: matchedCore,
+            });
+          } else {
+            warningFlags.push({
+              icon: '🟡',
+              title: `${escapeHtml(item.code)} (${escapeHtml(shortMeaning)}) INELIGIBLE`,
+              detail: escapeHtml(reason),
+              code: codeUpper.match(/D\d{4}/)?.[0] || item.code,
+            });
+          }
+        }
+      });
+
+      // 4. Active Waiting Period Check
+      if (Boolean(details.waiting_period)) {
+        warningFlags.push({
+          icon: '🟡',
+          title: 'WAITING PERIOD ACTIVE',
+          detail: escapeHtml(levels.waiting_period_details || 'Waiting period applies to Basic/Major services.'),
+          code: null,
+        });
+      }
+
+      // 5. Missing Tooth Clause Check
+      if (Boolean(details.missing_tooth_clause)) {
+        warningFlags.push({
+          icon: '🟡',
+          title: 'MISSING TOOTH CLAUSE APPLIES',
+          detail: 'Teeth extracted prior to effective date are excluded for Bridges / Implants (D6010) / Partials.',
+          code: 'D6010',
+        });
+      }
+
+      // 6. Missing Critical Portal Info Check
+      const missingFields = [];
+      if (!details.effective_date || /^(none|n\/a|na|-|date not found)$/i.test(String(details.effective_date).trim())) {
+        missingFields.push('Effective Date');
+      }
+      if (!details.member_id || /^(none|n\/a|na|-)$/i.test(String(details.member_id).trim())) {
+        missingFields.push('Member ID');
+      }
+      if (!annMax || isNaN(annMax) || annMax <= 0) {
+        missingFields.push('Annual Max');
+      }
+      if (missingFields.length > 0) {
+        warningFlags.push({
+          icon: '🟡',
+          title: 'MISSING PORTAL DETAILS',
+          detail: `Verify ${escapeHtml(missingFields.join(', '))} with carrier or portal.`,
+          code: null,
+        });
+      }
+
+      bannerEl.style.display = 'block';
+
+      if (criticalFlags.length === 0 && warningFlags.length === 0) {
+        bannerEl.style.background = 'linear-gradient(135deg, rgba(6, 78, 59, 0.38), rgba(15, 23, 42, 0.9))';
+        bannerEl.style.borderColor = 'rgba(16, 185, 129, 0.45)';
+        bannerEl.innerHTML = `
+          <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 0.6rem;">
+            <div style="display: flex; align-items: center; gap: 0.6rem;">
+              <span style="display: inline-flex; align-items: center; justify-content: center; width: 26px; height: 26px; border-radius: 50%; background: rgba(16, 185, 129, 0.2); border: 1px solid rgba(16, 185, 129, 0.5); font-size: 0.85rem;">✅</span>
+              <div>
+                <div style="font-size: 0.8rem; font-weight: 800; color: #34d399; letter-spacing: 0.03em; text-transform: uppercase;">All Clear for Chairside — No Red Flags Detected</div>
+                <div style="font-size: 0.74rem; color: #cbd5e1;">Active policy • Healthy Annual Max • No waiting periods, downgrades, or ineligible preventive/x-ray codes today.</div>
+              </div>
+            </div>
+          </div>
+        `;
+        return;
+      }
+
+      const hasCritical = criticalFlags.length > 0;
+      bannerEl.style.background = hasCritical
+        ? 'linear-gradient(135deg, rgba(76, 5, 25, 0.42), rgba(15, 23, 42, 0.94))'
+        : 'linear-gradient(135deg, rgba(120, 53, 15, 0.35), rgba(15, 23, 42, 0.94))';
+      bannerEl.style.borderColor = hasCritical
+        ? 'rgba(244, 63, 94, 0.5)'
+        : 'rgba(245, 158, 11, 0.45)';
+
+      const renderFlagPill = (f, isCrit) => {
+        const borderCol = isCrit ? 'rgba(244, 63, 94, 0.45)' : 'rgba(245, 158, 11, 0.4)';
+        const bgCol = isCrit ? 'rgba(244, 63, 94, 0.13)' : 'rgba(245, 158, 11, 0.11)';
+        const titleCol = isCrit ? '#fda4af' : '#fcd34d';
+        const clickAttr = f.code
+          ? `data-jump-code="${escapeHtml(f.code)}" style="background: ${bgCol}; border: 1px solid ${borderCol}; border-radius: 8px; padding: 0.42rem 0.68rem; font-size: 0.74rem; line-height: 1.35; cursor: pointer; transition: transform 0.12s ease;" title="Click to jump to ${escapeHtml(f.code)} in Breakdown Table"`
+          : `style="background: ${bgCol}; border: 1px solid ${borderCol}; border-radius: 8px; padding: 0.42rem 0.68rem; font-size: 0.74rem; line-height: 1.35;"`;
+        return `
+          <div class="clinical-flag-pill" ${clickAttr}>
+            <span style="font-weight: 800; color: ${titleCol};">${f.icon} ${f.title}:</span>
+            <span style="color: #e2e8f0; margin-left: 0.25rem;">${f.detail}</span>
+            ${f.code ? `<span style="margin-left: 0.35rem; font-size: 0.64rem; color: #38bdf8; text-decoration: underline; font-weight: 700;">View Row ↘</span>` : ''}
+          </div>
+        `;
+      };
+
+      bannerEl.innerHTML = `
+        <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 0.5rem; margin-bottom: 0.6rem;">
+          <div style="display: flex; align-items: center; gap: 0.5rem;">
+            <span style="font-size: 0.76rem; font-weight: 800; letter-spacing: 0.05em; text-transform: uppercase; color: ${hasCritical ? '#fb7185' : '#fbbf24'}; display: inline-flex; align-items: center; gap: 0.35rem;">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4">
+                <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path>
+                <line x1="12" y1="9" x2="12" y2="13"></line>
+                <line x1="12" y1="17" x2="12.01" y2="17"></line>
+              </svg>
+              Clinical Red Flags & Chairside Alerts
+            </span>
+            ${criticalFlags.length > 0 ? `<span style="background: rgba(244, 63, 94, 0.22); color: #fda4af; border: 1px solid rgba(244, 63, 94, 0.45); font-size: 0.66rem; font-weight: 800; padding: 1px 7px; border-radius: 999px;">${criticalFlags.length} Critical</span>` : ''}
+            ${warningFlags.length > 0 ? `<span style="background: rgba(245, 158, 11, 0.2); color: #fcd34d; border: 1px solid rgba(245, 158, 11, 0.4); font-size: 0.66rem; font-weight: 800; padding: 1px 7px; border-radius: 999px;">${warningFlags.length} Warning${warningFlags.length > 1 ? 's' : ''}</span>` : ''}
+          </div>
+          <span style="font-size: 0.68rem; color: #94a3b8;">Click any flagged CDT code to jump to its table row</span>
+        </div>
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 0.45rem;">
+          ${criticalFlags.map(f => renderFlagPill(f, true)).join('')}
+          ${warningFlags.map(f => renderFlagPill(f, false)).join('')}
+        </div>
+      `;
+
+      bannerEl.querySelectorAll('[data-jump-code]').forEach(pill => {
+        pill.addEventListener('click', () => {
+          jumpToCdtCodeRow(pill.getAttribute('data-jump-code'));
+        });
+      });
+    }
+
     // Render CDT Table
     function renderCdtTable() {
       const allCodes = currentAuditData?.procedure_codes || [];
@@ -2691,6 +3107,7 @@
 
         catCodes.forEach(p => {
           const tr = document.createElement('tr');
+          tr.dataset.cdtCode = String(p.code || '').toUpperCase().trim();
 
           // Status badge
           const statusBadge = p.is_eligible
@@ -2772,6 +3189,7 @@
           displayToast(`${code} Eligibility: ${p.is_eligible ? 'Eligible' : 'Ineligible'} (Manual Override)`);
         }
         renderCdtTable();
+        renderClinicalRedFlags(currentAuditData);
         renderExcelBreakdownSheet(currentAuditData);
         if (pmsModal && pmsModal.classList.contains('active')) buildPmsNote();
         persistActiveBreakdownToDb();
@@ -2840,6 +3258,7 @@
             persistActiveBreakdownToDb();
           }
           renderCdtTable();
+          renderClinicalRedFlags(currentAuditData);
           renderExcelBreakdownSheet(currentAuditData);
           if (pmsModal && pmsModal.classList.contains('active')) buildPmsNote();
         };

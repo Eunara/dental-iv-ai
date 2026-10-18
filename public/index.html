@@ -431,14 +431,23 @@
               <line x1="9" y1="15" x2="15" y2="15"></line>
             </svg>
           </div>
-          <div class="drop-heading">Select or drag & drop breakdown file(s) here</div>
-          <div class="drop-subheading">Upload single breakdown or multiple pages/portal screenshots (PDF, PNG, JPG, WEBP)</div>
+          <div class="drop-heading">Select, drag & drop, or press <kbd style="background: rgba(56, 189, 248, 0.16); color: #38bdf8; border: 1px solid rgba(56, 189, 248, 0.4); border-radius: 5px; padding: 1px 6px; font-size: 0.82rem; font-family: var(--font-mono);">Ctrl + V</kbd> to paste screenshot(s)</div>
+          <div class="drop-subheading">Upload single breakdown or paste multiple portal snips directly from clipboard (PDF, PNG, JPG, WEBP)</div>
+          <div style="margin-top: 0.65rem; display: flex; justify-content: center; gap: 0.5rem; flex-wrap: wrap;">
+            <button type="button" id="pasteClipboardDropzoneBtn" class="btn-action-ghost" style="padding: 0.34rem 0.8rem; font-size: 0.74rem; background: rgba(56, 189, 248, 0.12); border: 1px solid rgba(56, 189, 248, 0.38); color: #38bdf8; border-radius: 8px; font-weight: 700; display: inline-flex; align-items: center; gap: 0.35rem;" title="Paste copied screenshot image directly from your clipboard (or press Ctrl+V)">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+                <path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"></path>
+                <rect x="8" y="2" width="8" height="4" rx="1" ry="1"></rect>
+              </svg>
+              Paste Screenshot (Ctrl+V)
+            </button>
+          </div>
           <input type="file" id="fileInput" class="file-input-hidden" multiple accept="application/pdf,image/png,image/jpeg,image/jpg,image/webp">
         </div>
 
         <!-- Attached Files List Container -->
         <div class="files-list-container" id="filesListContainer">
-          <div class="files-list-header">
+          <div class="files-list-header" style="flex-wrap: wrap; gap: 0.5rem;">
             <div class="files-count-badge" id="filesCountBadge">
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                 <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
@@ -446,13 +455,25 @@
               </svg>
               <span id="filesCountText">1 File Attached</span>
             </div>
-            <button type="button" class="btn-add-more-files" id="addMoreFilesBtn">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
-                <line x1="12" y1="5" x2="12" y2="19"></line>
-                <line x1="5" y1="12" x2="19" y2="12"></line>
-              </svg>
-              Add More Files
-            </button>
+            <div style="display: flex; align-items: center; gap: 0.45rem; flex-wrap: wrap;">
+              <button type="button" class="btn-add-more-files" id="pasteMoreClipboardBtn" style="background: rgba(56, 189, 248, 0.14); border-color: rgba(56, 189, 248, 0.4); color: #38bdf8;" title="Paste another portal screenshot from clipboard (or press Ctrl+V anywhere)">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3">
+                  <path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"></path>
+                  <rect x="8" y="2" width="8" height="4" rx="1" ry="1"></rect>
+                </svg>
+                Paste Screenshot (Ctrl+V)
+              </button>
+              <button type="button" class="btn-add-more-files" id="addMoreFilesBtn">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                  <line x1="12" y1="5" x2="12" y2="19"></line>
+                  <line x1="5" y1="12" x2="19" y2="12"></line>
+                </svg>
+                Add More Files
+              </button>
+              <button type="button" class="btn-action-ghost" id="clearAllFilesBtn" style="padding: 0.28rem 0.6rem; font-size: 0.72rem; color: #fda4af; border-color: rgba(244, 63, 94, 0.35); background: rgba(244, 63, 94, 0.1);" title="Remove all attached files">
+                Clear All
+              </button>
+            </div>
           </div>
           <div class="files-items-grid" id="filesItemsGrid">
             <!-- Dynamically populated files -->
@@ -811,6 +832,11 @@
               </div>
             </div>
           </div>
+        </div>
+
+        <!-- SMART CLINICAL RED FLAGS & FRONT-DESK CHAIRSIDE ALERTS BANNER -->
+        <div id="clinicalRedFlagsBanner" style="display: none; margin-bottom: 1.1rem; border-radius: 12px; padding: 0.9rem 1.15rem; background: rgba(15, 23, 42, 0.88); border: 1px solid rgba(244, 63, 94, 0.4); box-shadow: 0 8px 24px rgba(0, 0, 0, 0.28);">
+          <!-- Dynamically populated by renderClinicalRedFlags(data) -->
         </div>
 
         <!-- KEY POLICY CLAUSES & WARNING FLAGS -->
