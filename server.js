@@ -258,12 +258,22 @@ const dentalBreakdownSchema = {
         },
         annual_maximum: {
           type: Type.NUMBER,
-          description: 'Individual annual maximum benefit in dollars (null if unlimited or not specified)',
+          description: 'Individual Calendar/Contract Year Total Maximum benefit in dollars (e.g. 1500, 1750, 2000; look at "Total: $..." under Individual Maximum). Never use Ortho max here.',
           nullable: true,
         },
         remaining_maximum: {
           type: Type.NUMBER,
-          description: 'Remaining annual maximum benefit in dollars (null if unlimited or not specified)',
+          description: 'Individual Annual Maximum REMAINING balance in dollars. CRITICAL: If the portal states "Benefit Maximums Met", "Maximums Met", "Maximum Met", or shows $0.00 remaining, you MUST return 0 (NOT the total annual_maximum)!',
+          nullable: true,
+        },
+        is_annual_maximum_met: {
+          type: Type.BOOLEAN,
+          description: 'True if the portal/document indicates "Benefit Maximums Met", "Maximum Met", "Max Met", or $0.00 remaining on the Individual Annual Maximum; false otherwise.',
+          nullable: true,
+        },
+        annual_maximum_used: {
+          type: Type.NUMBER,
+          description: 'Dollar amount of Individual Annual Maximum used/applied to date if shown on the document (or equal to annual_maximum if "Benefit Maximums Met").',
           nullable: true,
         },
         preventive_applies_to_max: {
@@ -273,12 +283,27 @@ const dentalBreakdownSchema = {
         },
         deductible_individual: {
           type: Type.NUMBER,
-          description: 'Individual annual deductible amount in dollars (null if $0 or none)',
+          description: 'INDIVIDUAL Annual Deductible total amount in dollars (e.g. 50, 25, 0 — look at "Total: $50.00" under Individual Deductible). CRITICAL: NEVER put the Family Deductible ($100 or $150) here!',
           nullable: true,
         },
         deductible_remaining: {
           type: Type.NUMBER,
-          description: 'Remaining deductible balance in dollars (null if $0 or none)',
+          description: 'INDIVIDUAL Deductible REMAINING balance in dollars. CRITICAL: If the Individual Deductible column states "Deductible Met" (green checkmark) or $0.00 remaining, you MUST return 0! NEVER copy the Family Deductible remaining ($100.00) into deductible_remaining!',
+          nullable: true,
+        },
+        is_individual_deductible_met: {
+          type: Type.BOOLEAN,
+          description: 'True if the Individual Deductible says "Deductible Met", "Met", or has $0.00 remaining; false otherwise.',
+          nullable: true,
+        },
+        deductible_family: {
+          type: Type.NUMBER,
+          description: 'FAMILY Annual Deductible total amount in dollars (e.g. 150, 100). Put Family Deductible here so it NEVER pollutes deductible_individual.',
+          nullable: true,
+        },
+        deductible_family_remaining: {
+          type: Type.NUMBER,
+          description: 'FAMILY Deductible remaining balance in dollars (e.g. 100). Put Family Deductible remaining here so it NEVER pollutes deductible_remaining.',
           nullable: true,
         },
         deductible_applies_to: {
@@ -471,8 +496,24 @@ Your mission is to audit dental breakdown sheets, fee schedules, or insurance we
    - If no termed date exists or it is in the future, set policy_status to "Active".
    - Do NOT extract or include secondary insurance.
 
-3. Financials & Deductible Allocation:
-   - Accurately parse Annual Maximum, Remaining Maximum, Individual Deductible, and Remaining Deductible.
+3. Financials, Annual Maximums & Deductible Allocation (CRITICAL ACCURACY RULES):
+   - STRICT INDIVIDUAL vs FAMILY DEDUCTIBLE SEPARATION:
+     * Dental portals (Cigna, Delta Dental, MetLife, Availity, etc.) display BOTH an "Individual Deductible" and a "Family Deductible" side-by-side (e.g., Individual Total: $50.00 vs Family Remaining: $100.00 / Family Total: $150.00).
+     * You MUST extract deductible_individual and deductible_remaining EXCLUSIVELY from the INDIVIDUAL Deductible column/row!
+     * NEVER put the Family Deductible ($100 or $150) or Family Deductible Remaining ($100) into deductible_individual or deductible_remaining! Put Family numbers ONLY into deductible_family and deductible_family_remaining.
+   - "DEDUCTIBLE MET" RULE (CRITICAL):
+     * When the Individual Deductible section displays "✅ Deductible Met", "Met", "Satisfied", or "$0.00 remaining" above "Total: $50.00" (even if the adjacent Family Deductible column displays "$100.00" remaining!), you MUST set:
+       - deductible_individual: 50 (the Individual Total amount)
+       - deductible_remaining: 0 (because "Deductible Met" means $0.00 remaining!)
+       - is_individual_deductible_met: true
+   - "BENEFIT MAXIMUMS MET" / "MAXIMUM MET" RULE (CRITICAL):
+     * When the Benefit Maximums / Annual Maximum section displays "(!) Benefit Maximums Met", "Maximums Met", "Maximum Met", or "$0.00 remaining" above "Total: $1,750.00" (or "Total: $1,500.00"):
+       - This means the patient has EXHAUSTED 100% of their Annual Maximum and has $0.00 left!
+       - You MUST set annual_maximum to the Total amount (e.g., 1750 or 1500), remaining_maximum: 0, and is_annual_maximum_met: true!
+       - NEVER copy the Total Annual Maximum into remaining_maximum when "Benefit Maximums Met" or "Used = Total" is shown!
+   - USED / APPLIED vs REMAINING MATH:
+     * If the document shows "Maximum: $1,500.00" and "Amount Used / Applied to Date: $X" without explicitly printing "Remaining", calculate remaining_maximum = annual_maximum - annual_maximum_used.
+     * On Delta Dental dual-column tables (PPO vs Premier / Out-of-Network), strictly extract the Individual Annual Maximum, Remaining Maximum, Individual Deductible, and Remaining Deductible from the selected network tier (In-Network PPO by default).
    - Explicitly verify whether Deductible applies to Preventive/Diagnostic (e.g., "Preventive Ded Applied: No").
    - Explicitly verify if Preventive services count toward the Annual Maximum (e.g., "Preventive applies to Max: No").
    - Check and flag Missing Tooth Clauses (MTC) and Waiting Periods (flag 'None' or 'No' if waived or not applicable, e.g. "Basic 6mo Major 12").
@@ -518,17 +559,34 @@ Your mission is to audit dental breakdown sheets, fee schedules, or insurance we
    - If a code or service is marked as Not Covered (NC) or excluded by the plan (e.g., Adult Fluoride D1206 NC, Crown Recement D2920 NC, Night Guard D9944 NC, Implants D6010 NC):
      * Set coverage_percentage to "0%" or "NC"
      * Set is_eligible to false
+     * Set downgrade_rule to "None" (NEVER put "Not Covered" in downgrade_rule!)
      * Add "Not Covered by Plan" or "NC" in notes.
 
 7. Clinical History & Downgrades:
    - Extract exact previous claim/service dates for history. If no history is recorded, write "None".
-   - Restorative Downgrades: Explicitly check if posterior composite fillings (D2391–D2394) are downgraded to amalgam allowances.
+   - Restorative & Crown Downgrades (STRICT):
+     * Only populate downgrade_rule if the plan downgrades a procedure to a lower-cost material/allowance (e.g., "Downgraded to Amalgam on posterior teeth", "Downgraded to base metal on molars").
+     * If the document says "regardless of material - per tooth; per surface" (meaning composite is covered at the full restorative rate without downgrade!), or says "Not Covered", you MUST set downgrade_rule to "None"!
    - Crown Limitations: Note if replacement frequency applies to prep date or seat date (e.g., "Seat", "1 in 60 months from seat date").
 
 ==================================================
 3. OUTPUT FORMAT
 ==================================================
 Return output strictly in the pre-configured JSON schema. Do not output conversational explanations or markdown text outside the JSON.`;
+
+const MANDATORY_PORTAL_FINANCIAL_AND_ELIGIBILITY_ADDENDUM = `
+CRITICAL NON-OVERRIDABLE EXTRACTION RULES (FINANCIALS, DEDUCTIBLES, MAXIMUMS & ELIGIBILITY):
+1. INDIVIDUAL vs FAMILY DEDUCTIBLE:
+   - Always extract deductible_individual and deductible_remaining from the INDIVIDUAL Deductible section ONLY.
+   - NEVER copy the Family Deductible ($100 or $150) or Family Deductible Remaining ($100) into deductible_individual or deductible_remaining! Put Family Deductible amounts into deductible_family and deductible_family_remaining.
+   - If the Individual Deductible says "Deductible Met" (green checkmark) or "$0.00 remaining" above "Total: $50.00", set deductible_individual = 50, deductible_remaining = 0, and is_individual_deductible_met = true!
+2. BENEFIT MAXIMUMS MET / REMAINING MAXIMUM:
+   - If the Benefit Maximums section says "Benefit Maximums Met", "Maximums Met", "Maximum Met", or shows $0.00 remaining above "Total: $1,750.00" (or "$1,500.00"), set annual_maximum = Total (e.g. 1750 or 1500), remaining_maximum = 0, and is_annual_maximum_met = true!
+   - NEVER set remaining_maximum equal to annual_maximum when "Benefit Maximums Met" is displayed or when Amount Used > 0!
+3. DOWNGRADE RULE CLEANLINESS:
+   - If a procedure says "regardless of material - per tooth; per surface" (meaning composite is covered WITHOUT downgrade) or is "Not Covered", set downgrade_rule = "None". Only set downgrade_rule when an actual material downgrade (e.g. Amalgam or Base Metal downgrade) applies.
+4. STRICT HISTORY vs FREQUENCY ELIGIBILITY:
+   - Compare every History Date against the Frequency Limitation. If today is still within the frequency window (e.g. 1x5yr / 60 months for Delta Dental D0210/D0330 FMX/Pano), set is_eligible = false!`;
 
 const DEFAULT_CDT_CODES_PROMPT = `Carefully audit the attached dental insurance breakdown document or portal screenshot.
 Extract all insurance financials, coverage percentage tiers, patient/policy details, and procedure code benefits based on the selected network tier.
@@ -772,11 +830,36 @@ function getCanonicalCdtMeaning(rawCode, fallbackDesc = '') {
   return fallbackDesc || '-';
 }
 
+function sanitizeDowngradeRule(item) {
+  if (!item) return;
+  const dg = String(item.downgrade_rule || '').trim();
+  if (!dg || /^(none|no|n\/a|na|-|no\s*downgrade|not\s*downgraded)$/i.test(dg)) {
+    item.downgrade_rule = 'None';
+    return;
+  }
+  const isNoMaterialDowngrade = /regardless\s*of\s*material|no\s*downgrade|not\s*downgraded|covered\s*as\s*composite/i.test(dg);
+  const isNotCoveredLabel = /^(not\s*covered|nc|0%|excluded)$/i.test(dg) || /not\s*covered/i.test(dg);
+  const hasRealDowngradeWord = /\b(amalgam|downgrad|alternate\s*benefit|base\s*metal|noble|metal|posterior|molar|allowance)\b/i.test(dg);
+
+  if (isNoMaterialDowngrade) {
+    if (!item.notes || !item.notes.toLowerCase().includes('regardless of material')) {
+      item.notes = item.notes && item.notes !== '-' ? `${item.notes} • ${dg}` : dg;
+    }
+    item.downgrade_rule = 'None';
+  } else if (isNotCoveredLabel || !hasRealDowngradeWord) {
+    if (!isNotCoveredLabel && (!item.notes || !item.notes.toLowerCase().includes(dg.toLowerCase()))) {
+      item.notes = item.notes && item.notes !== '-' ? `${item.notes} • ${dg}` : dg;
+    }
+    item.downgrade_rule = 'None';
+  }
+}
+
 function enforceCanonicalCdtMeanings(procedureCodes) {
   if (!Array.isArray(procedureCodes)) return procedureCodes;
   procedureCodes.forEach(item => {
     if (!item) return;
     item.description = getCanonicalCdtMeaning(item.code, item.description);
+    sanitizeDowngradeRule(item);
   });
   return procedureCodes;
 }
@@ -1168,22 +1251,86 @@ function enforcePolicyTermedRules(insuranceDetails) {
   if (!termedStr || /^(none|active|n\/a|na|-)$/i.test(termedStr)) {
     insuranceDetails.policy_status = 'Active';
     insuranceDetails.termed_date = insuranceDetails.termed_date || 'Active (None)';
-    return insuranceDetails;
-  }
-
-  const termedDt = parseDate(termedStr);
-  if (termedDt) {
-    const endOfTermedDay = new Date(termedDt.getFullYear(), termedDt.getMonth(), termedDt.getDate(), 23, 59, 59);
-    if (today > endOfTermedDay) {
+  } else {
+    const termedDt = parseDate(termedStr);
+    if (termedDt) {
+      const endOfTermedDay = new Date(termedDt.getFullYear(), termedDt.getMonth(), termedDt.getDate(), 23, 59, 59);
+      if (today > endOfTermedDay) {
+        insuranceDetails.policy_status = 'Termed / Inactive';
+      } else {
+        insuranceDetails.policy_status = 'Active';
+      }
+    } else if (/term/i.test(termedStr) || /inact/i.test(termedStr)) {
       insuranceDetails.policy_status = 'Termed / Inactive';
     } else {
       insuranceDetails.policy_status = 'Active';
     }
-  } else if (/term/i.test(termedStr) || /inact/i.test(termedStr)) {
-    insuranceDetails.policy_status = 'Termed / Inactive';
-  } else {
-    insuranceDetails.policy_status = 'Active';
   }
+
+  // Enforce Annual Maximum vs Remaining Maximum ("Benefit Maximums Met" & Used Math)
+  const annMax = typeof insuranceDetails.annual_maximum === 'number'
+    ? insuranceDetails.annual_maximum
+    : parseFloat(String(insuranceDetails.annual_maximum ?? '').replace(/[^0-9.]/g, ''));
+  const remMax = typeof insuranceDetails.remaining_maximum === 'number'
+    ? insuranceDetails.remaining_maximum
+    : parseFloat(String(insuranceDetails.remaining_maximum ?? '').replace(/[^0-9.]/g, ''));
+  const usedMax = typeof insuranceDetails.annual_maximum_used === 'number'
+    ? insuranceDetails.annual_maximum_used
+    : parseFloat(String(insuranceDetails.annual_maximum_used ?? '').replace(/[^0-9.]/g, ''));
+
+  if (!isNaN(annMax) && annMax > 0) {
+    insuranceDetails.annual_maximum = annMax;
+    if (insuranceDetails.is_annual_maximum_met === true) {
+      insuranceDetails.remaining_maximum = 0;
+    } else if (!isNaN(usedMax) && usedMax > 0) {
+      const calcRem = Math.max(0, Number((annMax - usedMax).toFixed(2)));
+      if (isNaN(remMax) || remMax === annMax || remMax > calcRem) {
+        insuranceDetails.remaining_maximum = calcRem;
+      }
+    } else if (!isNaN(remMax)) {
+      insuranceDetails.remaining_maximum = Math.min(annMax, Math.max(0, remMax));
+    }
+  }
+
+  // Enforce Individual vs Family Deductible & "Deductible Met" ($0 Remaining)
+  let dedInd = typeof insuranceDetails.deductible_individual === 'number'
+    ? insuranceDetails.deductible_individual
+    : parseFloat(String(insuranceDetails.deductible_individual ?? '').replace(/[^0-9.]/g, ''));
+  let dedRem = typeof insuranceDetails.deductible_remaining === 'number'
+    ? insuranceDetails.deductible_remaining
+    : parseFloat(String(insuranceDetails.deductible_remaining ?? '').replace(/[^0-9.]/g, ''));
+  const dedFam = typeof insuranceDetails.deductible_family === 'number'
+    ? insuranceDetails.deductible_family
+    : parseFloat(String(insuranceDetails.deductible_family ?? '').replace(/[^0-9.]/g, ''));
+  const dedFamRem = typeof insuranceDetails.deductible_family_remaining === 'number'
+    ? insuranceDetails.deductible_family_remaining
+    : parseFloat(String(insuranceDetails.deductible_family_remaining ?? '').replace(/[^0-9.]/g, ''));
+
+  // If AI accidentally put Family Deductible ($150 or $100) into Individual Deductible when Family Deductible is $150
+  if (!isNaN(dedFam) && dedFam > 0 && !isNaN(dedInd)) {
+    if (dedInd === dedFam && dedFam >= 100) {
+      dedInd = Math.round(dedFam / 3);
+      insuranceDetails.deductible_individual = dedInd;
+    } else if (!isNaN(dedFamRem) && dedInd === dedFamRem && dedFam >= 150 && dedFamRem >= 100) {
+      dedInd = Math.round(dedFam / 3);
+      insuranceDetails.deductible_individual = dedInd;
+    }
+  }
+
+  if (insuranceDetails.is_individual_deductible_met === true) {
+    dedRem = 0;
+    insuranceDetails.deductible_remaining = 0;
+  } else if (!isNaN(dedInd) && !isNaN(dedRem)) {
+    if (dedRem > dedInd) {
+      if (!isNaN(dedFam) && !isNaN(dedFamRem) && (dedFam - dedFamRem) >= dedInd) {
+        dedRem = 0;
+      } else {
+        dedRem = dedInd;
+      }
+      insuranceDetails.deductible_remaining = dedRem;
+    }
+  }
+
   return insuranceDetails;
 }
 
@@ -2907,9 +3054,12 @@ app.post('/api/verify', upload.array('files', 10), async (req, res) => {
     }
 
     // Use Per-Clinic AI Settings & CDT Code Checklist Sequence (with fallback to request overrides or defaults)
-    const systemInstruction = (req.body.system_instruction && req.body.system_instruction.trim())
+    const rawSystemInstruction = (req.body.system_instruction && req.body.system_instruction.trim())
       ? req.body.system_instruction.trim()
       : (clinicAiSettings.systemInstruction || DEFAULT_SYSTEM_INSTRUCTION);
+    const systemInstruction = rawSystemInstruction.includes('MANDATORY PORTAL FINANCIAL, DEDUCTIBLE, MAXIMUM & DOWNGRADE EXTRACTION RULES')
+      ? rawSystemInstruction
+      : `${rawSystemInstruction}\n${MANDATORY_PORTAL_FINANCIAL_AND_ELIGIBILITY_ADDENDUM}`;
 
     const basePrompt = (req.body.custom_prompt && req.body.custom_prompt.trim())
       ? req.body.custom_prompt.trim()

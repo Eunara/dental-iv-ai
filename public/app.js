@@ -341,7 +341,7 @@
     }
 
     // ==========================================
-    // 1. POLICY TERMED DATE & STATUS VALIDATOR
+    // 1. POLICY TERMED DATE, STATUS & FINANCIAL MET/INDIVIDUAL DEDUCTIBLE VALIDATOR
     // ==========================================
     function enforcePolicyTermedRules(insuranceDetails) {
       if (!insuranceDetails) return insuranceDetails;
@@ -351,22 +351,82 @@
       if (!termedStr || /^(none|active|n\/a|na|-)$/i.test(termedStr)) {
         insuranceDetails.policy_status = 'Active';
         insuranceDetails.termed_date = insuranceDetails.termed_date || 'Active (None)';
-        return insuranceDetails;
-      }
-
-      const termedDt = parseDate(termedStr);
-      if (termedDt) {
-        const endOfTermedDay = new Date(termedDt.getFullYear(), termedDt.getMonth(), termedDt.getDate(), 23, 59, 59);
-        if (today > endOfTermedDay) {
+      } else {
+        const termedDt = parseDate(termedStr);
+        if (termedDt) {
+          const endOfTermedDay = new Date(termedDt.getFullYear(), termedDt.getMonth(), termedDt.getDate(), 23, 59, 59);
+          if (today > endOfTermedDay) {
+            insuranceDetails.policy_status = 'Termed / Inactive';
+          } else {
+            insuranceDetails.policy_status = 'Active';
+          }
+        } else if (/term/i.test(termedStr) || /inact/i.test(termedStr)) {
           insuranceDetails.policy_status = 'Termed / Inactive';
         } else {
           insuranceDetails.policy_status = 'Active';
         }
-      } else if (/term/i.test(termedStr) || /inact/i.test(termedStr)) {
-        insuranceDetails.policy_status = 'Termed / Inactive';
-      } else {
-        insuranceDetails.policy_status = 'Active';
       }
+
+      // 1B. Enforce Annual Maximum Met / Used -> Remaining Maximum = $0
+      const annMax = typeof insuranceDetails.annual_maximum === 'number'
+        ? insuranceDetails.annual_maximum
+        : parseFloat(String(insuranceDetails.annual_maximum ?? '').replace(/[^0-9.]/g, ''));
+      const annUsed = typeof insuranceDetails.annual_maximum_used === 'number'
+        ? insuranceDetails.annual_maximum_used
+        : parseFloat(String(insuranceDetails.annual_maximum_used ?? '').replace(/[^0-9.]/g, ''));
+      const remMax = typeof insuranceDetails.remaining_maximum === 'number'
+        ? insuranceDetails.remaining_maximum
+        : parseFloat(String(insuranceDetails.remaining_maximum ?? '').replace(/[^0-9.]/g, ''));
+
+      if (!isNaN(annMax) && annMax >= 0) {
+        insuranceDetails.annual_maximum = annMax;
+      }
+
+      if (insuranceDetails.is_annual_maximum_met === true) {
+        insuranceDetails.remaining_maximum = 0;
+      } else if (!isNaN(annMax) && annMax > 0 && !isNaN(annUsed) && annUsed >= 0) {
+        const calcRem = Math.max(0, Number((annMax - annUsed).toFixed(2)));
+        if (annUsed >= annMax) {
+          insuranceDetails.remaining_maximum = 0;
+          insuranceDetails.is_annual_maximum_met = true;
+        } else if (isNaN(remMax) || (remMax === annMax && annUsed > 0)) {
+          insuranceDetails.remaining_maximum = calcRem;
+        }
+      }
+
+      // 1C. Enforce Individual Deductible vs Family Deductible & Deductible Met -> Remaining = $0
+      let indDed = typeof insuranceDetails.deductible_individual === 'number'
+        ? insuranceDetails.deductible_individual
+        : parseFloat(String(insuranceDetails.deductible_individual ?? '').replace(/[^0-9.]/g, ''));
+      let indDedRem = typeof insuranceDetails.deductible_remaining === 'number'
+        ? insuranceDetails.deductible_remaining
+        : parseFloat(String(insuranceDetails.deductible_remaining ?? '').replace(/[^0-9.]/g, ''));
+      const famDed = typeof insuranceDetails.deductible_family === 'number'
+        ? insuranceDetails.deductible_family
+        : parseFloat(String(insuranceDetails.deductible_family ?? '').replace(/[^0-9.]/g, ''));
+      const famDedRem = typeof insuranceDetails.deductible_family_remaining === 'number'
+        ? insuranceDetails.deductible_family_remaining
+        : parseFloat(String(insuranceDetails.deductible_family_remaining ?? '').replace(/[^0-9.]/g, ''));
+
+      if (!isNaN(indDed) && !isNaN(famDed) && famDed >= 100 && (indDed === famDed || indDed === famDedRem) && famDed % 3 === 0 && famDed <= 300) {
+        indDed = famDed / 3;
+        insuranceDetails.deductible_individual = indDed;
+      } else if (!isNaN(indDed) && indDed >= 0) {
+        insuranceDetails.deductible_individual = indDed;
+      }
+
+      if (insuranceDetails.is_individual_deductible_met === true) {
+        insuranceDetails.deductible_remaining = 0;
+      } else if (!isNaN(indDed) && !isNaN(indDedRem)) {
+        if (indDedRem > indDed && indDed >= 0) {
+          if (!isNaN(famDedRem) && indDedRem === famDedRem && indDed < famDedRem) {
+            insuranceDetails.deductible_remaining = 0;
+          } else {
+            insuranceDetails.deductible_remaining = indDed;
+          }
+        }
+      }
+
       return insuranceDetails;
     }
 
@@ -876,11 +936,31 @@
       return fallbackDesc || '-';
     }
 
+    function sanitizeDowngradeRule(item) {
+      if (!item) return;
+      const dg = String(item.downgrade_rule || '').trim();
+      if (!dg) {
+        item.downgrade_rule = 'None';
+        return;
+      }
+      if (
+        /^(none|no|n\/a|na|-|no\s*downgrade|not\s*applicable|not\s*covered|nc|0%|covered|eligible|ineligible)$/i.test(dg) ||
+        /regardless\s*of\s*material|no\s*downgrade|not\s*subject\s*to\s*downgrade|covered\s*as\s*composite|posterior\s*composite\s*covered/i.test(dg) ||
+        /^not\s*covered\b/i.test(dg)
+      ) {
+        if (/regardless\s*of\s*material/i.test(dg) && (!item.notes || !/regardless\s*of\s*material/i.test(item.notes))) {
+          item.notes = item.notes ? `${item.notes} • Covered regardless of material (No downgrade)` : 'Covered regardless of material (No downgrade)';
+        }
+        item.downgrade_rule = 'None';
+      }
+    }
+
     function enforceCanonicalCdtMeanings(procedureCodes) {
       if (!Array.isArray(procedureCodes)) return procedureCodes;
       procedureCodes.forEach(item => {
         if (!item) return;
         item.description = getCanonicalCdtMeaning(item.code, item.description);
+        sanitizeDowngradeRule(item);
       });
       return procedureCodes;
     }
@@ -2840,6 +2920,8 @@
 
       // 3. Scan CDT Procedure Codes for Ineligible Core Preventive/Diagnostic vs Other Codes & Downgrades
       const coreDiagPrevSet = ['D0120', 'D0150', 'D0140', 'D1110', 'D4346', 'D0274', 'D0210', 'D0330', 'D0220'];
+      const pediatricAgeOnlyCodes = ['D1351', 'D1206', 'D1208', 'D1120', 'D1510'];
+      const patientAge = calculateAge(details.dob || '');
       let handledFmxPanoGroup = false;
 
       const extractShortIneligibleReason = (item) => {
@@ -2866,9 +2948,14 @@
         if (!item || !item.code) return;
         const codeUpper = String(item.code).toUpperCase();
 
-        // Check Downgrade Rules (e.g. D2391 Composite -> Amalgam, D2740 Crown -> Base Metal)
+        // Check Downgrade Rules (only genuine material downgrades like Composite -> Amalgam or Porcelain -> Base Metal)
+        sanitizeDowngradeRule(item);
         const dg = String(item.downgrade_rule || '').trim();
-        if (dg && !/^(none|no|n\/a|-|no downgrade)$/i.test(dg)) {
+        if (
+          dg &&
+          !/^(none|no|n\/a|na|-|no\s*downgrade|not\s*applicable|not\s*covered|nc|0%|covered)$/i.test(dg) &&
+          !/regardless\s*of\s*material|no\s*downgrade|not\s*subject\s*to\s*downgrade|^not\s*covered\b/i.test(dg)
+        ) {
           warningFlags.push({
             icon: '🟡',
             title: `${escapeHtml(item.code)} DOWNGRADE`,
@@ -2896,6 +2983,12 @@
           const matchedCore = coreDiagPrevSet.find(c => codeUpper.includes(c));
           const reason = extractShortIneligibleReason(item);
           const shortMeaning = String(item.description || '').split('(')[0].trim() || item.code;
+
+          // Skip flagging standard pediatric age-limit codes (Sealants/Fluoride/Child Prophy) on adult patients (>= 19 yo)
+          const isPediatricCode = pediatricAgeOnlyCodes.some(c => codeUpper.includes(c));
+          if (isPediatricCode && patientAge !== null && patientAge >= 19 && reason.startsWith('Age Limit')) {
+            return;
+          }
 
           if (matchedCore) {
             criticalFlags.push({
@@ -2935,13 +3028,10 @@
         });
       }
 
-      // 6. Missing Critical Portal Info Check
+      // 6. Missing Critical Portal Info Check (Member ID is intentionally omitted per HIPAA rules)
       const missingFields = [];
       if (!details.effective_date || /^(none|n\/a|na|-|date not found)$/i.test(String(details.effective_date).trim())) {
         missingFields.push('Effective Date');
-      }
-      if (!details.member_id || /^(none|n\/a|na|-)$/i.test(String(details.member_id).trim())) {
-        missingFields.push('Member ID');
       }
       if (!annMax || isNaN(annMax) || annMax <= 0) {
         missingFields.push('Annual Max');
