@@ -585,8 +585,14 @@ CRITICAL NON-OVERRIDABLE EXTRACTION RULES (FINANCIALS, DEDUCTIBLES, MAXIMUMS & E
    - NEVER set remaining_maximum equal to annual_maximum when "Benefit Maximums Met" is displayed or when Amount Used > 0!
 3. DOWNGRADE RULE CLEANLINESS:
    - If a procedure says "regardless of material - per tooth; per surface" (meaning composite is covered WITHOUT downgrade) or is "Not Covered", set downgrade_rule = "None". Only set downgrade_rule when an actual material downgrade (e.g. Amalgam or Base Metal downgrade) applies.
-4. STRICT HISTORY vs FREQUENCY ELIGIBILITY:
-   - Compare every History Date against the Frequency Limitation. If today is still within the frequency window (e.g. 1x5yr / 60 months for Delta Dental D0210/D0330 FMX/Pano), set is_eligible = false!`;
+4. PORTAL "AMOUNT MET: X OF Y" & 2x1yr MULTI-VISIT FREQUENCY RULE (CIGNA / METLIFE / AETNA / GUARDIAN):
+   - When a portal shows "Frequency -> Amount Met: 1 of 2" (with "Twice Per Policy Year", "2x1yr", or "2x12m") and only ONE history date in the current year (e.g. 2026-09-08) with NO 6-month spacing restriction, the procedure is STRICTLY ELIGIBLE (is_eligible = true) because only 1 of 2 visits has been used and 1 visit remains available!
+   - Write "Eligible: 1 of 2 met in policy year (1 visit remaining)" in notes. NEVER write "Ineligible due to recent history within frequency window" when only 1 of 2 visits has been used!
+   - Only mark a 2x1yr / Twice Per Policy Year code is_eligible = false if Amount Met is "2 of 2" (0 remaining), OR there are 2 history dates in the current year, OR a 6-month waiting interval between visits is explicitly stated.
+5. AGE LIMIT vs PATIENT DOB (PEDIATRIC & ADULT ACCURACY):
+   - Always calculate the patient's exact age from DOB before evaluating age_limit. For example, if DOB is 06/25/2021 (Age 5) and D1206 Fluoride has age_limit "18" (covered through age 18), a 5-year-old child is UNDER 18 and is STRICTLY ELIGIBLE (is_eligible = true)! NEVER write "Patient age exceeds plan age limit" when the patient is younger than the maximum age limit!
+6. DO NOT COPY HISTORY DATES TO UNSHOWN CODES:
+   - Only record a history_dates value on a procedure code if the uploaded screenshot explicitly lists that history date under that specific procedure code (or its shared D0210/D0330 pair). Do NOT copy D1110/D0120 history dates onto D4910 (Perio Maintenance) or D0210 (FMX) if those codes were not shown with history on the portal.`;
 
 const DEFAULT_CDT_CODES_PROMPT = `Carefully audit the attached dental insurance breakdown document or portal screenshot.
 Extract all insurance financials, coverage percentage tiers, patient/policy details, and procedure code benefits based on the selected network tier.
@@ -1437,6 +1443,12 @@ function enforceAgeLimitAndFrequencyRules(procedureCodes, insuranceDetails = {})
                 if (!item.notes || !item.notes.includes('exceeds plan age limit')) {
                   item.notes = item.notes ? `${item.notes} • ${ageNote}` : ageNote;
                 }
+              } else if (item.notes && /exceeds\s*plan\s*age\s*limit|below\s*plan\s*minimum\s*age/i.test(item.notes)) {
+                item.notes = item.notes
+                  .replace(/\s*•?\s*Ineligible:\s*Patient age[^•]*age limit[^•]*/gi, '')
+                  .replace(/\s*•?\s*Ineligible:\s*Patient age[^•]*minimum age[^•]*/gi, '')
+                  .replace(/^•\s*|\s*•$/g, '')
+                  .trim();
               }
             }
           }
@@ -1458,11 +1470,28 @@ function enforceAgeLimitAndFrequencyRules(procedureCodes, insuranceDetails = {})
     const allDates = extractAllDates(histStr);
     const hasSixMonthSpacingRule = /6\s*(?:-|to\s*)?month\s*(?:apart|interval|wait|separation)|1\s*(?:per|every|in)\s*6\s*m/i.test(notesStr);
 
-    // Check explicit "0 remaining" or unit exhaustion in history/notes (e.g. "2 Units" used on a 2x1yr code)
-    if (/0\s*(?:service\/procedures|procedures|visits|units)?\s*remaining|exhausted/i.test(histStr) || /0\s*(?:service\/procedures|procedures|visits|units)\s*remaining/i.test(notesStr)) {
+    // Helper: check if notes/history explicitly indicate 100% quota exhaustion (e.g. "2 of 2", "0 remaining", "exhausted")
+    const hasExplicitQuotaExhaustion = (() => {
+      const combined = `${histStr} ${notesStr}`;
+      if (/0\s*(?:service\/procedures|procedures|visits|units)?\s*remaining|exhausted/i.test(combined)) {
+        return true;
+      }
+      const xOfYMatch = combined.match(/\b(\d+)\s*of\s*(\d+)\s*(?:met|used|visits|units)?\b/i);
+      if (xOfYMatch) {
+        const usedNum = parseInt(xOfYMatch[1], 10);
+        const maxNum = parseInt(xOfYMatch[2], 10);
+        if (maxNum > 0 && usedNum >= maxNum && !/remaining/i.test(xOfYMatch[0])) {
+          return true;
+        }
+      }
+      return false;
+    })();
+
+    if (hasExplicitQuotaExhaustion) {
       item.is_eligible = false;
       return;
     }
+
     const unitUsedMatch = histStr.match(/^(\d+)\s*(?:visit|visits|unit|units|used)\b/i);
     if (unitUsedMatch && freqRule.maxCount < 999) {
       const usedUnits = parseInt(unitUsedMatch[1], 10);
@@ -1474,6 +1503,27 @@ function enforceAgeLimitAndFrequencyRules(procedureCodes, insuranceDetails = {})
         }
         return;
       }
+    }
+
+    // Helper: strip false AI "Ineligible due to recent history..." or false age limit strings when math proves Eligible
+    const cleanFalseIneligibleNote = (rawNote) => {
+      if (!rawNote) return '';
+      return String(rawNote)
+        .replace(/\s*•?\s*Ineligible due to recent history within frequency window\s*•?\s*/gi, '')
+        .replace(/\s*•?\s*Ineligible:\s*Patient age[^•]*\s*•?\s*/gi, '')
+        .replace(/^Ineligible\b[^•]*$/i, '')
+        .replace(/^•\s*|\s*•$/g, '')
+        .trim();
+    };
+
+    if (allDates.length === 0) {
+      // No history dates on file, covered benefit, and patient passed age limit check -> Strictly Eligible!
+      item.is_eligible = true;
+      const cleaned = cleanFalseIneligibleNote(item.notes);
+      item.notes = cleaned || (patientAge !== null && ageLimStr && !/^(none|nl|-)$/i.test(ageLimStr)
+        ? `Eligible (Patient age ${patientAge} is within age limit ${ageLimStr}; No prior history)`
+        : 'Eligible, no recent history');
+      return;
     }
 
     if (allDates.length > 0) {
@@ -1497,7 +1547,8 @@ function enforceAgeLimitAndFrequencyRules(procedureCodes, insuranceDetails = {})
           const nextJan1 = `01/01/${currentYear + 1}`;
           const ineligNote = `Ineligible until ${nextJan1} (${datesInCurrentYear.length} of ${freqRule.maxCount} used in Calendar Year ${currentYear}; Last: ${formatDate(latestDate)})`;
           if (!item.notes || !item.notes.includes(nextJan1)) {
-            item.notes = item.notes ? `${item.notes} • ${ineligNote}` : ineligNote;
+            const cleaned = cleanFalseIneligibleNote(item.notes);
+            item.notes = cleaned ? `${cleaned} • ${ineligNote}` : ineligNote;
           }
           return;
         }
@@ -1515,17 +1566,26 @@ function enforceAgeLimitAndFrequencyRules(procedureCodes, insuranceDetails = {})
           }
         }
 
-        // Otherwise eligible (either prior calendar year reset, or remaining visits in current year)
+        // Otherwise eligible (either prior calendar year reset, or remaining visits in current year e.g. 1 of 2 used on 2x1yr!)
         if (latestDate.getFullYear() < currentYear) {
           item.is_eligible = true;
+          const cleaned = cleanFalseIneligibleNote(item.notes);
           const resetNote = `Eligible (Benefit reset for Calendar Year ${currentYear}; Last service: ${formatDate(latestDate)})`;
-          if (!item.notes || !item.notes.includes('Calendar Year')) {
-            item.notes = item.notes ? `${item.notes} • ${resetNote}` : resetNote;
+          if (!cleaned || !cleaned.includes('Calendar Year')) {
+            item.notes = cleaned ? `${cleaned} • ${resetNote}` : resetNote;
+          } else {
+            item.notes = cleaned;
           }
         } else if (datesInCurrentYear.length < freqRule.maxCount) {
-          // Only mark eligible if notes don't explicitly state combined/shared frequency exhaustion on another code
-          if (!/ineligible|exhausted|frequency\s*met|0\s*remaining/i.test(notesStr)) {
-            item.is_eligible = true;
+          // Remaining visits available in current calendar/policy year (e.g. 1 of 2 met -> 1 remaining)!
+          item.is_eligible = true;
+          const rem = freqRule.maxCount - datesInCurrentYear.length;
+          const cleaned = cleanFalseIneligibleNote(item.notes);
+          const remNote = `Eligible: ${datesInCurrentYear.length} of ${freqRule.maxCount} used in ${currentYear} (${rem} remaining; Last: ${formatDate(latestDate)})`;
+          if (!cleaned || !/remaining/i.test(cleaned)) {
+            item.notes = cleaned ? `${cleaned} • ${remNote}` : remNote;
+          } else {
+            item.notes = cleaned;
           }
         }
       } else if (freqRule.mode === 'rolling_months' && freqRule.windowMonths > 0) {
@@ -1540,7 +1600,8 @@ function enforceAgeLimitAndFrequencyRules(procedureCodes, insuranceDetails = {})
           const nextEligibleStr = formatDate(nextEligibleDt);
           const ineligNote = `Ineligible until ${nextEligibleStr} (Last: ${formatDate(latestDate)}, Freq: ${cleanFreq})`;
           if (!item.notes || (!item.notes.includes(nextEligibleStr) && !item.notes.toLowerCase().includes('ineligible until'))) {
-            item.notes = item.notes ? `${item.notes} • ${ineligNote}` : ineligNote;
+            const cleaned = cleanFalseIneligibleNote(item.notes);
+            item.notes = cleaned ? `${cleaned} • ${ineligNote}` : ineligNote;
           }
           return;
         }
@@ -1556,18 +1617,22 @@ function enforceAgeLimitAndFrequencyRules(procedureCodes, insuranceDetails = {})
         // Frequency window has elapsed or visits remain in rolling window
         if (activeWindowDates.length === 0) {
           item.is_eligible = true;
+          const cleaned = cleanFalseIneligibleNote(item.notes);
           const satNote = `Eligible (Frequency satisfied: Last service ${formatDate(latestDate)})`;
-          if (!item.notes || !item.notes.includes('Frequency satisfied')) {
-            item.notes = item.notes ? `${item.notes} • ${satNote}` : satNote;
+          if (!cleaned || !cleaned.includes('Frequency satisfied')) {
+            item.notes = cleaned ? `${cleaned} • ${satNote}` : satNote;
+          } else {
+            item.notes = cleaned;
           }
         } else if (activeWindowDates.length < freqRule.maxCount) {
           const rem = freqRule.maxCount - activeWindowDates.length;
-          if (!/ineligible|exhausted|frequency\s*met|0\s*remaining/i.test(notesStr)) {
-            item.is_eligible = true;
-            const rollNote = `Eligible: ${rem} of ${freqRule.maxCount} remaining in rolling ${freqRule.windowMonths}m (Last service: ${formatDate(latestDate)})`;
-            if (!item.notes || !item.notes.includes('remaining in rolling')) {
-              item.notes = item.notes ? `${item.notes} • ${rollNote}` : rollNote;
-            }
+          item.is_eligible = true;
+          const cleaned = cleanFalseIneligibleNote(item.notes);
+          const rollNote = `Eligible: ${activeWindowDates.length} of ${freqRule.maxCount} used (${rem} remaining in rolling ${freqRule.windowMonths}m; Last: ${formatDate(latestDate)})`;
+          if (!cleaned || !/remaining/i.test(cleaned)) {
+            item.notes = cleaned ? `${cleaned} • ${rollNote}` : rollNote;
+          } else {
+            item.notes = cleaned;
           }
         }
       }

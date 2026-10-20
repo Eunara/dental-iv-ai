@@ -530,6 +530,12 @@
                     if (!item.notes || !item.notes.includes('exceeds plan age limit')) {
                       item.notes = item.notes ? `${item.notes} • ${ageNote}` : ageNote;
                     }
+                  } else if (item.notes && /exceeds\s*plan\s*age\s*limit|below\s*plan\s*minimum\s*age/i.test(item.notes)) {
+                    item.notes = item.notes
+                      .replace(/\s*•?\s*Ineligible:\s*Patient age[^•]*age limit[^•]*/gi, '')
+                      .replace(/\s*•?\s*Ineligible:\s*Patient age[^•]*minimum age[^•]*/gi, '')
+                      .replace(/^•\s*|\s*•$/g, '')
+                      .trim();
                   }
                 }
               }
@@ -549,10 +555,27 @@
         const allDates = extractAllDates(histStr);
         const hasSixMonthSpacingRule = /6\s*(?:-|to\s*)?month\s*(?:apart|interval|wait|separation)|1\s*(?:per|every|in)\s*6\s*m/i.test(notesStr);
 
-        if (/0\s*(?:service\/procedures|procedures|visits|units)?\s*remaining|exhausted/i.test(histStr) || /0\s*(?:service\/procedures|procedures|visits|units)\s*remaining/i.test(notesStr)) {
+        const hasExplicitQuotaExhaustion = (() => {
+          const combined = `${histStr} ${notesStr}`;
+          if (/0\s*(?:service\/procedures|procedures|visits|units)?\s*remaining|exhausted/i.test(combined)) {
+            return true;
+          }
+          const xOfYMatch = combined.match(/\b(\d+)\s*of\s*(\d+)\s*(?:met|used|visits|units)?\b/i);
+          if (xOfYMatch) {
+            const usedNum = parseInt(xOfYMatch[1], 10);
+            const maxNum = parseInt(xOfYMatch[2], 10);
+            if (maxNum > 0 && usedNum >= maxNum && !/remaining/i.test(xOfYMatch[0])) {
+              return true;
+            }
+          }
+          return false;
+        })();
+
+        if (hasExplicitQuotaExhaustion) {
           item.is_eligible = false;
           return;
         }
+
         const unitUsedMatch = histStr.match(/^(\d+)\s*(?:visit|visits|unit|units|used)\b/i);
         if (unitUsedMatch && freqRule.maxCount < 999) {
           const usedUnits = parseInt(unitUsedMatch[1], 10);
@@ -564,6 +587,25 @@
             }
             return;
           }
+        }
+
+        const cleanFalseIneligibleNote = (rawNote) => {
+          if (!rawNote) return '';
+          return String(rawNote)
+            .replace(/\s*•?\s*Ineligible due to recent history within frequency window\s*•?\s*/gi, '')
+            .replace(/\s*•?\s*Ineligible:\s*Patient age[^•]*\s*•?\s*/gi, '')
+            .replace(/^Ineligible\b[^•]*$/i, '')
+            .replace(/^•\s*|\s*•$/g, '')
+            .trim();
+        };
+
+        if (allDates.length === 0) {
+          item.is_eligible = true;
+          const cleaned = cleanFalseIneligibleNote(item.notes);
+          item.notes = cleaned || (patientAge !== null && ageLimStr && !/^(none|nl|-)$/i.test(ageLimStr)
+            ? `Eligible (Patient age ${patientAge} is within age limit ${ageLimStr}; No prior history)`
+            : 'Eligible, no recent history');
+          return;
         }
 
         if (allDates.length > 0) {
@@ -586,7 +628,8 @@
               const nextJan1 = `01/01/${currentYear + 1}`;
               const ineligNote = `Ineligible until ${nextJan1} (${datesInCurrentYear.length} of ${freqRule.maxCount} used in Calendar Year ${currentYear}; Last: ${formatDate(latestDate)})`;
               if (!item.notes || !item.notes.includes(nextJan1)) {
-                item.notes = item.notes ? `${item.notes} • ${ineligNote}` : ineligNote;
+                const cleaned = cleanFalseIneligibleNote(item.notes);
+                item.notes = cleaned ? `${cleaned} • ${ineligNote}` : ineligNote;
               }
               return;
             }
@@ -605,13 +648,22 @@
 
             if (latestDate.getFullYear() < currentYear) {
               item.is_eligible = true;
+              const cleaned = cleanFalseIneligibleNote(item.notes);
               const resetNote = `Eligible (Benefit reset for Calendar Year ${currentYear}; Last service: ${formatDate(latestDate)})`;
-              if (!item.notes || !item.notes.includes('Calendar Year')) {
-                item.notes = item.notes ? `${item.notes} • ${resetNote}` : resetNote;
+              if (!cleaned || !cleaned.includes('Calendar Year')) {
+                item.notes = cleaned ? `${cleaned} • ${resetNote}` : resetNote;
+              } else {
+                item.notes = cleaned;
               }
             } else if (datesInCurrentYear.length < freqRule.maxCount) {
-              if (!/ineligible|exhausted|frequency\s*met|0\s*remaining/i.test(notesStr)) {
-                item.is_eligible = true;
+              item.is_eligible = true;
+              const rem = freqRule.maxCount - datesInCurrentYear.length;
+              const cleaned = cleanFalseIneligibleNote(item.notes);
+              const remNote = `Eligible: ${datesInCurrentYear.length} of ${freqRule.maxCount} used in ${currentYear} (${rem} remaining; Last: ${formatDate(latestDate)})`;
+              if (!cleaned || !/remaining/i.test(cleaned)) {
+                item.notes = cleaned ? `${cleaned} • ${remNote}` : remNote;
+              } else {
+                item.notes = cleaned;
               }
             }
           } else if (freqRule.mode === 'rolling_months' && freqRule.windowMonths > 0) {
@@ -624,7 +676,8 @@
               const nextEligibleStr = formatDate(nextEligibleDt);
               const ineligNote = `Ineligible until ${nextEligibleStr} (Last: ${formatDate(latestDate)}, Freq: ${cleanFreq})`;
               if (!item.notes || (!item.notes.includes(nextEligibleStr) && !item.notes.toLowerCase().includes('ineligible until'))) {
-                item.notes = item.notes ? `${item.notes} • ${ineligNote}` : ineligNote;
+                const cleaned = cleanFalseIneligibleNote(item.notes);
+                item.notes = cleaned ? `${cleaned} • ${ineligNote}` : ineligNote;
               }
               return;
             }
@@ -639,18 +692,22 @@
 
             if (activeWindowDates.length === 0) {
               item.is_eligible = true;
+              const cleaned = cleanFalseIneligibleNote(item.notes);
               const satNote = `Eligible (Frequency satisfied: Last service ${formatDate(latestDate)})`;
-              if (!item.notes || !item.notes.includes('Frequency satisfied')) {
-                item.notes = item.notes ? `${item.notes} • ${satNote}` : satNote;
+              if (!cleaned || !cleaned.includes('Frequency satisfied')) {
+                item.notes = cleaned ? `${cleaned} • ${satNote}` : satNote;
+              } else {
+                item.notes = cleaned;
               }
             } else if (activeWindowDates.length < freqRule.maxCount) {
               const rem = freqRule.maxCount - activeWindowDates.length;
-              if (!/ineligible|exhausted|frequency\s*met|0\s*remaining/i.test(notesStr)) {
-                item.is_eligible = true;
-                const rollNote = `Eligible: ${rem} of ${freqRule.maxCount} remaining in rolling ${freqRule.windowMonths}m (Last service: ${formatDate(latestDate)})`;
-                if (!item.notes || !item.notes.includes('remaining in rolling')) {
-                  item.notes = item.notes ? `${item.notes} • ${rollNote}` : rollNote;
-                }
+              item.is_eligible = true;
+              const cleaned = cleanFalseIneligibleNote(item.notes);
+              const rollNote = `Eligible: ${activeWindowDates.length} of ${freqRule.maxCount} used (${rem} remaining in rolling ${freqRule.windowMonths}m; Last: ${formatDate(latestDate)})`;
+              if (!cleaned || !/remaining/i.test(cleaned)) {
+                item.notes = cleaned ? `${cleaned} • ${rollNote}` : rollNote;
+              } else {
+                item.notes = cleaned;
               }
             }
           }
