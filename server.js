@@ -3047,7 +3047,7 @@ app.post('/api/owner/api-keys/reset-cooldown', async (req, res) => {
 });
 
 // Verification Endpoint (Supports single or multiple files with resilient multi-key pool)
-app.post('/api/verify', upload.array('files', 10), async (req, res) => {
+const verifyHandler = async (req, res) => {
   if (!req.user) {
     return res.status(401).json({
       success: false,
@@ -3172,12 +3172,22 @@ app.post('/api/verify', upload.array('files', 10), async (req, res) => {
       }
 
       let lastError;
+      // Cloudflare cuts the connection at ~100s (HTTP 524), so the whole
+      // fallback chain must finish well inside that window.
+      const TOTAL_BUDGET_MS = parseInt(process.env.GEMINI_TOTAL_BUDGET_MS, 10) || 85000;
+      const PER_CALL_MS     = parseInt(process.env.GEMINI_CALL_TIMEOUT_MS, 10) || 30000;
+      const deadline = Date.now() + TOTAL_BUDGET_MS;
+      let overloadCount = 0;
       for (const currentKey of keysToTry) {
+        if (Date.now() >= deadline) break;
         const ai = new GoogleGenAI({ apiKey: currentKey });
         const keyLabel = maskApiKey(currentKey);
 
         for (const currentModel of modelsToTry) {
+          if (Date.now() >= deadline) break;
           for (let attempt = 1; attempt <= 2; attempt++) {
+            const remaining = deadline - Date.now();
+            if (remaining < 3000) break;
             try {
               console.log(
                 `[Gemini Request] Calling model: ${currentModel} via Key [${keyLabel}] (Attempt ${attempt}, Files: ${uploadedFiles.length})...`
@@ -3195,6 +3205,7 @@ app.post('/api/verify', upload.array('files', 10), async (req, res) => {
                   responseMimeType: 'application/json',
                   responseSchema: dentalBreakdownSchema,
                   temperature: 0.1,
+                  abortSignal: AbortSignal.timeout(Math.min(PER_CALL_MS, remaining)),
                 },
               });
               recordKeySuccess(currentKey);
@@ -3214,6 +3225,7 @@ app.post('/api/verify', upload.array('files', 10), async (req, res) => {
 
               const is503 = err.status === 503 || errMsg.includes('503') || errMsg.includes('high demand');
               if (is503) {
+                overloadCount++;
                 console.warn(`[Gemini 503 Spike] Model ${currentModel} is experiencing high demand. Falling back to alternative model...`);
                 break; // Try next model immediately
               }
@@ -3230,6 +3242,14 @@ app.post('/api/verify', upload.array('files', 10), async (req, res) => {
             break;
           }
         }
+        // 503 is model-side, not key-side: if every model already overloaded
+        // on this key, other keys will hit the same wall — stop burning time.
+        if (overloadCount >= modelsToTry.length) break;
+      }
+      if (!lastError || Date.now() >= deadline) {
+        const e = new Error('Gemini request timeout: AI models did not respond within the time budget.');
+        e.status = lastError && lastError.status ? lastError.status : 504;
+        throw e;
       }
       throw lastError;
     }
@@ -3435,6 +3455,49 @@ app.post('/api/verify', upload.array('files', 10), async (req, res) => {
       status_code: errStatus,
     });
   }
+};
+
+// Async job wrapper: returns a job id immediately so Cloudflare's ~100s limit never applies.
+const verifyJobs = new Map();
+setInterval(() => {
+  const cutoff = Date.now() - 30 * 60 * 1000;
+  for (const [id, j] of verifyJobs) if (j.createdAt < cutoff) verifyJobs.delete(id);
+}, 5 * 60 * 1000).unref();
+
+app.post('/api/verify', upload.array('files', 10), (req, res) => {
+  if (!req.user) return verifyHandler(req, res);
+  const jobId = require('crypto').randomBytes(16).toString('hex');
+  const job = { id: jobId, userId: req.user.id, status: 'running', httpStatus: 200, body: null, createdAt: Date.now() };
+  verifyJobs.set(jobId, job);
+  const fakeRes = {
+    statusCode: 200,
+    status(c) { this.statusCode = c; return this; },
+    json(b) { job.httpStatus = this.statusCode; job.body = b; job.status = 'done'; return this; },
+  };
+  Promise.resolve(verifyHandler(req, fakeRes)).catch((e) => {
+    console.error('Verify job crashed:', e);
+    job.httpStatus = 500;
+    job.body = { success: false, error: 'An unexpected error occurred during analysis. Please try again.', error_type: 'SERVER_ERROR' };
+    job.status = 'done';
+  }).finally(() => {
+    if (job.status !== 'done') {
+      job.httpStatus = 500;
+      job.body = { success: false, error: 'Analysis ended without a result. Please try again.', error_type: 'SERVER_ERROR' };
+      job.status = 'done';
+    }
+  });
+  res.status(202).json({ success: true, job_id: jobId, status: 'running' });
+});
+
+app.get('/api/verify/status/:jobId', (req, res) => {
+  if (!req.user) return res.status(401).json({ success: false, error: 'Please sign in.', error_type: 'AUTH_REQUIRED' });
+  const job = verifyJobs.get(req.params.jobId);
+  if (!job || String(job.userId) !== String(req.user.id)) {
+    return res.status(404).json({ success: false, error: 'Verification job not found or expired. Please retry.', error_type: 'JOB_NOT_FOUND' });
+  }
+  if (job.status === 'running') return res.json({ status: 'running' });
+  verifyJobs.delete(job.id);
+  res.status(job.httpStatus).json(job.body);
 });
 
 // Error handling middleware for Multer and unexpected errors

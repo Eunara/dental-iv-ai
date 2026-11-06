@@ -2217,10 +2217,34 @@
       startAuditorLoading();
 
       try {
-        const response = await fetch('/api/verify', {
+        let response = await fetch('/api/verify', {
           method: 'POST',
           body: formData,
         });
+
+        if (response.status === 202) {
+          const { job_id } = await response.json();
+          const pollStart = Date.now();
+          while (true) {
+            await new Promise(r => setTimeout(r, 2500));
+            if (Date.now() - pollStart > 10 * 60 * 1000) {
+              showAlert('Verification took too long. Please click "Retry Verification".', 'Processing Timeout');
+              return;
+            }
+            let pr;
+            try {
+              pr = await fetch('/api/verify/status/' + encodeURIComponent(job_id), { cache: 'no-store' });
+            } catch (netErr) {
+              continue;
+            }
+            if (pr.status === 200 && (pr.headers.get('content-type') || '').includes('application/json')) {
+              const peek = await pr.clone().json().catch(() => null);
+              if (peek && peek.status === 'running') continue;
+            }
+            response = pr;
+            break;
+          }
+        }
 
         let resData = null;
         let isJson = false;
