@@ -2217,17 +2217,36 @@
       startAuditorLoading();
 
       try {
-        let response = await fetch('/api/verify', {
-          method: 'POST',
-          body: formData,
-        });
+        let response;
+        let postErr = null;
+        for (let postAttempt = 1; postAttempt <= 2; postAttempt++) {
+          try {
+            response = await fetch('/api/verify', {
+              method: 'POST',
+              body: formData,
+            });
+            postErr = null;
+            break;
+          } catch (fetchErr) {
+            postErr = fetchErr;
+            if (postAttempt < 2) {
+              await new Promise(r => setTimeout(r, 1200));
+            }
+          }
+        }
+        if (postErr) throw postErr;
+
+        let polledData = null;
 
         if (response.status === 202) {
-          const { job_id } = await response.json();
+          const initJson = await response.json();
+          const job_id = initJson.job_id;
           const pollStart = Date.now();
+          let consecutivePollErrors = 0;
+
           while (true) {
-            await new Promise(r => setTimeout(r, 2500));
-            if (Date.now() - pollStart > 10 * 60 * 1000) {
+            await new Promise(r => setTimeout(r, 2000));
+            if (Date.now() - pollStart > 6 * 60 * 1000) {
               showAlert('Verification took too long. Please click "Retry Verification".', 'Processing Timeout');
               return;
             }
@@ -2235,22 +2254,38 @@
             try {
               pr = await fetch('/api/verify/status/' + encodeURIComponent(job_id), { cache: 'no-store' });
             } catch (netErr) {
+              consecutivePollErrors++;
               continue;
             }
-            if (pr.status === 200 && (pr.headers.get('content-type') || '').includes('application/json')) {
-              const peek = await pr.clone().json().catch(() => null);
-              if (peek && peek.status === 'running') continue;
+
+            // If Cloudflare/Nginx returns transient 502/503/504/520-524 HTML during polling, retry instead of failing
+            const prContentType = pr.headers.get('content-type') || '';
+            if (!prContentType.includes('application/json') && (pr.status >= 502 && pr.status <= 526)) {
+              consecutivePollErrors++;
+              if (consecutivePollErrors < 10) continue;
             }
+
+            let prJson = null;
+            if (prContentType.includes('application/json')) {
+              prJson = await pr.json().catch(() => null);
+            }
+
+            if (pr.status === 200 && prJson && prJson.status === 'running') {
+              consecutivePollErrors = 0;
+              continue;
+            }
+
             response = pr;
+            polledData = prJson;
             break;
           }
         }
 
-        let resData = null;
-        let isJson = false;
+        let resData = polledData;
+        let isJson = Boolean(polledData);
         const contentType = response.headers.get('content-type') || '';
 
-        if (contentType.includes('application/json')) {
+        if (!isJson && contentType.includes('application/json')) {
           try {
             resData = await response.json();
             isJson = true;

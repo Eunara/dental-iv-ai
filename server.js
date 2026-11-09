@@ -3155,13 +3155,16 @@ const verifyHandler = async (req, res) => {
       };
     });
 
+    // Free raw Multer buffers immediately after base64 encoding to reduce heap pressure
+    uploadedFiles.forEach((f) => { f.buffer = null; });
+
     // Candidate models to try in priority order for resilience
     const candidateModels = [
       process.env.GEMINI_MODEL,
-      'gemini-3.8-flash',
       'gemini-3.5-flash-lite',
-      'gemini-flash-latest',
       'gemini-flash-lite-latest',
+      'gemini-3.8-flash',
+      'gemini-flash-latest',
     ].filter(Boolean);
     const modelsToTry = [...new Set(candidateModels)];
 
@@ -3172,10 +3175,8 @@ const verifyHandler = async (req, res) => {
       }
 
       let lastError;
-      // Cloudflare cuts the connection at ~100s (HTTP 524), so the whole
-      // fallback chain must finish well inside that window.
-      const TOTAL_BUDGET_MS = parseInt(process.env.GEMINI_TOTAL_BUDGET_MS, 10) || 85000;
-      const PER_CALL_MS     = parseInt(process.env.GEMINI_CALL_TIMEOUT_MS, 10) || 30000;
+      const TOTAL_BUDGET_MS = parseInt(process.env.GEMINI_TOTAL_BUDGET_MS, 10) || 180000;
+      const PER_CALL_MS     = parseInt(process.env.GEMINI_CALL_TIMEOUT_MS, 10) || 45000;
       const deadline = Date.now() + TOTAL_BUDGET_MS;
       let overloadCount = 0;
       for (const currentKey of keysToTry) {
@@ -3460,30 +3461,40 @@ const verifyHandler = async (req, res) => {
 // Async job wrapper: returns a job id immediately so Cloudflare's ~100s limit never applies.
 const verifyJobs = new Map();
 setInterval(() => {
-  const cutoff = Date.now() - 30 * 60 * 1000;
-  for (const [id, j] of verifyJobs) if (j.createdAt < cutoff) verifyJobs.delete(id);
-}, 5 * 60 * 1000).unref();
+  const now = Date.now();
+  const runningCutoff = now - 30 * 60 * 1000;
+  const doneCutoff = now - 5 * 60 * 1000;
+  for (const [id, j] of verifyJobs) {
+    if (j.status === 'done' && j.completedAt && j.completedAt < doneCutoff) {
+      verifyJobs.delete(id);
+    } else if (j.createdAt < runningCutoff) {
+      verifyJobs.delete(id);
+    }
+  }
+}, 2 * 60 * 1000).unref();
 
 app.post('/api/verify', upload.array('files', 10), (req, res) => {
   if (!req.user) return verifyHandler(req, res);
   const jobId = require('crypto').randomBytes(16).toString('hex');
-  const job = { id: jobId, userId: req.user.id, status: 'running', httpStatus: 200, body: null, createdAt: Date.now() };
+  const job = { id: jobId, userId: req.user.id, status: 'running', httpStatus: 200, body: null, createdAt: Date.now(), completedAt: null };
   verifyJobs.set(jobId, job);
   const fakeRes = {
     statusCode: 200,
     status(c) { this.statusCode = c; return this; },
-    json(b) { job.httpStatus = this.statusCode; job.body = b; job.status = 'done'; return this; },
+    json(b) { job.httpStatus = this.statusCode; job.body = b; job.status = 'done'; job.completedAt = Date.now(); return this; },
   };
   Promise.resolve(verifyHandler(req, fakeRes)).catch((e) => {
     console.error('Verify job crashed:', e);
     job.httpStatus = 500;
     job.body = { success: false, error: 'An unexpected error occurred during analysis. Please try again.', error_type: 'SERVER_ERROR' };
     job.status = 'done';
+    job.completedAt = Date.now();
   }).finally(() => {
     if (job.status !== 'done') {
       job.httpStatus = 500;
       job.body = { success: false, error: 'Analysis ended without a result. Please try again.', error_type: 'SERVER_ERROR' };
       job.status = 'done';
+      job.completedAt = Date.now();
     }
   });
   res.status(202).json({ success: true, job_id: jobId, status: 'running' });
@@ -3496,7 +3507,6 @@ app.get('/api/verify/status/:jobId', (req, res) => {
     return res.status(404).json({ success: false, error: 'Verification job not found or expired. Please retry.', error_type: 'JOB_NOT_FOUND' });
   }
   if (job.status === 'running') return res.json({ status: 'running' });
-  verifyJobs.delete(job.id);
   res.status(job.httpStatus).json(job.body);
 });
 
